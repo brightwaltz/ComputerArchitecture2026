@@ -405,6 +405,20 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
 .movie-link .tri { flex: none; width: 0; height: 0; border-left: 16px solid var(--accent); border-top: 10px solid transparent; border-bottom: 10px solid transparent; }
 #movie { scroll-margin-top: 120px; }
 
+.film-hint { display: none; font-size: var(--fs-small); color: var(--muted); }
+@media (max-width: 520px) { .film-hint { display: block; } }
+/* SVG の色（動画以外の図でも使う） */
+svg .k-ink { fill: var(--ink); } svg .k-mut { fill: var(--muted); } svg .k-acc { fill: var(--accent); } svg .k-accink { fill: var(--accent-ink); }
+svg .k-lamp { fill: var(--lamp); } svg .k-lampink { fill: var(--lamp-ink); } svg .k-wire { fill: var(--wire); } svg .k-wiresoft { fill: var(--wire-soft); }
+svg .k-ng { fill: var(--ng); } svg .k-panel { fill: var(--panel); } svg .k-off { fill: var(--lamp-off); } svg .k-none { fill: none; }
+svg .s-ink { stroke: var(--ink); } svg .s-mut { stroke: var(--muted); } svg .s-acc { stroke: var(--accent); } svg .s-lamp { stroke: var(--lamp); }
+svg .s-wire { stroke: var(--wire); } svg .s-ng { stroke: var(--ng); } svg .s-rule { stroke: var(--rule); } svg .s-none { stroke: none; }
+svg .ft { font-family: var(--font-body); } svg .fm { font-family: var(--font-mono); }
+.ov { text-decoration: overline; text-decoration-thickness: 2px; }
+
+.gate-pick button { font-family: var(--font-mono); }
+.gate-pick button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+
 </style>
 <header class="mast">
   <div class="mast-inner">
@@ -591,7 +605,7 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
     <h2>仕上げの5問</h2>
     <p class="prose">7項目から5問を出します。間違えたら、その項目に戻って確認問題と練習をもう一度。</p>
     <div id="fin"></div>
-    <div class="done-banner" id="banner" role="status">7項目すべての確認問題に正解しました。次回（10/22）はブール代数と論理演算です。<a href="w04-preview.html?v=202610151357">第4回 予習ページ</a>も見ておきましょう。</div>
+    <div class="done-banner" id="banner" role="status">7項目すべての確認問題に正解しました。次回（10/22）はブール代数と論理演算です。<a href="w04-preview.html?v=202610151425">第4回 予習ページ</a>も見ておきましょう。</div>
   </section>
 
   <footer>
@@ -1943,13 +1957,19 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
       sc.cues.forEach(function (cu) { if (p.t >= cu[0]) c = cu[1]; });
       if (cap.textContent !== c) cap.textContent = c;
       sceneLab.textContent = "場面 " + (p.i + 1) + " / " + scenes.length + "：" + sc.name;
-      var note = "";
-      if (sc.pause && pred[p.i] != null && p.t >= (sc.pause.reveal != null ? sc.pause.reveal : sc.pause.t + 600)) {
-        var ok = pred[p.i] === sc.pause.answer;
-        note = "あなたの予想：" + sc.pause.choices[pred[p.i]] + (ok ? "　→ 当たり" : "　→ 答えは「" + sc.pause.choices[sc.pause.answer] + "」");
-      }
+      /* 予想の答え合わせ。答えが次の場面で明かされるときは pause.noteScene / noteAt で指定する */
+      var note = "", hit = false;
+      scenes.forEach(function (s2, j) {
+        var ps = s2.pause;
+        if (!ps || pred[j] == null) return;
+        var ns = ps.noteScene != null ? ps.noteScene : j;
+        var atT = ps.noteScene != null ? (ps.noteAt || 0) : (ps.reveal != null ? ps.reveal : ps.t + 600);
+        if (ns !== p.i || p.t < atT) return;
+        hit = pred[j] === ps.answer;
+        note = "あなたの予想：" + ps.choices[pred[j]] + (hit ? "　→ 当たり" : "　→ 答えは「" + ps.choices[ps.answer] + "」");
+      });
       predNote.textContent = note;
-      predNote.className = "film-pred" + (note ? (pred[p.i] === sc.pause.answer ? " ok" : " ng") : "");
+      predNote.className = "film-pred" + (note ? (hit ? " ok" : " ng") : "");
       seek.value = Math.round(T);
       time.textContent = fmtTime(T) + " / " + fmtTime(total);
       chaps.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-current", +b.getAttribute("data-i") === p.i ? "true" : "false"); });
@@ -2018,6 +2038,7 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
     seek.oninput = function () { setPlaying(false); go(+seek.value); };
     var box = h("div", { class: "film", tabindex: "-1" },
       h("div", { class: "film-head" }, h("span", { class: "film-title", text: opts.title }), sceneLab),
+      h("p", { class: "film-hint", text: "スマホでは、横向きにして「全画面」で見ると図の文字が読みやすくなります。" }),
       stage, pauseBox, cap, predNote,
       h("div", { class: "film-ctrl" }, bPlay, bPrev, bNext, seek, time, bFull),
       chaps, script);
