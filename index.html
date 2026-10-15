@@ -418,6 +418,76 @@ svg .ft { font-family: var(--font-body); } svg .fm { font-family: var(--font-mon
 .gate-pick button { font-family: var(--font-mono); }
 .gate-pick button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
 
+/* 解説（簡単・通常・詳細・発展）。左のメニューで選んだレベルが既定で、その場で切りかえられる */
+.lv-box { display: grid; gap: 10px; min-width: 0; }
+.lv-title { font: 700 var(--fs-small)/1.4 var(--font-mono); color: var(--accent); letter-spacing: 0.08em; }
+.lv-tabs { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; justify-self: start; max-width: 100%; }
+.lv-tabs button { border: 0; border-radius: 0; border-right: 1px solid var(--rule); font-size: var(--fs-small); padding: 6px 16px; background: var(--panel); color: var(--ink); }
+.lv-tabs button:last-child { border-right: 0; }
+.lv-tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.lv-panel { font-size: var(--fs-body); line-height: 1.8; max-width: 40em; min-width: 0; overflow-wrap: anywhere; }
+.lv-panel > * + * { margin-top: 10px; }
+.lv-panel ul, .lv-panel ol { margin: 0; padding-left: 1.4em; }
+.lv-panel table { border-collapse: collapse; font-size: var(--fs-small); }
+.lv-panel th, .lv-panel td { border: 1px solid var(--rule); padding: 2px 10px; text-align: center; }
+.item-explain { border: 1px solid var(--rule); border-left: 6px solid var(--accent); border-radius: var(--radius); background: var(--panel); padding: 14px 18px; }
+.explain-q summary { color: var(--accent); }
+.explain-q > div { padding-top: 10px; }
+
+/* 左のメニュー。広い画面では常に出し、狭い画面では「メニュー」ボタンで引き出す */
+.side {
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: 30; width: 272px;
+  overflow-y: auto; overscroll-behavior: contain;
+  background: var(--panel); border-right: 1px solid var(--rule);
+  padding: 16px 14px 32px; display: grid; align-content: start; gap: 20px;
+  font-size: var(--fs-small); line-height: 1.5;
+}
+.side-head { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.side-home { font-weight: 700; color: var(--ink); text-decoration: none; }
+a.side-home:hover { color: var(--wire); text-decoration: underline; }
+.side-close { display: none; font-size: var(--fs-small); padding: 4px 12px; white-space: nowrap; flex: none; }
+.side-group { display: grid; gap: 8px; }
+.side-label { font: 700 var(--fs-small)/1.4 var(--font-mono); color: var(--accent); letter-spacing: 0.06em; border-bottom: 1px solid var(--rule); padding-bottom: 4px; }
+.side-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.side-list a { display: block; padding: 5px 8px; border-radius: 6px; color: var(--ink); text-decoration: none; }
+.side-list a:hover { background: var(--wire-soft); }
+.side-list a.here { background: var(--accent-soft); box-shadow: inset 4px 0 0 var(--accent); font-weight: 700; }
+.side-levels { display: grid; gap: 4px; }
+.side-levels label { display: grid; grid-template-columns: auto auto 1fr; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; cursor: pointer; }
+.side-levels label:hover { background: var(--wire-soft); }
+.side-levels input { margin: 0; width: 18px; height: 18px; accent-color: var(--accent); }
+.side-levels label span { color: var(--muted); }
+.side-levels label:has(input:checked) { background: var(--accent-soft); }
+.side-pages li { display: grid; grid-template-columns: 4em minmax(0, 1fr); gap: 0 8px; padding: 6px 4px; border-bottom: 1px solid var(--rule); }
+.side-pages .s-no { font: 700 var(--fs-small)/1.5 var(--font-mono); color: var(--accent); }
+.side-pages .s-ttl { color: var(--ink); }
+.side-pages .s-links { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.side-pages .s-links a, .side-pages .s-links span { display: inline-block; padding: 2px 10px; border-radius: 999px; }
+.side-pages .s-links a { border: 1px solid var(--wire); color: var(--wire); }
+.side-pages .s-links a:hover { background: var(--wire-soft); }
+.side-pages .s-links .cur { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.side-pages .s-links .off { border: 1px dashed var(--rule); color: var(--muted); }
+.menu-btn { display: none; font-size: var(--fs-small); padding: 6px 14px; }
+.side-backdrop { position: fixed; inset: 0; z-index: 29; background: rgba(0, 0, 0, 0.35); }
+@media (min-width: 1180px) {
+  body.has-side { padding-left: 296px; }
+  .side-backdrop { display: none !important; }
+}
+@media (max-width: 1179px) {
+  .side { width: min(320px, 88vw); transform: translateX(-102%); transition: transform 0.2s ease, visibility 0s linear 0.2s; box-shadow: 0 0 24px rgba(0, 0, 0, 0.2); visibility: hidden; }
+  body.side-open .side { transform: none; visibility: visible; transition: transform 0.2s ease; }
+  .side-close { display: inline-block; }
+  .menu-btn { display: inline-block; }
+  body.has-side .mast-inner { justify-content: flex-start; }
+  body.has-side .mast-inner > .lamps { margin-left: auto; }
+}
+@media (max-width: 640px) {
+  body.has-side .mast-inner { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; align-items: center; }
+  body.has-side .mast-inner > .lamps { grid-column: 1 / -1; margin-left: 0; }
+  .menu-btn { padding: 6px 10px; }
+}
+@media print { .side, .menu-btn, .side-backdrop { display: none !important; } body.has-side { padding-left: 16px; } }
+
 
 .sched { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border-top: 1px solid var(--rule); }
 .sched li { border-bottom: 1px solid var(--rule); padding: 12px 4px; }
@@ -452,18 +522,422 @@ svg .ft { font-family: var(--font-body); } svg .fm { font-family: var(--font-mon
     <p class="prose">授業（木曜3・4限 11:00〜13:00）の予習ページは授業の1週間前に、復習ページは授業の日に公開します。動きのある説明、確認問題、何度でも解ける練習問題で、各回の「最低限これだけ」を身につけましょう。</p>
     <div class="meta"><span>解いた結果やメモは、使っているブラウザの中だけに保存されます</span><span>提出は不要です</span></div>
   </section>
-  <section class="stack">
+  <section class="stack" id="now">
     <h2>公開中のページ</h2>
-    <div class="cards"><a class="card" href="w04-preview.html?v=202610151425"><span class="k">第4回 予習</span><span class="t">ブール代数と論理演算</span><span class="mv">▶ 動画あり：NOT ゲートの中身（約1分15秒）</span><span class="d">授業 10/22（木） の前に</span></a><a class="card" href="w03-review.html?v=202610151425"><span class="k">第3回 復習</span><span class="t">デジタルデータの表現と演算</span><span class="mv">▶ 動画あり：なぜ「反転して＋1」なのか（約1分30秒）</span><span class="d">授業 10/15（木） の復習</span></a></div>
+    <div class="cards"><a class="card" href="w04-preview.html?v=202610152352"><span class="k">第4回 予習</span><span class="t">ブール代数と論理演算</span><span class="mv">▶ 動画あり：NOT ゲートの中身（約1分15秒）</span><span class="d">授業 10/22（木） の前に</span></a><a class="card" href="w03-review.html?v=202610152352"><span class="k">第3回 復習</span><span class="t">デジタルデータの表現と演算</span><span class="mv">▶ 動画あり：なぜ「反転して＋1」なのか（約1分30秒）</span><span class="d">授業 10/15（木） の復習</span></a></div>
   </section>
-  <section class="stack">
+  <section class="stack" id="schedule">
     <h2>日程</h2>
-    <ol class="sched"><li class="sess"><span class="no">第1回</span><span class="date">10/1（木）</span><span class="ttl">ガイダンス</span><span class="links"></span></li><li class="sess"><span class="no">第2回</span><span class="date">10/8（木）</span><span class="ttl">コンピュータの歴史</span><span class="links"></span></li><li class="sess"><span class="no">第3回</span><span class="date">10/15（木）</span><span class="ttl">デジタルデータの表現と演算</span><span class="links"><a class="pill on" href="w03-review.html?v=202610151425">復習</a></span></li><li class="sess"><span class="no">第4回</span><span class="date">10/22（木）</span><span class="ttl">ブール代数と論理演算</span><span class="links"><a class="pill on" href="w04-preview.html?v=202610151425">予習</a><span class="pill off">復習は 10/22 公開</span></span></li><li class="sess"><span class="no">第5回</span><span class="date">10/29（木）</span><span class="ttl">論理回路と組み合わせ回路</span><span class="links"><span class="pill off">予習は 10/22 公開</span><span class="pill off">復習は 10/29 公開</span></span></li><li class="gapline">11/5（木）・11/12（木）は休講</li><li class="sess"><span class="no">第6回</span><span class="date">11/19（木）</span><span class="ttl">順序回路</span><span class="links"><span class="pill off">予習は 11/12 公開</span><span class="pill off">復習は 11/19 公開</span></span></li><li class="sess test"><span class="no">第7回</span><span class="date">11/26（木）</span><span class="ttl">中間テスト</span><span class="links"><span class="pill off">対策ページは 11/19 公開</span></span></li><li class="sess"><span class="no">第8回</span><span class="date">11/28（土）</span><span class="ttl">チューリングマシン<span class="note">土曜日（補講日）</span></span><span class="links"><span class="pill off">予習は 11/21 公開</span><span class="pill off">復習は 11/28 公開</span></span></li><li class="sess"><span class="no">第9回</span><span class="date">12/3（木）</span><span class="ttl">ノイマン型コンピュータの動作原理(1)</span><span class="links"><span class="pill off">予習は 11/26 公開</span><span class="pill off">復習は 12/3 公開</span></span></li><li class="sess"><span class="no">第10回</span><span class="date">12/10（木）</span><span class="ttl">ノイマン型コンピュータの動作原理(2)</span><span class="links"><span class="pill off">予習は 12/3 公開</span><span class="pill off">復習は 12/10 公開</span></span></li><li class="sess"><span class="no">第11回</span><span class="date">12/17（木）</span><span class="ttl">アセンブリ言語</span><span class="links"><span class="pill off">予習は 12/10 公開</span><span class="pill off">復習は 12/17 公開</span></span></li><li class="gapline">12/24（木）・12/31（木）は授業なし</li><li class="sess"><span class="no">第12回</span><span class="date">1/7（木）</span><span class="ttl">記憶装置(1)</span><span class="links"><span class="pill off">予習は 12/17 公開</span><span class="pill off">復習は 1/7 公開</span></span></li><li class="sess"><span class="no">第13回</span><span class="date">1/14（木）</span><span class="ttl">記憶装置(2)、並列処理</span><span class="links"><span class="pill off">予習は 1/7 公開</span><span class="pill off">復習は 1/14 公開</span></span></li><li class="sess test"><span class="no">第14回</span><span class="date">1/21（木）</span><span class="ttl">期末テスト・まとめ</span><span class="links"><span class="pill off">対策ページは 1/14 公開</span></span></li></ol>
+    <ol class="sched"><li class="sess"><span class="no">第1回</span><span class="date">10/1（木）</span><span class="ttl">ガイダンス</span><span class="links"></span></li><li class="sess"><span class="no">第2回</span><span class="date">10/8（木）</span><span class="ttl">コンピュータの歴史</span><span class="links"></span></li><li class="sess"><span class="no">第3回</span><span class="date">10/15（木）</span><span class="ttl">デジタルデータの表現と演算</span><span class="links"><a class="pill on" href="w03-review.html?v=202610152352">復習</a></span></li><li class="sess"><span class="no">第4回</span><span class="date">10/22（木）</span><span class="ttl">ブール代数と論理演算</span><span class="links"><a class="pill on" href="w04-preview.html?v=202610152352">予習</a><span class="pill off">復習は 10/22 公開</span></span></li><li class="sess"><span class="no">第5回</span><span class="date">10/29（木）</span><span class="ttl">論理回路と組み合わせ回路</span><span class="links"><span class="pill off">予習は 10/22 公開</span><span class="pill off">復習は 10/29 公開</span></span></li><li class="gapline">11/5（木）・11/12（木）は休講</li><li class="sess"><span class="no">第6回</span><span class="date">11/19（木）</span><span class="ttl">順序回路</span><span class="links"><span class="pill off">予習は 11/12 公開</span><span class="pill off">復習は 11/19 公開</span></span></li><li class="sess test"><span class="no">第7回</span><span class="date">11/26（木）</span><span class="ttl">中間テスト</span><span class="links"><span class="pill off">対策ページは 11/19 公開</span></span></li><li class="sess"><span class="no">第8回</span><span class="date">11/28（土）</span><span class="ttl">チューリングマシン<span class="note">土曜日（補講日）</span></span><span class="links"><span class="pill off">予習は 11/21 公開</span><span class="pill off">復習は 11/28 公開</span></span></li><li class="sess"><span class="no">第9回</span><span class="date">12/3（木）</span><span class="ttl">ノイマン型コンピュータの動作原理(1)</span><span class="links"><span class="pill off">予習は 11/26 公開</span><span class="pill off">復習は 12/3 公開</span></span></li><li class="sess"><span class="no">第10回</span><span class="date">12/10（木）</span><span class="ttl">ノイマン型コンピュータの動作原理(2)</span><span class="links"><span class="pill off">予習は 12/3 公開</span><span class="pill off">復習は 12/10 公開</span></span></li><li class="sess"><span class="no">第11回</span><span class="date">12/17（木）</span><span class="ttl">アセンブリ言語</span><span class="links"><span class="pill off">予習は 12/10 公開</span><span class="pill off">復習は 12/17 公開</span></span></li><li class="gapline">12/24（木）・12/31（木）は授業なし</li><li class="sess"><span class="no">第12回</span><span class="date">1/7（木）</span><span class="ttl">記憶装置(1)</span><span class="links"><span class="pill off">予習は 12/17 公開</span><span class="pill off">復習は 1/7 公開</span></span></li><li class="sess"><span class="no">第13回</span><span class="date">1/14（木）</span><span class="ttl">記憶装置(2)、並列処理</span><span class="links"><span class="pill off">予習は 1/7 公開</span><span class="pill off">復習は 1/14 公開</span></span></li><li class="sess test"><span class="no">第14回</span><span class="date">1/21（木）</span><span class="ttl">期末テスト・まとめ</span><span class="links"><span class="pill off">対策ページは 1/14 公開</span></span></li></ol>
   </section>
   <footer>
     <span>コンピュータアーキテクチャ（2026年度 秋・木曜3・4限）</span>
     <span>問題は練習用に作ったもので、テストの問題そのものではありません。授業の資料と課題は WebClass にあります。</span>
   </footer>
 </main>
+<script>window.CA_PAGE = "index"; window.CA_SITE = {"home":null,"sessions":[{"no":3,"title":"デジタルデータの表現と演算","pages":[{"label":"復習","href":"w03-review.html?v=202610152352"}]},{"no":4,"title":"ブール代数と論理演算","pages":[{"label":"予習","href":"w04-preview.html?v=202610152352"},{"label":"復習（10/22）"}]},{"no":5,"title":"論理回路と組み合わせ回路","pages":[{"label":"予習（10/22）"},{"label":"復習（10/29）"}]},{"no":6,"title":"順序回路","pages":[{"label":"予習（11/12）"}]}]};</script>
+<script>
+/* 共通の部品：保存、ステップ再生、ドリル・確認問題、進み具合のランプ、抽象レベルの地図 */
+(function (root) {
+  "use strict";
+  var CA = root.CA = root.CA || {};
+
+  /* ---------- 小さな道具 ---------- */
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      if (attrs[k] == null || attrs[k] === false) continue;
+      if (k === "html") el.innerHTML = attrs[k];
+      else if (k === "text") el.textContent = attrs[k];
+      else if (k === "class") el.className = attrs[k];
+      else if (k.slice(0, 2) === "on") el.addEventListener(k.slice(2), attrs[k]);
+      else el.setAttribute(k, attrs[k] === true ? "" : attrs[k]);
+    }
+    for (var i = 2; i < arguments.length; i++) {
+      var c = arguments[i];
+      if (c == null) continue;
+      if (Array.isArray(c)) c.forEach(function (x) { if (x != null) el.appendChild(typeof x === "string" ? document.createTextNode(x) : x); });
+      else el.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+    }
+    return el;
+  }
+  CA.h = h;
+  var uid = 0;
+  CA.uid = function (p) { uid += 1; return (p || "u") + uid; };
+
+  /* ---------- 保存（ブラウザの中だけ。使えなくても動く） ---------- */
+  var PAGE = root.CA_PAGE || "page";
+  var PREFIX = "ca2026." + PAGE + ".";
+  CA.store = {
+    get: function (k, d) {
+      try { var v = localStorage.getItem(PREFIX + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; }
+    },
+    set: function (k, v) {
+      try { localStorage.setItem(PREFIX + k, JSON.stringify(v)); } catch (e) { /* 保存できない環境 */ }
+    }
+  };
+
+  /* ---------- サイト全体で共有する設定（解説のレベルなど） ---------- */
+  CA.gstore = {
+    get: function (k, d) { try { var v = localStorage.getItem("ca2026.global." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem("ca2026.global." + k, JSON.stringify(v)); } catch (e) { /* 保存できない環境 */ } }
+  };
+  var LV = [["easy", "簡単", "要点だけ"], ["normal", "通常", "ふつうの説明"], ["detail", "詳細", "手順をくわしく"], ["adv", "発展", "一歩先の話"]];
+  var levelListeners = [];
+  CA.level = {
+    LIST: LV,
+    get: function () { var v = CA.gstore.get("level", "normal"); return LV.some(function (x) { return x[0] === v; }) ? v : "normal"; },
+    set: function (v) { CA.gstore.set("level", v); levelListeners.slice().forEach(function (fn) { fn(v); }); },
+    /* 登録をやめる関数を返す */
+    count: function () { return levelListeners.length; },
+    on: function (fn) { levelListeners.push(fn); return function () { var i = levelListeners.indexOf(fn); if (i >= 0) levelListeners.splice(i, 1); }; }
+  };
+
+  /* ---------- 解説（4段）。問題の key から作るハンドラは explain-*.js が CA.EXP.handlers に足す ---------- */
+  CA.EXP = CA.EXP || { handlers: [] };
+  CA.EXP.fromKey = function (key) {
+    if (!key) return null;
+    for (var i = 0; i < CA.EXP.handlers.length; i++) {
+      var m = key.match(CA.EXP.handlers[i][0]);
+      if (m) { try { return CA.EXP.handlers[i][1](key, m); } catch (e) { return null; } }
+    }
+    return null;
+  };
+  /* 問題の解説を探す順：問題に付いた解説 → ページの手書き解説（CA.EXP_Q[ページ][問題id]）→ 固定問題の key（CA.EXP_KEYS）→ 問題の key */
+  CA.EXP.forQuestion = function (p, qid) {
+    if (p.explain) return p.explain;
+    var q = (CA.EXP_Q || {})[root.CA_PAGE];
+    if (q && q[qid]) return q[qid];
+    var k = (CA.EXP_KEYS || {})[qid];
+    return CA.EXP.fromKey(k || p.exKey || p.key);
+  };
+  /* 4段の切りかえ。levels: { easy, normal, detail, adv }。左メニューのレベルが既定で、その場で切りかえもできる */
+  CA.levelTabs = function (mount, levels, opts) {
+    opts = opts || {};
+    var cur = CA.level.get();
+    var tabs = h("div", { class: "lv-tabs", role: "tablist", "aria-label": "解説のレベル" });
+    var panel = h("div", { class: "lv-panel", role: "tabpanel" });
+    function show(v) {
+      cur = v;
+      tabs.querySelectorAll("button").forEach(function (b) { var on = b.getAttribute("data-lv") === v; b.setAttribute("aria-selected", on ? "true" : "false"); b.tabIndex = on ? 0 : -1; });
+      panel.innerHTML = levels[v] || levels.normal || "";
+    }
+    LV.forEach(function (x) {
+      tabs.appendChild(h("button", { type: "button", role: "tab", "data-lv": x[0], title: x[2], text: x[1], onclick: function () { show(x[0]); } }));
+    });
+    tabs.addEventListener("keydown", function (e) {
+      var i = LV.map(function (x) { return x[0]; }).indexOf(cur);
+      if (e.key === "ArrowRight") { e.preventDefault(); show(LV[(i + 1) % 4][0]); tabs.querySelector("[aria-selected=true]").focus(); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); show(LV[(i + 3) % 4][0]); tabs.querySelector("[aria-selected=true]").focus(); }
+    });
+    var box = h("div", { class: "lv-box" + (opts.cls ? " " + opts.cls : "") }, opts.title ? h("div", { class: "lv-title", text: opts.title }) : null, tabs, panel);
+    /* 問題を出し直すと箱を作り直すので、古い箱の登録は dispose で外す */
+    box.dispose = CA.level.on(function (v) { show(v); });
+    mount.appendChild(box);
+    show(cur);
+    return box;
+  };
+  /* 項目ごとの解説：ページの <div data-explain="i1"> に置く */
+  CA.explainItems = function (map) {
+    if (!map) return;
+    document.querySelectorAll("[data-explain]").forEach(function (el) {
+      var lv = map[el.getAttribute("data-explain")];
+      if (lv) CA.levelTabs(el, lv, { title: "解説", cls: "item-explain" });
+    });
+  };
+
+  /* ---------- 左のメニュー：サイトのページ一覧・このページの中・解説のレベル ---------- */
+  CA.sidebar = function () {
+    var site = root.CA_SITE || { sessions: [] };
+    var nav = h("nav", { class: "side", id: "side", "aria-label": "メニュー" });
+    var close = h("button", { type: "button", class: "side-close", "aria-label": "メニューを閉じる", text: "閉じる" });
+    nav.appendChild(h("div", { class: "side-head" }, site.home ? h("a", { href: site.home, class: "side-home", text: "コンピュータアーキテクチャ 2026" }) : h("span", { class: "side-home", text: "コンピュータアーキテクチャ 2026" }), close));
+    /* このページの中 */
+    var secs = [];
+    document.querySelectorAll("main section[id]").forEach(function (sec) {
+      var hd = sec.querySelector("h2, h1");
+      if (!hd) return;
+      var no = sec.querySelector(".item-head .no");
+      var t = hd.textContent.replace(/\s+/g, " ").trim();
+      if (sec.id === "movie") t = "動画：" + t.replace(/^動画：/, "").replace(/^今日の問い：/, "");
+      secs.push({ id: sec.id, label: (no ? no.textContent.replace("最低限 ", "").replace("やること ", "") + "　" : "") + t });
+    });
+    if (secs.length) {
+      var ul = h("ul", { class: "side-list" });
+      ul.appendChild(h("li", null, h("a", { href: "#", "data-sec": "", text: "ページの先頭" })));
+      secs.forEach(function (x) { ul.appendChild(h("li", null, h("a", { href: "#" + x.id, "data-sec": x.id, text: x.label }))); });
+      nav.appendChild(h("div", { class: "side-group" }, h("div", { class: "side-label", text: "このページ" }), ul));
+    }
+    /* 解説のレベル */
+    var lvBox = h("div", { class: "side-levels", role: "radiogroup", "aria-label": "解説のレベル" });
+    LV.forEach(function (x) {
+      var id = CA.uid("lv");
+      var r = h("input", { type: "radio", name: "side-level", id: id, value: x[0] });
+      r.checked = CA.level.get() === x[0];
+      r.onchange = function () { if (r.checked) CA.level.set(x[0]); };
+      lvBox.appendChild(h("label", { for: id }, r, h("b", { text: x[1] }), h("span", { text: x[2] })));
+    });
+    CA.level.on(function (v) { lvBox.querySelectorAll("input").forEach(function (r) { r.checked = r.value === v; }); });
+    nav.appendChild(h("div", { class: "side-group" }, h("div", { class: "side-label", text: "解説のレベル" }), lvBox));
+    /* ページ一覧 */
+    if (site.sessions && site.sessions.length) {
+      var sl = h("ul", { class: "side-list side-pages" });
+      site.sessions.forEach(function (ss) {
+        var links = ss.pages.map(function (pg) {
+          if (pg.current) return h("span", { class: "cur", "aria-current": "page", text: pg.label });
+          return pg.href ? h("a", { href: pg.href, text: pg.label }) : h("span", { class: "off", text: pg.label });
+        });
+        sl.appendChild(h("li", null, h("span", { class: "s-no", text: "第" + ss.no + "回" }), h("span", { class: "s-ttl", text: ss.title }), h("span", { class: "s-links" }, links)));
+      });
+      nav.appendChild(h("div", { class: "side-group" }, h("div", { class: "side-label", text: "予習・復習ページ" }), sl));
+    }
+    var backdrop = h("div", { class: "side-backdrop", hidden: true });
+    function open(v) {
+      document.body.classList.toggle("side-open", v);
+      backdrop.hidden = !v;
+      if (v) { var f = nav.querySelector("a, button"); if (f) f.focus(); } else if (menuBtn) menuBtn.focus();
+    }
+    close.onclick = function () { open(false); };
+    backdrop.onclick = function () { open(false); };
+    nav.addEventListener("click", function (e) { if (e.target.tagName === "A" && window.matchMedia("(max-width: 1179px)").matches) open(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && document.body.classList.contains("side-open")) open(false); });
+    var menuBtn = h("button", { type: "button", class: "menu-btn", "aria-controls": "side", "aria-label": "メニューを開く", text: "☰ メニュー" });
+    menuBtn.onclick = function () { open(!document.body.classList.contains("side-open")); };
+    var mi = document.querySelector(".mast-inner");
+    if (mi) mi.insertBefore(menuBtn, mi.firstChild);
+    document.body.insertBefore(nav, document.body.firstChild);
+    document.body.appendChild(backdrop);
+    document.body.classList.add("has-side");
+    /* いま読んでいる場所を強調 */
+    if ("IntersectionObserver" in root && secs.length) {
+      var links2 = nav.querySelectorAll("[data-sec]");
+      var io = new IntersectionObserver(function (ents) {
+        ents.forEach(function (en) {
+          if (en.isIntersecting) links2.forEach(function (a) { a.classList.toggle("here", a.getAttribute("data-sec") === en.target.id); });
+        });
+      }, { rootMargin: "-30% 0px -60% 0px" });
+      secs.forEach(function (x) { var el = document.getElementById(x.id); if (el) io.observe(el); });
+    }
+  };
+
+  /* ---------- 進み具合（最低限の項目ごとのランプ） ---------- */
+  var progress = { items: [], done: {}, listeners: [] };
+  CA.progress = {
+    init: function (items) {
+      progress.items = items;
+      progress.done = CA.store.get("done", {}) || {};
+      this.render();
+    },
+    mark: function (id) {
+      if (progress.done[id]) return;
+      progress.done[id] = true;
+      CA.store.set("done", progress.done);
+      this.render();
+    },
+    isDone: function (id) { return !!progress.done[id]; },
+    count: function () { return progress.items.filter(function (it) { return progress.done[it.id]; }).length; },
+    onChange: function (fn) { progress.listeners.push(fn); },
+    render: function () {
+      var n = this.count(), total = progress.items.length;
+      document.querySelectorAll("[data-lamps]").forEach(function (box) {
+        box.innerHTML = "";
+        box.appendChild(h("span", { class: "label", text: "最低限 " + n + " / " + total }));
+        progress.items.forEach(function (it, i) {
+          box.appendChild(h("a", {
+            class: "lamp" + (progress.done[it.id] ? " on" : ""), href: "#" + it.id,
+            title: (i + 1) + ". " + it.title + (progress.done[it.id] ? "（確認問題に正解）" : "（まだ）"),
+            "aria-label": (i + 1) + "番 " + it.title + (progress.done[it.id] ? " 正解済み" : " まだ")
+          }, String(i + 1)));
+        });
+      });
+      document.querySelectorAll("[data-item-state]").forEach(function (el) {
+        var id = el.getAttribute("data-item-state");
+        el.textContent = progress.done[id] ? "確認問題に正解しました" : "";
+      });
+      progress.listeners.forEach(function (fn) { fn(n, total); });
+    }
+  };
+
+  /* ---------- ステップ再生 ----------
+     frames: [{ caption, render(stageEl) }] */
+  CA.stepper = function (mount, opts) {
+    var frames = opts.frames, i = 0, timer = null;
+    var stage = h("div", { class: "stage", "aria-hidden": "false" });
+    var cap = h("p", { class: "caption", "aria-live": "polite" });
+    var rid = CA.uid("rng");
+    var range = h("input", { type: "range", min: 0, max: frames.length - 1, value: 0, id: rid, "aria-label": "場面" });
+    var count = h("span", { class: "count" });
+    var bFirst = h("button", { type: "button", text: "最初から" });
+    var bPrev = h("button", { type: "button", text: "◀ 前へ" });
+    var bNext = h("button", { type: "button", class: "primary", text: "次へ ▶" });
+    var bPlay = h("button", { type: "button", text: "自動で再生" });
+    function stop() { if (timer) { clearInterval(timer); timer = null; bPlay.textContent = "自動で再生"; } }
+    function show(k) {
+      i = Math.max(0, Math.min(frames.length - 1, k));
+      stage.innerHTML = "";
+      frames[i].render(stage);
+      cap.innerHTML = frames[i].caption;
+      range.value = i;
+      count.textContent = (i + 1) + " / " + frames.length;
+      bPrev.disabled = i === 0; bFirst.disabled = i === 0;
+      bNext.disabled = i === frames.length - 1;
+      if (i === frames.length - 1 && opts.onEnd) opts.onEnd();
+    }
+    bFirst.onclick = function () { stop(); show(0); };
+    bPrev.onclick = function () { stop(); show(i - 1); };
+    bNext.onclick = function () { stop(); show(i + 1); };
+    range.oninput = function () { stop(); show(+range.value); };
+    bPlay.onclick = function () {
+      if (timer) { stop(); return; }
+      if (i === frames.length - 1) show(0);
+      bPlay.textContent = "止める";
+      timer = setInterval(function () {
+        if (i >= frames.length - 1) { stop(); return; }
+        show(i + 1);
+      }, opts.interval || 2600);
+    };
+    var box = h("div", { class: "stepper" }, stage, cap,
+      h("div", { class: "ctrl" }, bFirst, bPrev, bNext, range, count, bPlay));
+    box.addEventListener("keydown", function (e) {
+      if (e.target === range) return;
+      if (e.key === "ArrowRight") { stop(); show(i + 1); }
+      if (e.key === "ArrowLeft") { stop(); show(i - 1); }
+    });
+    mount.appendChild(box);
+    show(0);
+    return { show: show };
+  };
+
+  /* ---------- ドリル・確認問題 ----------
+     opts.mode: "drill"（何問でも） / "check"（1問、正解で項目のランプが点く） / "seq"（決まった問題を順に）
+     opts.make(): 問題を返す。問題は { prompt, inputLabel, check(x)->{ok,msg}, solution, type, choices } */
+  CA.quiz = function (mount, opts) {
+    var mode = opts.mode || "drill";
+    var stats = CA.store.get("q." + opts.id, { ok: 0, tried: 0 }) || { ok: 0, tried: 0 };
+    var p = null, answered = false, wrongs = 0, seqIndex = 0, seqOk = 0;
+    var kind = h("div", { class: "kind" });
+    var prompt = h("div", { class: "prompt" });
+    var area = h("div");
+    var fb = h("div", { class: "feedback", role: "status", "aria-live": "polite" });
+    var sol = h("details", { class: "solution" }, h("summary", { text: "解き方を見る" }), h("div"));
+    var exq = h("details", { class: "solution explain-q" }, h("summary", { text: "解説を見る（簡単・通常・詳細・発展）" }), h("div")), exBox = null;
+    var bNext = h("button", { type: "button", text: mode === "seq" ? "次の問題へ" : "別の問題を出す" });
+    var foot = h("div", { class: "row" });
+    if (mode !== "check") foot.appendChild(bNext);
+    var box = h("div", { class: "quiz" + (mode === "check" ? " check-quiz" : "") }, kind, prompt, area, fb, sol, exq, foot);
+    if (mode === "check" && opts.itemId && CA.progress.isDone(opts.itemId)) box.classList.add("done");
+
+    function label() {
+      kind.innerHTML = "";
+      var title = mode === "check" ? "確認問題" : mode === "seq" ? (opts.title || "仕上げ") + "　" + (seqIndex + 1) + " / " + opts.seq.length : (opts.title || "練習");
+      kind.appendChild(h("b", { text: title }));
+      if (mode === "drill") kind.appendChild(h("span", { class: "score", text: "正解 " + stats.ok + " / " + stats.tried }));
+      if (mode === "check") kind.appendChild(h("span", { class: "score", "data-item-state": opts.itemId }));
+      if (mode === "seq") kind.appendChild(h("span", { class: "score", text: "正解 " + seqOk }));
+    }
+    function judge(res, picked) {
+      if (answered && mode !== "check") return;
+      if (mode !== "check" || !answered) { stats.tried += 1; }
+      if (res.ok) {
+        answered = true;
+        stats.ok += 1;
+        if (mode === "seq") seqOk += 1;
+        fb.className = "feedback ok";
+        fb.innerHTML = "<span class=\"head\">正解</span>" + (opts.okNote ? "　" + opts.okNote : "");
+        if (mode === "check") { box.classList.add("done"); if (opts.itemId) CA.progress.mark(opts.itemId); }
+        sol.open = false;
+        if (opts.onCorrect) opts.onCorrect();
+      } else {
+        wrongs += 1;
+        if (mode === "seq") answered = true;
+        fb.className = "feedback ng";
+        fb.innerHTML = "<span class=\"head\">" + (mode === "seq" ? "ちがいます" : "もう一度") + "</span>　" + (res.msg || (wrongs >= 2 || mode === "seq" ? "「解き方を見る」で手順を確かめましょう。" : "手順を一つずつ確かめてみましょう。"));
+        if (wrongs >= 2 || mode === "seq") sol.open = true;
+      }
+      CA.store.set("q." + opts.id, stats);
+      label();
+      if (mode === "seq") { bNext.disabled = false; if (seqIndex === opts.seq.length - 1) bNext.textContent = "結果を見る"; }
+    }
+    function load() {
+      answered = false; wrongs = 0;
+      p = mode === "seq" ? opts.seq[seqIndex]() : opts.make();
+      prompt.innerHTML = p.prompt;
+      sol.lastChild.innerHTML = p.solution;
+      sol.open = false;
+      var ex = CA.EXP.forQuestion(p, mode === "seq" ? opts.id + (seqIndex + 1) : opts.id);
+      if (exBox) exBox.dispose();
+      exq.lastChild.innerHTML = "";
+      exq.open = false;
+      exq.hidden = !ex;
+      exBox = ex ? CA.levelTabs(exq.lastChild, ex) : null;
+      fb.className = "feedback"; fb.innerHTML = "";
+      area.innerHTML = "";
+      if (p.type === "choice") {
+        var list = h("div", { class: "choices" });
+        p.choices.forEach(function (c, k) {
+          var b = h("button", { type: "button", html: c });
+          b.onclick = function () {
+            if (answered) return;
+            var res = p.check(k);
+            list.querySelectorAll("button").forEach(function (x) { x.classList.remove("picked-ng"); });
+            b.classList.add(res.ok ? "picked-ok" : "picked-ng");
+            judge(res, k);
+          };
+          list.appendChild(b);
+        });
+        area.appendChild(list);
+      } else {
+        var iid = CA.uid("ans");
+        var inp = h("input", { type: "text", id: iid, autocomplete: "off", autocapitalize: "off", spellcheck: "false", inputmode: p.inputMode || "text" });
+        var go = h("button", { type: "button", class: "primary", text: "答え合わせ" });
+        go.onclick = function () {
+          if (!inp.value.trim()) { fb.className = "feedback ng"; fb.innerHTML = "答えを入力してください。"; return; }
+          judge(p.check(inp.value));
+        };
+        inp.addEventListener("keydown", function (e) { if (e.key === "Enter") go.onclick(); });
+        area.appendChild(h("div", { class: "answer-row" }, h("label", { for: iid, text: p.inputLabel || "答え" }), inp, go));
+      }
+      if (mode === "seq") bNext.disabled = true;
+      label();
+      CA.progress.render();
+    }
+    bNext.onclick = function () {
+      if (mode === "seq") {
+        if (seqIndex === opts.seq.length - 1) { if (opts.onFinish) opts.onFinish(seqOk, opts.seq.length, box); return; }
+        seqIndex += 1;
+      }
+      load();
+    };
+    box.restart = function () { seqIndex = 0; seqOk = 0; bNext.textContent = "次の問題へ"; load(); };
+    mount.appendChild(box);
+    load();
+    return box;
+  };
+
+  /* ---------- 抽象レベルの地図（第3回スライド2の9層） ---------- */
+  var LEVELS = [
+    ["アプリケーションソフトウェア", "プログラム"],
+    ["OS", "デバイスドライバ"],
+    ["アーキテクチャ", "命令とレジスタ"],
+    ["マイクロアーキテクチャ", "データパス、コントローラ"],
+    ["論理", "加算器、メモリ"],
+    ["ディジタル回路", "ANDゲート、NOTゲート"],
+    ["アナログ回路", "増幅器、フィルタ"],
+    ["デバイス（素子）", "トランジスタ、ダイオード"],
+    ["物理", "電子"]
+  ];
+  CA.levels = function (mount, here, note) {
+    var ol = h("ol");
+    LEVELS.forEach(function (lv, k) {
+      var mark = here[k];
+      ol.appendChild(h("li", { class: mark ? "here" : "" }, h("span", { text: lv[0] }), h("span", { class: "ex", text: mark ? mark : lv[1] })));
+    });
+    var d = h("details", { class: "levels" }, h("summary", { text: note }), ol);
+    mount.appendChild(d);
+  };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>CA.sidebar();</script>
 </body>
 </html>

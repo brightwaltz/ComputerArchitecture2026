@@ -419,6 +419,76 @@ svg .ft { font-family: var(--font-body); } svg .fm { font-family: var(--font-mon
 .gate-pick button { font-family: var(--font-mono); }
 .gate-pick button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
 
+/* 解説（簡単・通常・詳細・発展）。左のメニューで選んだレベルが既定で、その場で切りかえられる */
+.lv-box { display: grid; gap: 10px; min-width: 0; }
+.lv-title { font: 700 var(--fs-small)/1.4 var(--font-mono); color: var(--accent); letter-spacing: 0.08em; }
+.lv-tabs { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; justify-self: start; max-width: 100%; }
+.lv-tabs button { border: 0; border-radius: 0; border-right: 1px solid var(--rule); font-size: var(--fs-small); padding: 6px 16px; background: var(--panel); color: var(--ink); }
+.lv-tabs button:last-child { border-right: 0; }
+.lv-tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.lv-panel { font-size: var(--fs-body); line-height: 1.8; max-width: 40em; min-width: 0; overflow-wrap: anywhere; }
+.lv-panel > * + * { margin-top: 10px; }
+.lv-panel ul, .lv-panel ol { margin: 0; padding-left: 1.4em; }
+.lv-panel table { border-collapse: collapse; font-size: var(--fs-small); }
+.lv-panel th, .lv-panel td { border: 1px solid var(--rule); padding: 2px 10px; text-align: center; }
+.item-explain { border: 1px solid var(--rule); border-left: 6px solid var(--accent); border-radius: var(--radius); background: var(--panel); padding: 14px 18px; }
+.explain-q summary { color: var(--accent); }
+.explain-q > div { padding-top: 10px; }
+
+/* 左のメニュー。広い画面では常に出し、狭い画面では「メニュー」ボタンで引き出す */
+.side {
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: 30; width: 272px;
+  overflow-y: auto; overscroll-behavior: contain;
+  background: var(--panel); border-right: 1px solid var(--rule);
+  padding: 16px 14px 32px; display: grid; align-content: start; gap: 20px;
+  font-size: var(--fs-small); line-height: 1.5;
+}
+.side-head { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.side-home { font-weight: 700; color: var(--ink); text-decoration: none; }
+a.side-home:hover { color: var(--wire); text-decoration: underline; }
+.side-close { display: none; font-size: var(--fs-small); padding: 4px 12px; white-space: nowrap; flex: none; }
+.side-group { display: grid; gap: 8px; }
+.side-label { font: 700 var(--fs-small)/1.4 var(--font-mono); color: var(--accent); letter-spacing: 0.06em; border-bottom: 1px solid var(--rule); padding-bottom: 4px; }
+.side-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.side-list a { display: block; padding: 5px 8px; border-radius: 6px; color: var(--ink); text-decoration: none; }
+.side-list a:hover { background: var(--wire-soft); }
+.side-list a.here { background: var(--accent-soft); box-shadow: inset 4px 0 0 var(--accent); font-weight: 700; }
+.side-levels { display: grid; gap: 4px; }
+.side-levels label { display: grid; grid-template-columns: auto auto 1fr; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; cursor: pointer; }
+.side-levels label:hover { background: var(--wire-soft); }
+.side-levels input { margin: 0; width: 18px; height: 18px; accent-color: var(--accent); }
+.side-levels label span { color: var(--muted); }
+.side-levels label:has(input:checked) { background: var(--accent-soft); }
+.side-pages li { display: grid; grid-template-columns: 4em minmax(0, 1fr); gap: 0 8px; padding: 6px 4px; border-bottom: 1px solid var(--rule); }
+.side-pages .s-no { font: 700 var(--fs-small)/1.5 var(--font-mono); color: var(--accent); }
+.side-pages .s-ttl { color: var(--ink); }
+.side-pages .s-links { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.side-pages .s-links a, .side-pages .s-links span { display: inline-block; padding: 2px 10px; border-radius: 999px; }
+.side-pages .s-links a { border: 1px solid var(--wire); color: var(--wire); }
+.side-pages .s-links a:hover { background: var(--wire-soft); }
+.side-pages .s-links .cur { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.side-pages .s-links .off { border: 1px dashed var(--rule); color: var(--muted); }
+.menu-btn { display: none; font-size: var(--fs-small); padding: 6px 14px; }
+.side-backdrop { position: fixed; inset: 0; z-index: 29; background: rgba(0, 0, 0, 0.35); }
+@media (min-width: 1180px) {
+  body.has-side { padding-left: 296px; }
+  .side-backdrop { display: none !important; }
+}
+@media (max-width: 1179px) {
+  .side { width: min(320px, 88vw); transform: translateX(-102%); transition: transform 0.2s ease, visibility 0s linear 0.2s; box-shadow: 0 0 24px rgba(0, 0, 0, 0.2); visibility: hidden; }
+  body.side-open .side { transform: none; visibility: visible; transition: transform 0.2s ease; }
+  .side-close { display: inline-block; }
+  .menu-btn { display: inline-block; }
+  body.has-side .mast-inner { justify-content: flex-start; }
+  body.has-side .mast-inner > .lamps { margin-left: auto; }
+}
+@media (max-width: 640px) {
+  body.has-side .mast-inner { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; align-items: center; }
+  body.has-side .mast-inner > .lamps { grid-column: 1 / -1; margin-left: 0; }
+  .menu-btn { padding: 6px 10px; }
+}
+@media print { .side, .menu-btn, .side-backdrop { display: none !important; } body.has-side { padding-left: 16px; } }
+
 </style>
 <header class="mast">
   <div class="mast-inner">
@@ -469,7 +539,7 @@ svg .ft { font-family: var(--font-body); } svg .fm { font-family: var(--font-mon
       <h2>前回の確認（3問）</h2>
       <span class="slides">第3回 デジタルデータの表現と演算</span>
     </div>
-    <p class="prose">第4回では、第3回の2進数の足し算（桁上がり）を回路にした「半加算器」が出てきます。解けなかったら、<a href="w03-review.html?v=202610151425">第3回 復習ページ</a>で確かめてから授業に来てください。</p>
+    <p class="prose">第4回では、第3回の2進数の足し算（桁上がり）を回路にした「半加算器」が出てきます。解けなかったら、<a href="w03-review.html?v=202610152352">第3回 復習ページ</a>で確かめてから授業に来てください。</p>
     <div id="review"></div>
   </section>
 
@@ -498,7 +568,7 @@ svg .ft { font-family: var(--font-body); } svg .fm { font-family: var(--font-mon
   </footer>
 </main>
 
-<script>window.CA_PAGE = "w04p";</script>
+<script>window.CA_PAGE = "w04p"; window.CA_SITE = {"home":"./","sessions":[{"no":3,"title":"デジタルデータの表現と演算","pages":[{"label":"復習","href":"w03-review.html?v=202610152352"}]},{"no":4,"title":"ブール代数と論理演算","pages":[{"label":"予習","current":true},{"label":"復習（10/22）"}]},{"no":5,"title":"論理回路と組み合わせ回路","pages":[{"label":"予習（10/22）"},{"label":"復習（10/29）"}]},{"no":6,"title":"順序回路","pages":[{"label":"予習（11/12）"}]}]};</script>
 <script>
 /* 部品① ビットの計算（画面に依存しない関数と、ドリルの問題生成）。node のテストからも読む。 */
 (function (root) {
@@ -672,7 +742,11 @@ svg .ft { font-family: var(--font-body); } svg .fm { font-family: var(--font-mon
     for (var k = 0; k < 200; k++) {
       var p = make(rng);
       if (!p) continue;
-      if (!isBlocked(p.key, now)) return p;
+      if (isBlocked(p.key, now)) continue;
+      /* 解説（explain-bits.js）に課題の答えが出てしまう問題も引き直す */
+      var EXP = root.CA && root.CA.EXP;
+      if (EXP && EXP.leaks && EXP.leaks(p.key, now)) continue;
+      return p;
     }
     throw new Error("問題を作れませんでした");
   }
@@ -1027,6 +1101,149 @@ svg .ft { font-family: var(--font-body); } svg .fm { font-family: var(--font-mon
     }
   };
 
+  /* ---------- サイト全体で共有する設定（解説のレベルなど） ---------- */
+  CA.gstore = {
+    get: function (k, d) { try { var v = localStorage.getItem("ca2026.global." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem("ca2026.global." + k, JSON.stringify(v)); } catch (e) { /* 保存できない環境 */ } }
+  };
+  var LV = [["easy", "簡単", "要点だけ"], ["normal", "通常", "ふつうの説明"], ["detail", "詳細", "手順をくわしく"], ["adv", "発展", "一歩先の話"]];
+  var levelListeners = [];
+  CA.level = {
+    LIST: LV,
+    get: function () { var v = CA.gstore.get("level", "normal"); return LV.some(function (x) { return x[0] === v; }) ? v : "normal"; },
+    set: function (v) { CA.gstore.set("level", v); levelListeners.slice().forEach(function (fn) { fn(v); }); },
+    /* 登録をやめる関数を返す */
+    count: function () { return levelListeners.length; },
+    on: function (fn) { levelListeners.push(fn); return function () { var i = levelListeners.indexOf(fn); if (i >= 0) levelListeners.splice(i, 1); }; }
+  };
+
+  /* ---------- 解説（4段）。問題の key から作るハンドラは explain-*.js が CA.EXP.handlers に足す ---------- */
+  CA.EXP = CA.EXP || { handlers: [] };
+  CA.EXP.fromKey = function (key) {
+    if (!key) return null;
+    for (var i = 0; i < CA.EXP.handlers.length; i++) {
+      var m = key.match(CA.EXP.handlers[i][0]);
+      if (m) { try { return CA.EXP.handlers[i][1](key, m); } catch (e) { return null; } }
+    }
+    return null;
+  };
+  /* 問題の解説を探す順：問題に付いた解説 → ページの手書き解説（CA.EXP_Q[ページ][問題id]）→ 固定問題の key（CA.EXP_KEYS）→ 問題の key */
+  CA.EXP.forQuestion = function (p, qid) {
+    if (p.explain) return p.explain;
+    var q = (CA.EXP_Q || {})[root.CA_PAGE];
+    if (q && q[qid]) return q[qid];
+    var k = (CA.EXP_KEYS || {})[qid];
+    return CA.EXP.fromKey(k || p.exKey || p.key);
+  };
+  /* 4段の切りかえ。levels: { easy, normal, detail, adv }。左メニューのレベルが既定で、その場で切りかえもできる */
+  CA.levelTabs = function (mount, levels, opts) {
+    opts = opts || {};
+    var cur = CA.level.get();
+    var tabs = h("div", { class: "lv-tabs", role: "tablist", "aria-label": "解説のレベル" });
+    var panel = h("div", { class: "lv-panel", role: "tabpanel" });
+    function show(v) {
+      cur = v;
+      tabs.querySelectorAll("button").forEach(function (b) { var on = b.getAttribute("data-lv") === v; b.setAttribute("aria-selected", on ? "true" : "false"); b.tabIndex = on ? 0 : -1; });
+      panel.innerHTML = levels[v] || levels.normal || "";
+    }
+    LV.forEach(function (x) {
+      tabs.appendChild(h("button", { type: "button", role: "tab", "data-lv": x[0], title: x[2], text: x[1], onclick: function () { show(x[0]); } }));
+    });
+    tabs.addEventListener("keydown", function (e) {
+      var i = LV.map(function (x) { return x[0]; }).indexOf(cur);
+      if (e.key === "ArrowRight") { e.preventDefault(); show(LV[(i + 1) % 4][0]); tabs.querySelector("[aria-selected=true]").focus(); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); show(LV[(i + 3) % 4][0]); tabs.querySelector("[aria-selected=true]").focus(); }
+    });
+    var box = h("div", { class: "lv-box" + (opts.cls ? " " + opts.cls : "") }, opts.title ? h("div", { class: "lv-title", text: opts.title }) : null, tabs, panel);
+    /* 問題を出し直すと箱を作り直すので、古い箱の登録は dispose で外す */
+    box.dispose = CA.level.on(function (v) { show(v); });
+    mount.appendChild(box);
+    show(cur);
+    return box;
+  };
+  /* 項目ごとの解説：ページの <div data-explain="i1"> に置く */
+  CA.explainItems = function (map) {
+    if (!map) return;
+    document.querySelectorAll("[data-explain]").forEach(function (el) {
+      var lv = map[el.getAttribute("data-explain")];
+      if (lv) CA.levelTabs(el, lv, { title: "解説", cls: "item-explain" });
+    });
+  };
+
+  /* ---------- 左のメニュー：サイトのページ一覧・このページの中・解説のレベル ---------- */
+  CA.sidebar = function () {
+    var site = root.CA_SITE || { sessions: [] };
+    var nav = h("nav", { class: "side", id: "side", "aria-label": "メニュー" });
+    var close = h("button", { type: "button", class: "side-close", "aria-label": "メニューを閉じる", text: "閉じる" });
+    nav.appendChild(h("div", { class: "side-head" }, site.home ? h("a", { href: site.home, class: "side-home", text: "コンピュータアーキテクチャ 2026" }) : h("span", { class: "side-home", text: "コンピュータアーキテクチャ 2026" }), close));
+    /* このページの中 */
+    var secs = [];
+    document.querySelectorAll("main section[id]").forEach(function (sec) {
+      var hd = sec.querySelector("h2, h1");
+      if (!hd) return;
+      var no = sec.querySelector(".item-head .no");
+      var t = hd.textContent.replace(/\s+/g, " ").trim();
+      if (sec.id === "movie") t = "動画：" + t.replace(/^動画：/, "").replace(/^今日の問い：/, "");
+      secs.push({ id: sec.id, label: (no ? no.textContent.replace("最低限 ", "").replace("やること ", "") + "　" : "") + t });
+    });
+    if (secs.length) {
+      var ul = h("ul", { class: "side-list" });
+      ul.appendChild(h("li", null, h("a", { href: "#", "data-sec": "", text: "ページの先頭" })));
+      secs.forEach(function (x) { ul.appendChild(h("li", null, h("a", { href: "#" + x.id, "data-sec": x.id, text: x.label }))); });
+      nav.appendChild(h("div", { class: "side-group" }, h("div", { class: "side-label", text: "このページ" }), ul));
+    }
+    /* 解説のレベル */
+    var lvBox = h("div", { class: "side-levels", role: "radiogroup", "aria-label": "解説のレベル" });
+    LV.forEach(function (x) {
+      var id = CA.uid("lv");
+      var r = h("input", { type: "radio", name: "side-level", id: id, value: x[0] });
+      r.checked = CA.level.get() === x[0];
+      r.onchange = function () { if (r.checked) CA.level.set(x[0]); };
+      lvBox.appendChild(h("label", { for: id }, r, h("b", { text: x[1] }), h("span", { text: x[2] })));
+    });
+    CA.level.on(function (v) { lvBox.querySelectorAll("input").forEach(function (r) { r.checked = r.value === v; }); });
+    nav.appendChild(h("div", { class: "side-group" }, h("div", { class: "side-label", text: "解説のレベル" }), lvBox));
+    /* ページ一覧 */
+    if (site.sessions && site.sessions.length) {
+      var sl = h("ul", { class: "side-list side-pages" });
+      site.sessions.forEach(function (ss) {
+        var links = ss.pages.map(function (pg) {
+          if (pg.current) return h("span", { class: "cur", "aria-current": "page", text: pg.label });
+          return pg.href ? h("a", { href: pg.href, text: pg.label }) : h("span", { class: "off", text: pg.label });
+        });
+        sl.appendChild(h("li", null, h("span", { class: "s-no", text: "第" + ss.no + "回" }), h("span", { class: "s-ttl", text: ss.title }), h("span", { class: "s-links" }, links)));
+      });
+      nav.appendChild(h("div", { class: "side-group" }, h("div", { class: "side-label", text: "予習・復習ページ" }), sl));
+    }
+    var backdrop = h("div", { class: "side-backdrop", hidden: true });
+    function open(v) {
+      document.body.classList.toggle("side-open", v);
+      backdrop.hidden = !v;
+      if (v) { var f = nav.querySelector("a, button"); if (f) f.focus(); } else if (menuBtn) menuBtn.focus();
+    }
+    close.onclick = function () { open(false); };
+    backdrop.onclick = function () { open(false); };
+    nav.addEventListener("click", function (e) { if (e.target.tagName === "A" && window.matchMedia("(max-width: 1179px)").matches) open(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && document.body.classList.contains("side-open")) open(false); });
+    var menuBtn = h("button", { type: "button", class: "menu-btn", "aria-controls": "side", "aria-label": "メニューを開く", text: "☰ メニュー" });
+    menuBtn.onclick = function () { open(!document.body.classList.contains("side-open")); };
+    var mi = document.querySelector(".mast-inner");
+    if (mi) mi.insertBefore(menuBtn, mi.firstChild);
+    document.body.insertBefore(nav, document.body.firstChild);
+    document.body.appendChild(backdrop);
+    document.body.classList.add("has-side");
+    /* いま読んでいる場所を強調 */
+    if ("IntersectionObserver" in root && secs.length) {
+      var links2 = nav.querySelectorAll("[data-sec]");
+      var io = new IntersectionObserver(function (ents) {
+        ents.forEach(function (en) {
+          if (en.isIntersecting) links2.forEach(function (a) { a.classList.toggle("here", a.getAttribute("data-sec") === en.target.id); });
+        });
+      }, { rootMargin: "-30% 0px -60% 0px" });
+      secs.forEach(function (x) { var el = document.getElementById(x.id); if (el) io.observe(el); });
+    }
+  };
+
   /* ---------- 進み具合（最低限の項目ごとのランプ） ---------- */
   var progress = { items: [], done: {}, listeners: [] };
   CA.progress = {
@@ -1127,10 +1344,11 @@ svg .ft { font-family: var(--font-body); } svg .fm { font-family: var(--font-mon
     var area = h("div");
     var fb = h("div", { class: "feedback", role: "status", "aria-live": "polite" });
     var sol = h("details", { class: "solution" }, h("summary", { text: "解き方を見る" }), h("div"));
+    var exq = h("details", { class: "solution explain-q" }, h("summary", { text: "解説を見る（簡単・通常・詳細・発展）" }), h("div")), exBox = null;
     var bNext = h("button", { type: "button", text: mode === "seq" ? "次の問題へ" : "別の問題を出す" });
     var foot = h("div", { class: "row" });
     if (mode !== "check") foot.appendChild(bNext);
-    var box = h("div", { class: "quiz" + (mode === "check" ? " check-quiz" : "") }, kind, prompt, area, fb, sol, foot);
+    var box = h("div", { class: "quiz" + (mode === "check" ? " check-quiz" : "") }, kind, prompt, area, fb, sol, exq, foot);
     if (mode === "check" && opts.itemId && CA.progress.isDone(opts.itemId)) box.classList.add("done");
 
     function label() {
@@ -1170,6 +1388,12 @@ svg .ft { font-family: var(--font-body); } svg .fm { font-family: var(--font-mon
       prompt.innerHTML = p.prompt;
       sol.lastChild.innerHTML = p.solution;
       sol.open = false;
+      var ex = CA.EXP.forQuestion(p, mode === "seq" ? opts.id + (seqIndex + 1) : opts.id);
+      if (exBox) exBox.dispose();
+      exq.lastChild.innerHTML = "";
+      exq.open = false;
+      exq.hidden = !ex;
+      exBox = ex ? CA.levelTabs(exq.lastChild, ex) : null;
       fb.className = "feedback"; fb.innerHTML = "";
       area.innerHTML = "";
       if (p.type === "choice") {
@@ -1872,6 +2096,591 @@ svg .ft { font-family: var(--font-body); } svg .fm { font-family: var(--font-mon
 })(typeof window !== "undefined" ? window : globalThis);
 
 </script>
+<script>
+/* 解説（4段）：2進数系の問題。問題の key から作る */
+(function (root) {
+  "use strict";
+  var CA = root.CA = root.CA || {};
+  CA.EXP = CA.EXP || { handlers: [] };
+  function add(re, fn) { CA.EXP.handlers.push([re, fn]); }
+
+  /* ---------- 小さな計算（bits.js がなくても動くように自前で持つ） ---------- */
+  function toBin(n, w) { var s = (n >>> 0).toString(2); if (w) { s = s.slice(-w); while (s.length < w) s = "0" + s; } return s; }
+  function fromBin(s) { return parseInt(s, 2); }
+  function g4(s) { var o = []; for (var i = s.length; i > 0; i -= 4) o.unshift(s.slice(Math.max(0, i - 4), i)); return o.join(" "); }
+  function hex(n, d) { var s = (n >>> 0).toString(16).toUpperCase(); while (d && s.length < d) s = "0" + s; return s; }
+  function mn(v) { return v < 0 ? "−" + (-v) : String(v); }
+  function signed(u, w) { var m = Math.pow(2, w); u = ((u % m) + m) % m; return u >= m / 2 ? u - m : u; }
+  function inv(u, w) { return (~u) & (Math.pow(2, w) - 1); }
+  function num(s) { return "<span class=\"num\">" + s + "</span>"; }
+  function pow2(k) { return "2<sup>" + mn(k) + "</sup>"; }
+  function addCols(a, b, w) {
+    var c = [0], s = 0;
+    for (var i = 0; i < w; i++) { var t = ((a >> i) & 1) + ((b >> i) & 1) + c[i]; if (t & 1) s |= 1 << i; c.push(t >> 1); }
+    return { sum: s, carries: c, carryOut: c[w] };
+  }
+  function weightsOf(s) { var t = []; for (var i = 0; i < s.length; i++) if (s[i] === "1") t.push(Math.pow(2, s.length - 1 - i)); return t; }
+  function li(items) { return "<ol>" + items.map(function (x) { return "<li>" + x + "</li>"; }).join("") + "</ol>"; }
+
+  /* ---------- 2進数 → 10進数 ---------- */
+  add(/^b2d:([01]+)$/, function (key, m) {
+    var s = m[1], w = s.length, n = fromBin(s), terms = weightsOf(s);
+    var rows = "";
+    for (var i = 0; i < w; i++) {
+      var k = w - 1 - i, wt = Math.pow(2, k), b = +s[i];
+      rows += "<tr><td>" + (k + 1) + "</td><td>" + pow2(k) + " = " + wt + "</td><td>" + b + "</td><td>" + (b * wt) + "</td></tr>";
+    }
+    var half = n >> 1, dbl = n * 2;
+    return {
+      easy: "2進数の各桁は、その桁の重みが「入っている（1）か、入っていない（0）か」を表すスイッチです。1 の桁の重みを足せば値になります。",
+      normal: "10進数の 345 が 3×100 + 4×10 + 5×1 であるのと同じで、2進数は桁の重みが 1、2、4、8、… と2倍ずつになります。" + num(s + "<sub>2</sub>") + " は 1 が立っている桁の重み " + terms.join("、") + " を足して <b>" + n + "</b> です。",
+      detail: "右の桁から順に、重みとビットを掛けて足します。<table class=\"ref\"><tr><th>右から何桁目</th><th>重み</th><th>ビット</th><th>ビット × 重み</th></tr>" + rows + "</table>右の列を全部足すと " + terms.join(" + ") + " = <b>" + n + "</b>。0 の桁は掛けると 0 になるので、足さなくてかまいません。",
+      adv: w + " ビットで表せる最大の数は、全部の桁が 1 の " + pow2(w) + " − 1 = " + (Math.pow(2, w) - 1) + " です。また、ビット列を左へ1つずらすと値は2倍（" + n + " → " + dbl + "）、右へ1つずらすと2で割った商（" + n + " → " + half + "）になります。CPU のシフト命令は、これを使って2のべき乗の掛け算・割り算をすばやく行います。"
+    };
+  });
+
+  /* ---------- 10進数 → 2進数 ---------- */
+  add(/^d2b:(\d+)$/, function (key, m) {
+    var n = +m[1], s = n.toString(2), rows = [], x = n, k = 1;
+    while (x > 0) { rows.push(x + " ÷ 2 = " + Math.floor(x / 2) + " 余り " + (x % 2) + " → 右から " + k + " 桁目は " + (x % 2)); x = Math.floor(x / 2); k++; }
+    var terms = weightsOf(s);
+    var bitsLen = s.length;
+    return {
+      easy: "2で割った余りは、いちばん右の桁（重み 1）が 0 か 1 かを表します。割り続けると、下の桁から順に分かります。",
+      normal: n + " を 2 で割った余り " + (n % 2) + " が右から1桁目（1 の位）、その商をまた 2 で割った余りが2桁目（2 の位）……と、<b>下の桁から順に</b>決まります。だから最後に出た余りが最上位の桁で、余りを下から上へ読むと " + num(s) + " です。",
+      detail: li(rows.concat(["商が 0 になったので終わり。最後の余りが最上位なので、下から上へ読んで " + num(s) + "。", "確かめ：" + num(s + "<sub>2</sub>") + " の 1 の桁の重みを足すと " + terms.join(" + ") + " = " + n + " に戻ります。"])),
+      adv: "別の方法として、" + n + " 以下でいちばん大きい2のべき乗から順に引いていく方法もあります（" + n + " = " + terms.join(" + ") + "）。どちらの方法でも、桁数は " + n + " より大きくない最大の2のべき乗 " + pow2(bitsLen - 1) + " = " + Math.pow(2, bitsLen - 1) + " で決まり、" + bitsLen + " 桁になります。"
+    };
+  });
+
+  /* ---------- 2進数 → 16進数 ---------- */
+  add(/^b2h:([01]{8})$/, function (key, m) {
+    var s = m[1], n = fromBin(s), hi = n >> 4, lo = n & 15, h = hex(n, 2);
+    function part(v) { var b = toBin(v, 4); return num(b) + " = " + weightsOf(b).concat(weightsOf(b).length ? [] : ["0"]).join(" + ") + " = " + v + " → " + hex(v, 1); }
+    return {
+      easy: "16進数の1桁は、4ビットをひとまとめにした呼び名です。4ビットずつ区切って、それぞれを1文字にします。",
+      normal: "4ビットは 0000〜1111 の16通りで、16進数の1桁（0〜9、A〜F）とちょうど1対1に対応します。だから " + num(g4(s)) + " を上下の4ビットに分け、" + num(toBin(hi, 4)) + " を " + hex(hi, 1) + "、" + num(toBin(lo, 4)) + " を " + hex(lo, 1) + " にすると <b>" + h + "</b> です。",
+      detail: li(["右から4ビットずつ区切る：" + num(toBin(hi, 4)) + " | " + num(toBin(lo, 4)) + "。", "上の4ビット：" + part(hi) + "。", "下の4ビット：" + part(lo) + "。", "並べて " + h + "<sub>16</sub>。", "確かめ：" + h + "<sub>16</sub> = " + hi + " × 16 + " + lo + " = " + n + "、" + num(s + "<sub>2</sub>") + " も " + n + "。"]),
+      adv: "16進数は、2進数を短く書くために使われます。8ビット（1バイト）は16進数2桁で書けるので、メモリの中身やアドレスの表示、色の指定（#RRGGBB）などでよく見かけます。たとえば32ビットのアドレスは16進数8桁です。"
+    };
+  });
+
+  /* ---------- 16進数 → 2進数 ---------- */
+  add(/^h2b:([0-9A-F]{2})$/, function (key, m) {
+    var h = m[1], hi = parseInt(h[0], 16), lo = parseInt(h[1], 16), n = hi * 16 + lo, s = toBin(n, 8);
+    function part(c, v) { var b = toBin(v, 4); return c + " = " + v + " = " + (weightsOf(b).length ? weightsOf(b).join(" + ") : "0") + " → " + num(b); }
+    return {
+      easy: "16進数の1文字を、4ビットの2進数に1つずつ置きかえるだけです。",
+      normal: h[0] + " は10進数で " + hi + "、" + h[1] + " は " + lo + " です。16進数の1桁は必ず4ビットになるので、上の桁の 0 も省かずに書いて、つなげると " + num(g4(s)) + " です。",
+      detail: li([part(h[0], hi) + "（重み 8・4・2・1 で作る）。", part(h[1], lo) + "。", "上の桁を左に並べて " + num(g4(s)) + "。", "確かめ：" + h + "<sub>16</sub> = " + hi + " × 16 + " + lo + " = " + n + "。"]),
+      adv: "2進数を経由すると、ほかの基数との行き来も簡単です。" + num(s) + " を右から3ビットずつ区切ると8進数で " + n.toString(8) + "<sub>8</sub> になります（8進数の1桁は3ビット）。Java などで 0x" + h + " と書くと16進数、0" + n.toString(8) + " と書くと8進数として読まれるのはこのためです。"
+    };
+  });
+
+  /* ---------- 10進数の負の数 → 2の補数 ---------- */
+  add(/^n2t(\d+):(-\d+)$/, function (key, m) {
+    var w = +m[1], v = +m[2], a = -v, M = Math.pow(2, w), u = M + v, s = toBin(u, w), pos = toBin(a, w), iv = toBin(inv(a, w), w);
+    var chk = addCols(u, a, w);
+    return {
+      easy: "2の補数の −" + a + " は、「+" + a + " を足すと 0 になる（あふれた桁は捨てる）ビット列」です。",
+      normal: w + " ビットの世界は " + M + " で1周します。−" + a + " は 0 から " + a + " 戻った場所、つまり " + M + " − " + a + " = " + u + " の位置で、その2進数が " + num(g4(s)) + " です。反転すると " + (M - 1) + " − " + a + " になり、1 を足すと " + M + " − " + a + " になるので、「反転して＋1」と同じ結果です。",
+      detail: li(["+" + a + " を " + w + " ビットで書く：" + num(g4(pos)) + "。", "全ビットを反転：" + num(g4(iv)) + "（これは " + (M - 1) + " − " + a + " = " + inv(a, w) + "）。", "1 を足す：" + num(g4(s)) + "（" + u + "）。最上位が 1 なので負の数を表しています。", "確かめ：" + num(g4(s)) + " + " + num(g4(pos)) + " = " + num("1 " + g4(toBin(chk.sum, w))) + "。" + w + " ビットからあふれた桁を捨てると 0 になり、−" + a + " + " + a + " = 0 と合います。"]),
+      adv: "2の補数は「" + M + " で割った余り（mod " + M + "）」で計算する仕組みです。−" + a + " と " + u + " は " + w + " ビットの世界では同じものとして扱われるので、足し算の回路だけで引き算もできます。" + w + " ビットで表せる範囲は " + mn(-M / 2) + "〜+" + (M / 2 - 1) + " で、" + mn(-M / 2) + " だけは対になる正の数がありません。"
+    };
+  });
+
+  /* ---------- 2の補数 → 10進数 ---------- */
+  add(/^t2n(\d+):([01]+)$/, function (key, m) {
+    var w = +m[1], s = m[2], u = fromBin(s), M = Math.pow(2, w), v = signed(u, w), iv = toBin(inv(u, w), w), mag = -v;
+    var rest = u - M / 2;
+    return {
+      easy: "最上位ビットが 1 なら負の数です。大きさは、もう一度「反転して＋1」すると分かります。",
+      normal: num(g4(s)) + " の最上位は 1 なので負の数です。符号なしで読むと " + u + " ですが、" + w + " ビットの2の補数では、そこから " + M + " を引いた " + u + " − " + M + " = <b>" + mn(v) + "</b> を表します。反転して＋1 すると " + mag + " になることからも確かめられます。",
+      detail: li(["最上位ビットを見る：1 なので負の数。", "全ビットを反転：" + num(g4(iv)) + "。", "1 を足す：" + num(g4(toBin(mag, w))) + " = " + mag + "。これが大きさです。", "符号を付けて " + mn(v) + "。"]),
+      adv: "別の読み方として、最上位ビットの重みだけを負（−" + pow2(w - 1) + " = " + mn(-M / 2) + "）と考えて足すと、直接値が出ます。" + num(g4(s)) + " なら " + mn(-M / 2) + " + " + rest + " = " + mn(v) + "。残りの " + (w - 1) + " ビット（" + num(s.slice(1)) + " = " + rest + "）は、ふつうの符号なしの数として読みます。"
+    };
+  });
+
+  /* ---------- 補数を足す引き算（4ビット） ---------- */
+  add(/^sub4:([01]{4})-([01]{4})$/, function (key, m) {
+    var sa = m[1], sb = m[2], a = fromBin(sa), b = fromBin(sb), nb = (inv(b, 4) + 1) & 15, r = addCols(a, nb, 4);
+    var ans = toBin(r.sum, 4), x = signed(r.sum, 4), full = (r.carryOut ? "1 " : "") + ans;
+    var tail = x < 0 ? "最上位が 1 なので負の数。反転して＋1 すると " + num(toBin((inv(r.sum, 4) + 1) & 15, 4)) + " = " + (-x) + " なので " + mn(x) + "。" : "最上位が 0 なので、そのまま " + x + "。";
+    return {
+      easy: "引き算 A − B は「A ＋（−B）」です。−B を2の補数で作れば、足し算だけで計算できます。",
+      normal: num(sb) + "（" + b + "）の2の補数は " + num(toBin(nb, 4)) + "（−" + b + "）です。" + num(sa) + " + " + num(toBin(nb, 4)) + " = " + num(full) + (r.carryOut ? "。4ビットに入らない5桁目は捨てて " + num(ans) : "") + "。これが " + a + " − " + b + " = " + mn(a - b) + " を表します。",
+      detail: li(["引く数 " + num(sb) + " を反転：" + num(toBin(inv(b, 4), 4)) + "。", "1 を足して −" + b + " を作る：" + num(toBin(nb, 4)) + "。", num(sa) + " + " + num(toBin(nb, 4)) + " を右の桁から足す：" + num(full) + "。", (r.carryOut ? "5桁目の 1 は4ビットに入らないので捨てる → " + num(ans) + "。" : "5桁目への桁上がりは出ない → " + num(ans) + "。"), tail]),
+      adv: "5桁目を捨てるのは、16 を引くのと同じです。" + num(toBin(nb, 4)) + " は 16 − " + b + " = " + nb + " なので、" + a + " + (16 − " + b + ") − 16 = " + a + " − " + b + " になります。この計算は「符号なし」と「2の補数」のどちらで読んでも正しいので、CPU は同じ足し算の回路で両方を扱えます。"
+    };
+  });
+
+  /* ---------- 8ビットの足し算 ---------- */
+  add(/^add8:([01]{8})\+([01]{8})$/, function (key, m) {
+    var sa = m[1], sb = m[2], a = fromBin(sa), b = fromBin(sb), r = addCols(a, b, 8), sum = toBin(r.sum, 8);
+    var nc = r.carries.slice(1, 9).filter(function (x) { return x; }).length;
+    var rows = "";
+    for (var i = 0; i < 8; i++) {
+      var x = (a >> i) & 1, y = (b >> i) & 1, cin = r.carries[i];
+      rows += "<tr><td>" + (i + 1) + "</td><td>" + x + "</td><td>" + y + "</td><td>" + cin + "</td><td>" + ((r.sum >> i) & 1) + "</td><td>" + r.carries[i + 1] + "</td></tr>";
+    }
+    return {
+      easy: "2進数の足し算は10進数の筆算と同じです。1 + 1 = 10 になったら、その桁に 0 を書いて左へ 1 を上げます。",
+      normal: num(g4(sa)) + "（" + a + "）と " + num(g4(sb)) + "（" + b + "）を右の桁から足すと、桁上がりが " + nc + " 回起きて " + num(g4(sum)) + "（" + (a + b) + "）になります。答えが +127 以下なので、8ビットの2の補数で正しく表せます。",
+      detail: "右の桁から1桁ずつ、A・B・下からの桁上がりの3つを足します。<table class=\"ref\"><tr><th>右から何桁目</th><th>A</th><th>B</th><th>下からの桁上がり</th><th>和</th><th>左への桁上がり</th></tr>" + rows + "</table>和の列を左から読むと " + num(g4(sum)) + " です。",
+      adv: "8ビットの2の補数で表せるのは −128〜+127 です。正の数どうしを足して 127 を超えると、最上位が 1 になって負の数に読めてしまいます（オーバーフロー）。CPU は計算のたびに、これを「オーバーフローフラグ」で知らせます。"
+    };
+  });
+
+  /* ---------- オーバーフローの判定（4ビット、2の補数） ---------- */
+  add(/^ov4:([01]{4})\+([01]{4})$/, function (key, m) {
+    var sa = m[1], sb = m[2], ua = fromBin(sa), ub = fromBin(sb), a = signed(ua, 4), b = signed(ub, 4), t = a + b;
+    var r = addCols(ua, ub, 4), sv = signed(r.sum, 4), ov = t < -8 || t > 7;
+    var c3 = r.carries[3], c4 = r.carries[4];
+    return {
+      easy: "4ビットの2の補数で表せるのは −8〜+7 です。本当の答えがこの範囲を出たら、オーバーフローです。",
+      normal: num(sa) + " は " + mn(a) + "、" + num(sb) + " は " + mn(b) + " なので、本当の答えは " + mn(a) + " + " + (b < 0 ? "(" + mn(b) + ")" : b) + " = " + mn(t) + " です。" + (ov ? "これは −8〜+7 に入らないので<b>オーバーフロー</b>します。ビット列は " + num(toBin(r.sum, 4)) + " になり、" + mn(sv) + " と誤って読めてしまいます。" : "これは −8〜+7 に入るので、オーバーフローしません。" + (r.carryOut ? "5桁目に桁上がりは出ますが、捨ててよい桁で、結果 " + num(toBin(r.sum, 4)) + " = " + mn(sv) + " は正しい値です。" : "結果 " + num(toBin(r.sum, 4)) + " = " + mn(sv) + " は正しい値です。")),
+      detail: li(["それぞれを10進数で読む：" + num(sa) + " = " + mn(a) + "、" + num(sb) + " = " + mn(b) + "。", "本当の和：" + mn(t) + "。", "範囲を見る：4ビットの2の補数は −8〜+7。" + mn(t) + " は" + (ov ? "範囲の外。" : "範囲の中。"), "ビットで足す：" + num(sa) + " + " + num(sb) + " = " + num((r.carryOut ? "1 " : "") + toBin(r.sum, 4)) + (r.carryOut ? "（5桁目は捨てる）" : "") + "。", "結果を2の補数で読むと " + mn(sv) + "。" + (ov ? "本当の和 " + mn(t) + " と違うので、オーバーフローしています。" : "本当の和と同じなので、正しく計算できています。")]),
+      adv: "見分ける近道があります。符号が同じ2つの数を足して、結果の符号が変わったときだけオーバーフローします（符号が違う2数の和は必ず範囲に入ります）。回路では、最上位の桁に入ってくる桁上がりと、そこから出ていく桁上がりが違うときがオーバーフローです。この問題では、入ってくる桁上がりが " + c3 + "、出ていく桁上がりが " + c4 + " で、" + (c3 !== c4 ? "違うのでオーバーフローです。" : "同じなのでオーバーフローではありません。")
+    };
+  });
+
+  /* ---------- 符号なしの掛け算（4ビット × 4ビット） ---------- */
+  add(/^mul4:([01]{4})x([01]{4})$/, function (key, m) {
+    var sa = m[1], sb = m[2], a = fromBin(sa), b = fromBin(sb), p = a * b, ones = [];
+    for (var i = 0; i < 4; i++) if ((b >> i) & 1) ones.push(i);
+    var items = [];
+    for (var j = 0; j < 4; j++) {
+      var bit = (b >> j) & 1;
+      items.push("かける数の右から " + (j + 1) + " 桁目は " + bit + "：" + (bit ? num(sa) + " を " + j + " 桁左へずらして " + num(toBin(a * Math.pow(2, j))) + "（" + a + " × " + Math.pow(2, j) + " = " + a * Math.pow(2, j) + "）" : "部分積は 0"));
+    }
+    items.push("部分積を足す：" + ones.map(function (k) { return a * Math.pow(2, k); }).join(" + ") + " = " + p + " = " + num(toBin(p)) + "。");
+    return {
+      easy: "かける数の各桁が 1 なら、かけられる数をその桁の分だけ左へずらして足します。2進数の掛け算は「ずらして足す」だけです。",
+      normal: num(sb) + "（" + b + "）は " + ones.map(function (k) { return pow2(k); }).join(" + ") + " なので、" + a + " × " + b + " = " + ones.map(function (k) { return a + " × " + pow2(k); }).join(" + ") + " です。" + pow2(1) + " を掛けることは左へ1桁ずらすことなので、ずらした " + num(sa) + " を足して " + num(toBin(p)) + "（" + p + "）になります。",
+      detail: li(items),
+      adv: "4ビット × 4ビットの答えは最大でも 15 × 15 = 225 で、8ビットあれば必ず入ります（n ビット × n ビットの積は 2n ビット以内）。CPU の掛け算回路は、この「部分積を作って足す」を並べたものです。符号付きの掛け算を少ない足し算で行うブースのアルゴリズムのような工夫もあります。"
+    };
+  });
+
+  /* ---------- 浮動小数点（IEEE754 単精度）を読む ---------- */
+  add(/^fr:([01]{32})$/, function (key, m) {
+    var bits = m[1], s = +bits[0], es = bits.slice(1, 9), fs = bits.slice(9), e = fromBin(es), exp = e - 127;
+    var fr = 0, fterms = [];
+    for (var i = 0; i < 23; i++) if (fs[i] === "1") { fr += Math.pow(2, -(i + 1)); fterms.push(Math.pow(2, -(i + 1))); }
+    var mant = 1 + fr, x = (s ? -1 : 1) * Math.pow(2, exp) * mant;
+    var fshort = fs.replace(/0+$/, "") || "0";
+    var eterms = weightsOf(es);
+    return {
+      easy: "浮動小数点は、数を「符号 × 1.□□ × 2 の何乗」という形で記録します。3つの部分を読んで掛け合わせれば値になります。",
+      normal: "符号部が " + s + " なので" + (s ? "負" : "正") + "の数です。指数部 " + num(g4(es)) + " は " + e + " で、127 を引いた " + mn(exp) + " が本当の指数なので " + pow2(exp) + " です。仮数部は先頭に「1.」を補って 1." + fshort + "<sub>2</sub> = " + mant + "。掛け合わせて " + (s ? "−" : "") + pow2(exp) + " × " + mant + " = <b>" + mn(x) + "</b> です。",
+      detail: li(["32ビットを 1・8・23 ビットに分ける：符号部 " + num(String(s)) + "、指数部 " + num(g4(es)) + "、仮数部 " + num(fshort + "…") + "（残りは 0）。", "符号部：" + s + " → " + (s ? "負（−1 を掛ける）" : "正") + "。", "指数部：" + num(es) + " = " + eterms.join(" + ") + " = " + e + "。127 を引いて " + mn(exp) + " → " + pow2(exp) + " = " + Math.pow(2, exp) + "。", "仮数部：小数点の右の重みは 0.5、0.25、0.125…。1." + fshort + "<sub>2</sub> = 1" + (fterms.length ? " + " + fterms.join(" + ") : "") + " = " + mant + "。", "値：" + (s ? "−" : "") + Math.pow(2, exp) + " × " + mant + " = " + mn(x) + "。"]),
+      adv: "指数部に 127 を足して記録する（バイアス）のは、指数を符号なしの数として並べ、大小の比較を簡単にするためです。指数部がすべて 0 やすべて 1 のビット列は、0・非正規化数・∞・NaN という特別な値に使います。また 0.1 のように2進数で割り切れない数は、仮数部の23ビットに入りきらず丸められるので、計算に小さな誤差が出ます。"
+    };
+  });
+
+  /* ---------- 解説に、出してはいけない「2進数と10進数の組」が出ないか ----------
+     課題の答え（例：締切前の 2進→10進 の問題）は、bits.js の isBlocked で分かる。
+     解説の中で、2進数とその値の10進数が近く（40字以内）に並んでいたら、その組を調べる。
+     bits.js の問題づくりは、ここが true を返す問題を引き直す。 */
+  CA.EXP.leaks = function (key, now) {
+    var B = CA.bits;
+    if (!B || !B.isBlocked) return false;
+    var ex = CA.EXP.fromKey(key);
+    if (!ex) return false;
+    for (var lv in ex) {
+      var t = String(ex[lv]).replace(/<[^>]+>/g, "");
+      var bins = [], decs = [], mm;
+      var reB = /[01]{4}(?: [01]{4})+|[01]{3,}/g, reD = /\d+/g;
+      while ((mm = reB.exec(t))) bins.push({ s: mm[0].replace(/ /g, ""), a: mm.index, b: mm.index + mm[0].length });
+      while ((mm = reD.exec(t))) decs.push({ v: mm[0], a: mm.index, b: mm.index + mm[0].length });
+      for (var i = 0; i < bins.length; i++) {
+        var bn = bins[i], v = String(parseInt(bn.s, 2)), strip = bn.s.replace(/^0+(?=.)/, "");
+        for (var j = 0; j < decs.length; j++) {
+          var d = decs[j];
+          if (d.v !== v || (d.a < bn.b && d.b > bn.a)) continue;
+          var gap = d.a >= bn.b ? d.a - bn.b : bn.a - d.b;
+          if (gap <= 40 && (B.isBlocked("b2d:" + strip, now) || B.isBlocked("d2b:" + v, now))) return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  if (typeof module !== "undefined" && module.exports) module.exports = CA.EXP;
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+/* 解説（4段）：論理ゲート・回路系の問題。問題の key から作る
+   easy：要点だけ ／ normal：なぜその答えか ／ detail：手順を1段ずつ ／ adv：一歩先の話
+   決まり（2026-10-15 先生決定）：NAND だけで NOT・AND・OR・XOR を作る具体的な回路、全加算器の内部回路と8行の真理値表、
+   NAND 5個の XOR 回路、RS ラッチの真理値表、D フリップフロップのタイミングチャートは書かない。 */
+(function (root) {
+  "use strict";
+  var CA = root.CA = root.CA || {};
+  CA.EXP = CA.EXP || { handlers: [] };
+  function add(re, fn) { CA.EXP.handlers.push([re, fn]); }
+  function G() { return CA.gates; }
+  function ov(s) { return "<span class=\"ov\">" + s + "</span>"; }
+  function num(s) { return "<span class=\"num\">" + s + "</span>"; }
+  function ol(items) { return "<ol>" + items.map(function (x) { return "<li>" + x + "</li>"; }).join("") + "</ol>"; }
+  function bin2(t) { return t >= 2 ? (t === 2 ? "10" : "11") : "0" + t; }
+
+  var ROWS = [[0, 0], [0, 1], [1, 0], [1, 1]];
+  var DESC = {
+    AND: "両方 1 のときだけ 1", OR: "どちらか（両方でも）が 1 なら 1", XOR: "2つが違うときだけ 1",
+    NAND: "AND の反対（両方 1 のときだけ 0）", NOR: "OR の反対（両方 0 のときだけ 1）", XNOR: "2つが同じときに 1",
+    NOT: "入力の反対を出す", BUF: "入力と同じ値を出す"
+  };
+  var LIKE = {
+    AND: "スイッチを一列（直列）につないだ電球と同じで、両方 ON のときだけ点きます。",
+    OR: "スイッチを枝分かれ（並列）につないだ電球と同じで、どちらかが ON なら点きます。",
+    XOR: "階段の上と下のスイッチで点ける照明と同じで、2つの状態が違うときに点きます。",
+    NAND: "「両方そろったときだけ消える」電球です。",
+    NOR: "「どちらも OFF のときだけ点く」電球です。",
+    XNOR: "「2つがそろっているか」を調べるランプです。",
+    NOT: "「はい」と「いいえ」を入れかえる係です。",
+    BUF: "受け取った値をそのまま次へ渡す中継係です。"
+  };
+  var ADV = {
+    AND: "CMOS では、NAND・NOR のほうが AND・OR より少ないトランジスタで作れます（AND は NAND の後ろに NOT を付けて作るため）。プログラムでは、AND はビットごとの演算として「必要なビットだけを取り出す」（マスク）に使われます。例：" + num("0110 1011 & 0000 1111 = 0000 1011") + "。",
+    OR: "プログラムでは、OR は特定のビットを 1 にそろえる（フラグを立てる）ときに使います。例：" + num("0100 0000 | 0000 0001 = 0100 0001") + "。ブール代数では A ＋ A ＝ A、A ＋ 1 ＝ 1 が成り立ち、ふつうの足し算とは規則が違います。",
+    XOR: "XOR は「違うかどうか」を調べるので、2進数の足し算の和の桁（半加算器の S）になります。また、同じ値で2回 XOR すると元に戻る（A ⊕ K ⊕ K ＝ A）ので、簡単な暗号（バーナム暗号、スライド12）にも使われます。",
+    NAND: "NAND は CMOS ではトランジスタ4個で作れます（PMOS 2個を並列、NMOS 2個を直列）。NAND を組み合わせればどんな論理回路でも作れるので「万能ゲート」と呼ばれます（組み合わせ方は第5回の演習で）。",
+    NOR: "NOR も CMOS ではトランジスタ4個で作れます（PMOS 2個を直列、NMOS 2個を並列）。NOR も NAND と同じく、NOR だけでどんな論理回路でも作れる万能ゲートです。",
+    XNOR: "XNOR は2つのビットが等しいかを判定します。2つの数が等しいかを調べる比較器は、各桁の XNOR の結果をすべて AND して作れます（全部の桁が等しいときだけ 1）。",
+    NOT: "NOT は CMOS ではトランジスタ2個（PMOS と NMOS を1個ずつ）で作れます（第4回予習の動画）。2回反転すると元に戻ります（" + ov(ov("A")) + " ＝ A、二重否定）。",
+    BUF: "バッファは論理の上では何もしませんが、弱くなった信号を強くして、たくさんの回路へ配る（ファンアウト）ときや、信号が届くまでの時間を調整するときに使います。"
+  };
+  var SHAPE = { AND: "D の形", OR: "盾の形", XOR: "盾の形に、入口側の線がもう1本", NAND: "D の形に出口の○", NOR: "盾の形に出口の○", XNOR: "盾の形に入口側の線と出口の○", NOT: "三角に出口の○", BUF: "三角だけ（○なし）" };
+  function info(name) { return G().G2[name] || G().G1[name]; }
+  function gateTable(name, hl) {
+    var one = !!G().G1[name];
+    var rows = (one ? [[0], [1]] : ROWS).map(function (r) { return r.concat([G().evalGate(name, r)]).map(String); });
+    return G().tableHTML(one ? ["A", "Y"] : ["A", "B", "Y"], rows, { hl: hl });
+  }
+  function colOf(name) { return ROWS.map(function (r) { return G().evalGate(name, r); }).join(""); }
+
+  /* ---------- go：ゲートの出力 ---------- */
+  add(/^go:(\w+):([01]+)$/, function (key, m) {
+    var name = m[1], ins = m[2].split("").map(Number), y = G().evalGate(name, ins), a = ins[0], b = ins[1];
+    var one = ins.length === 1, vals = one ? "A=" + a : "A=" + a + "、B=" + b;
+    var why;
+    if (name === "AND") why = y ? "A と B がどちらも 1 なので" : "0 の入力があるので";
+    else if (name === "OR") why = y ? "1 の入力があるので" : "どちらも 0 なので";
+    else if (name === "XOR") why = a !== b ? "A と B が違うので" : "A と B が同じなので";
+    else if (name === "XNOR") why = a === b ? "A と B が同じなので" : "A と B が違うので";
+    else if (name === "NAND") why = "AND なら " + (a & b) + " になるところを反対にして";
+    else if (name === "NOR") why = "OR なら " + (a | b) + " になるところを反対にして";
+    else if (name === "NOT") why = "入力 " + a + " の反対で";
+    else why = "入力をそのまま出して";
+    var extra = "";
+    if (name === "OR" && a === 1 && b === 1) extra = "両方 1 でも 1 になるところが、XOR との違いです。";
+    if (name === "XOR" && a === 1 && b === 1) extra = "両方 1 のとき 0 になるところが、OR との違いです。";
+    if (name === "NAND" && a === 1 && b === 1) extra = "NAND が 0 を出すのは、この行だけです。";
+    if (name === "NOR" && a === 0 && b === 0) extra = "NOR が 1 を出すのは、この行だけです。";
+    var idx = one ? a : a * 2 + b;
+    return {
+      easy: name + " は「" + DESC[name] + "」。" + vals + " なので Y＝" + y + " です。",
+      normal: name + "（" + info(name).ja + "）は「" + DESC[name] + "」というゲートです。" + vals + " では、" + why + " Y＝" + y + " になります。" + extra,
+      detail: ol([
+        "ゲートの名前と働きを確かめます：" + name + " は「" + DESC[name] + "」。式では Y ＝ " + info(name).expr + "。",
+        "真理値表で、" + vals + " の行を探します（色の付いた行）。" + gateTable(name, idx),
+        "その行の Y を読みます：Y＝" + y + "。" + (extra || "")
+      ]) + LIKE[name],
+      adv: ADV[name]
+    };
+  });
+
+  /* ---------- gt：真理値表からゲートを当てる ---------- */
+  add(/^gt:(\w+)$/, function (key, m) {
+    var name = m[1], col = colOf(name), ones = col.split("").filter(function (c) { return c === "1"; }).length;
+    var oneRows = ROWS.filter(function (r, i) { return col[i] === "1"; }).map(function (r) { return r.join(""); });
+    var zeroRows = ROWS.filter(function (r, i) { return col[i] === "0"; }).map(function (r) { return r.join(""); });
+    var step2;
+    if (ones === 1) step2 = "1 の行が1つだけなら AND か NOR。1 の行が " + oneRows[0] + " なので " + (oneRows[0] === "11" ? "AND（両方 1 のときだけ 1）" : "NOR（両方 0 のときだけ 1）") + "。";
+    else if (ones === 3) step2 = "0 の行が1つだけなら OR か NAND。0 の行が " + zeroRows[0] + " なので " + (zeroRows[0] === "00" ? "OR（両方 0 のときだけ 0）" : "NAND（両方 1 のときだけ 0）") + "。";
+    else step2 = "1 の行が2つなら XOR か XNOR。1 の行が " + oneRows.join(" と ") + " で、入力が" + (oneRows[0] === "01" ? "違う" : "同じ") + "行なので " + (oneRows[0] === "01" ? "XOR" : "XNOR") + "。";
+    return {
+      easy: "出力の列 " + num(col.split("").join(" ")) + " は「" + DESC[name] + "」の形なので " + name + " です。",
+      normal: "Y＝1 になっている行は " + (oneRows.length ? oneRows.join("、") : "ありません") + " です。" + DESC[name] + "という決まりに当てはまるのは " + name + "（" + info(name).ja + "）です。",
+      detail: ol([
+        "Y＝1 の行を数えます：" + ones + " 行（" + oneRows.join("、") + "）。",
+        step2,
+        "念のため、残りの行も " + name + " の決まり（" + DESC[name] + "）と合うか確かめます。" + gateTable(name)
+      ]),
+      adv: "2入力の論理関数は全部で 2<sup>4</sup> ＝ 16 種類あります（出力の列は4ビットなので、その並び方の数）。名前の付いたゲートはそのうち6つ（AND・OR・XOR・NAND・NOR・XNOR）で、残りの関数もゲートを組み合わせれば作れます。"
+    };
+  });
+
+  /* ---------- sn：記号から名前 ---------- */
+  add(/^sn:(\w+)$/, function (key, m) {
+    var name = m[1];
+    var family = /^(AND|NAND)$/.test(name) ? "D の形 → AND のなかま" : /^(OR|NOR)$/.test(name) ? "盾の形 → OR のなかま" : /XOR|XNOR/.test(name) ? "盾の形＋入口側の線 → XOR のなかま" : "三角 → 入力1つのゲート（NOT かバッファ）";
+    var bub = /^(NAND|NOR|XNOR|NOT)$/.test(name);
+    return {
+      easy: "「" + SHAPE[name] + "」は " + name + " です。",
+      normal: "記号は、本体の形でなかまを、出口の○の有無で反転を見分けます。この記号は「" + SHAPE[name] + "」なので " + name + "（" + info(name).ja + "）です。",
+      detail: ol([
+        "本体の形を見ます：" + family + "。",
+        "盾の形なら、入口側にもう1本の弧があるかを見ます" + (/XOR|XNOR/.test(name) ? "：ある → XOR のなかま。" : /^(OR|NOR)$/.test(name) ? "：ない → OR のなかま。" : "（この記号には関係しません）。"),
+        "出口に小さな○があるかを見ます：" + (bub ? "ある → 反転する（NOT の働きが付く）。" : "ない → 反転しない。"),
+        "合わせて " + name + "。働きは「" + DESC[name] + "」です。"
+      ]),
+      adv: "記号には、このページで使っている MIL 記号と、四角の中に &（AND）・≥1（OR）・=1（XOR）・1（バッファ、○を付けて NOT）と書く JIS/IEC の記号があります（スライド13）。回路図を読むときは、どちらの規格で描かれているかを最初に確かめます。"
+    };
+  });
+
+  /* ---------- rc：n 入力の真理値表の行数 ---------- */
+  add(/^rc:(\d+)$/, function (key, m) {
+    var n = +m[1], ans = Math.pow(2, n), seq = [];
+    for (var k = 1; k <= n; k++) seq.push(k + " 入力 → " + Math.pow(2, k) + " 行");
+    return {
+      easy: "入力が1つ増えるごとに行は2倍。" + n + " 入力なら 2<sup>" + n + "</sup> ＝ " + ans + " 行です。",
+      normal: "入力の1つ1つが 0 か 1 の2通りをとるので、" + n + " 個の入力の組み合わせは 2 を " + n + " 回掛けた 2<sup>" + n + "</sup> ＝ " + ans + " 通りです。真理値表は組み合わせを1行ずつ書くので " + ans + " 行になります。",
+      detail: ol(seq.concat(["行は 000… から 111… まで、2進数で数える順（0、1、2、…、" + (ans - 1) + "）に並べると、もれも重なりもありません。"])),
+      adv: "入力が増えると行は急に増えます（10 入力で 1,024 行、20 入力で 1,048,576 行）。そのため大きな回路では真理値表をそのまま書かず、ブール代数の法則やカルノー図で式を簡単にしたり、コンピュータで自動的に調べたりします。"
+    };
+  });
+
+  /* ---------- oc：n 入力ゲートで出力が 1 になる行数 ---------- */
+  add(/^oc:(AND|OR|NAND|NOR)(\d)$/, function (key, m) {
+    var name = m[1], n = +m[2], total = Math.pow(2, n), ans = G().onesCount(name, n);
+    var rule = { AND: "全部 1 の行だけが 1", OR: "全部 0 の行だけが 0（ほかは 1）", NAND: "全部 1 の行だけが 0（ほかは 1）", NOR: "全部 0 の行だけが 1" }[name];
+    var special = { AND: "1".repeat(n), OR: "0".repeat(n), NAND: "1".repeat(n), NOR: "0".repeat(n) }[name];
+    var cells = G().rowsOf(n).map(function (r) { var y = G().evalGate(name, r); return "<td>" + r.join("") + "→" + (y ? "<b>1</b>" : "0") + "</td>"; });
+    var grid = "<table class=\"ref\">";
+    for (var i = 0; i < cells.length; i += 4) grid += "<tr>" + cells.slice(i, i + 4).join("") + "</tr>";
+    grid += "</table>";
+    return {
+      easy: n + " 入力の " + name + " は「" + rule + "」。だから 1 の行は " + ans + " 行です。",
+      normal: n + " 入力の真理値表は 2<sup>" + n + "</sup> ＝ " + total + " 行です。" + name + " は" + rule + "なので、" + special + " の行が特別で、出力が 1 の行は " + ans + " 行になります。",
+      detail: ol([
+        "行の数：2<sup>" + n + "</sup> ＝ " + total + " 行。",
+        "特別な行を見つけます：" + name + " では " + special + " の行だけが、ほかの行と違う出力になります。",
+        "出力が 1 の行を数えます：" + ans + " 行。" + grid
+      ]),
+      adv: "AND の入力を増やすと「全部そろったとき」の判定に、OR の入力を増やすと「どれか1つでも」の判定になります。たとえば番地のビットが決まった値のときだけ 1 を出す回路（デコーダ）は、多入力の AND（必要なビットは反転してから入れる）で作れます。第10回の命令デコードにつながる考え方です。"
+    };
+  });
+
+  /* ---------- dm：ド・モルガン ---------- */
+  var DM = {
+    nand: { q: ov("A·B"), a: ov("A") + "＋" + ov("B"), trap: ov("A") + "·" + ov("B"), words: "「A と B が両方 1」ではない、つまり「A か B の少なくとも一方が 0」", f: function (a, b) { return 1 - (a & b); }, g: function (a, b) { return (1 - a) | (1 - b); }, t: function (a, b) { return (1 - a) & (1 - b); } },
+    nor: { q: ov("A＋B"), a: ov("A") + "·" + ov("B"), trap: ov("A") + "＋" + ov("B"), words: "「A か B が 1」ではない、つまり「A も B も 0」", f: function (a, b) { return 1 - (a | b); }, g: function (a, b) { return (1 - a) & (1 - b); }, t: function (a, b) { return (1 - a) | (1 - b); } },
+    orbar: { q: ov("A") + "＋" + ov("B"), a: ov("A·B"), trap: ov("A＋B"), words: "「A が 0 か、B が 0」、つまり「A と B が両方 1 ではない」", f: function (a, b) { return (1 - a) | (1 - b); }, g: function (a, b) { return 1 - (a & b); }, t: function (a, b) { return 1 - (a | b); } },
+    andbar: { q: ov("A") + "·" + ov("B"), a: ov("A＋B"), trap: ov("A·B"), words: "「A も 0 で B も 0」、つまり「A か B が 1、ではない」", f: function (a, b) { return (1 - a) & (1 - b); }, g: function (a, b) { return 1 - (a | b); }, t: function (a, b) { return 1 - (a & b); } }
+  };
+  add(/^dm:(nand|nor|orbar|andbar)$/, function (key, m) {
+    var d = DM[m[1]];
+    var rows = ROWS.map(function (r) { var a = r[0], b = r[1]; return [a, b, d.f(a, b), d.g(a, b), d.t(a, b)].map(String); });
+    var tbl = "<table class=\"ref\"><tr><th>A</th><th>B</th><th>" + d.q + "</th><th>" + d.a + "</th><th>" + d.trap + "</th></tr>" +
+      rows.map(function (r) { return "<tr>" + r.map(function (c) { return "<td>" + c + "</td>"; }).join("") + "</tr>"; }).join("") + "</table>";
+    var bad = ROWS.filter(function (r) { return d.f(r[0], r[1]) !== d.t(r[0], r[1]); }).map(function (r) { return r.join(""); });
+    return {
+      easy: "バーを分ける（つなぐ）と、· と ＋ が入れかわります。" + d.q + " ＝ " + d.a + "。",
+      normal: d.q + " を言葉にすると" + d.words + "です。これを式で書くと " + d.a + " になります。" + d.trap + " のように · と ＋ をそのままにすると、意味が変わってしまいます。",
+      detail: ol([
+        "4通りの入力すべてで、元の式と候補の式を計算します。" + tbl,
+        d.a + " の列は、元の式 " + d.q + " の列と4行すべて一致します。",
+        d.trap + " の列は " + bad.join(" と ") + " の行で食い違います。だから · と ＋ の入れかえが必要です。"
+      ]),
+      adv: "ド・モルガンの定理は入力が3つ以上でも成り立ちます（" + ov("A·B·C") + " ＝ " + ov("A") + "＋" + ov("B") + "＋" + ov("C") + "）。回路では、記号の○（反転）を入口と出口の間で移しても働きが変わらないので、回路を NAND や NOR の形に書き直したり、ゲートの数を減らしたりするときに使います（第5回）。"
+    };
+  });
+
+  /* ---------- be：ブール式の値 ---------- */
+  var EXS = [
+    { s: "A＋B·C", steps: function (a, b, c) { var bc = b & c; return [["B·C", b + "·" + c, bc], ["A＋(B·C)", a + "＋" + bc, a | bc]]; },
+      adv: "A＋B·C ＝ (A＋B)·(A＋C) が成り立ちます（分配則の2つ目）。ふつうの算数では成り立ちませんが、ブール代数では ＋ が OR なので成り立ちます（第4回の復習）。" },
+    { s: "(A＋B)·C", steps: function (a, b, c) { var ab = a | b; return [["A＋B（かっこの中）", a + "＋" + b, ab], ["(A＋B)·C", ab + "·" + c, ab & c]]; },
+      adv: "(A＋B)·C ＝ A·C＋B·C と展開できます（分配則）。AND をまとめてから OR する形（積和形）にすると、AND の段と OR の段の2段の回路で作れます。" },
+    { s: ov("A") + "·B＋C", steps: function (a, b, c) { var na = 1 - a, nb = na & b; return [[ov("A"), "A＝" + a + " の反対", na], [ov("A") + "·B", na + "·" + b, nb], [ov("A") + "·B＋C", nb + "＋" + c, nb | c]]; },
+      adv: "この式は C＝1 なら A・B に関係なく 1 になります。1つの入力だけで結果が決まる場面に先に気づくと、真理値表を速く書けます。C＝0 のときは " + ov("A") + "·B だけを見ればよくなります。" },
+    { s: ov("A＋B") + "·C", steps: function (a, b, c) { var ab = a | b, n = 1 - ab; return [["A＋B（バーの中）", a + "＋" + b, ab], [ov("A＋B"), ab + " の反対", n], [ov("A＋B") + "·C", n + "·" + c, n & c]]; },
+      adv: "ド・モルガンを使うと " + ov("A＋B") + "·C ＝ " + ov("A") + "·" + ov("B") + "·C と書けます。A も B も 0 で、C が 1 のときだけ 1 になる式です。" },
+    { s: "A·" + ov("B") + "＋" + ov("A") + "·B", steps: function (a, b) { var nb = 1 - b, na = 1 - a, p = a & nb, q = na & b; return [[ov("B"), "B＝" + b + " の反対", nb], ["A·" + ov("B"), a + "·" + nb, p], [ov("A"), "A＝" + a + " の反対", na], [ov("A") + "·B", na + "·" + b, q], ["2つの OR", p + "＋" + q, p | q]]; },
+      adv: "A·" + ov("B") + "＋" + ov("A") + "·B は XOR（A⊕B）と同じ働きです。「A だけが 1」または「B だけが 1」のときに 1、つまり2つが違うときに 1 です。XOR を AND・OR・NOT で書いた形で、積和形の例です。" },
+    { s: ov("A·B") + "＋C", steps: function (a, b, c) { var ab = a & b, n = 1 - ab; return [["A·B（バーの中）", a + "·" + b, ab], [ov("A·B"), ab + " の反対", n], [ov("A·B") + "＋C", n + "＋" + c, n | c]]; },
+      adv: "ド・モルガンを使うと " + ov("A·B") + "＋C ＝ " + ov("A") + "＋" + ov("B") + "＋C と書けます。0 になるのは A＝1・B＝1・C＝0 の1通りだけです。" }
+  ];
+  add(/^be:(\d):([01]+)$/, function (key, m) {
+    var e = EXS[+m[1]], v = m[2].split("").map(Number), a = v[0], b = v[1], c = v[2] || 0;
+    var st = e.steps(a, b, c), y = st[st.length - 1][2];
+    var vals = "A＝" + a + "、B＝" + b + (v.length > 2 ? "、C＝" + c : "");
+    return {
+      easy: "バーの中 → ·（AND）→ ＋（OR）の順に計算します。" + vals + " なら Y＝" + y + "。",
+      normal: "Y ＝ " + e.s + " に " + vals + " を入れます。" + st.map(function (s) { return s[0] + " ＝ " + s[2]; }).join("、") + " なので Y＝" + y + " です。" + (st.some(function (s) { return s[1] === "1＋1"; }) ? "ブール代数では 1＋1＝1 です。" : ""),
+      detail: ol(["計算の順番を決めます：バー（反転）の中を先に、次に ·（AND）、最後に ＋（OR）。算数の「× を ＋ より先に」と同じです。"]
+        .concat(st.map(function (s) { return s[0] + "：" + s[1] + " ＝ <b>" + s[2] + "</b>"; }))
+        .concat(["答え：Y＝" + y + "。"])),
+      adv: e.adv
+    };
+  });
+
+  /* ---------- ha：半加算器 ---------- */
+  add(/^ha:([01])([01])$/, function (key, m) {
+    var a = +m[1], b = +m[2], s = a ^ b, c = a & b, t = a + b;
+    return {
+      easy: "1桁の足し算です。和 S は XOR（違うとき 1）、桁上がり C は AND（両方 1 のとき 1）。" + a + "＋" + b + " なら S＝" + s + "、C＝" + c + "。",
+      normal: a + "＋" + b + " ＝ " + t + " を2進数2桁で書くと " + num(bin2(t)) + " です。下の桁が和 S＝" + s + "、上の桁が左の桁へ渡す桁上がり C＝" + c + " になります。",
+      detail: ol([
+        "10進数で足します：" + a + "＋" + b + " ＝ " + t + "。",
+        "2進数の2桁で書きます：" + t + " → " + num(bin2(t)) + "（上の桁 C、下の桁 S）。",
+        "S は A⊕B（A と B が違うとき 1）：" + a + "⊕" + b + " ＝ " + s + "。",
+        "C は A·B（両方 1 のとき 1）：" + a + "·" + b + " ＝ " + c + "。"
+      ]),
+      adv: "半加算器は、下の桁から来る桁上がりを受け取る入口がありません。だから使えるのはいちばん右の桁だけで、2桁目からは A・B・下からの桁上がりの3つを足す全加算器を使います（第5回）。"
+    };
+  });
+
+  /* ---------- cl：組み合わせ回路か順序回路か ---------- */
+  var KIND_NOTE = {
+    "半加算器": "入力 A・B が決まれば S と C がすぐ決まります。",
+    "全加算器": "A・B・下からの桁上がり Cin が決まれば、S と Cout がすぐ決まります。",
+    "マルチプレクサ（MUX）": "入力の値と選ぶ信号が決まれば、出力がすぐ決まります。",
+    "4ビットの加算器": "全加算器をつないだだけで、覚えておく部品がありません。",
+    "NAND ゲート": "ゲート1つで、入力が決まれば出力が決まります。",
+    "ALU の論理演算の部分": "AND・OR などを計算し、制御信号で1つを選ぶだけで、覚えておく部品がありません。",
+    "RS ラッチ": "ゲートをたすき掛けにつなぎ、値を覚えておく回路です（第6回）。",
+    "レジスタ": "何ビットかの値を、次に書きかえるまで覚えておく回路です（第6回）。",
+    "カウンタ": "いままでにいくつ数えたかを覚えていて、それに1を足していきます（第6回）。",
+    "D フリップフロップ": "クロックに合わせて値を取りこみ、次に取りこむまで覚えておく回路です（第6回）。"
+  };
+  add(/^cl:(.+)$/, function (key, m) {
+    var name = m[1], k = (CA.circuit && CA.circuit.KINDS || []).filter(function (x) { return x[0] === name; })[0];
+    var comb = k ? !!k[1] : !/ラッチ|レジスタ|カウンタ|フリップフロップ/.test(name);
+    var kind = comb ? "組み合わせ回路" : "順序回路";
+    return {
+      easy: "覚えておくしくみがあれば順序回路、なければ組み合わせ回路。" + name + " は" + kind + "です。",
+      normal: (KIND_NOTE[name] || "") + (comb ? "同じ入力なら、いつも同じ出力になるので、組み合わせ回路です。" : "同じ入力でも、前の状態によって出力が変わることがあるので、順序回路です。"),
+      detail: ol([
+        "「同じ入力を入れたら、いつも同じ出力になるか？」と考えます。",
+        name + "：" + (KIND_NOTE[name] || ""),
+        comb ? "前のことを覚えていないので、組み合わせ回路です。" : "前の状態（記憶）が出力に関わるので、順序回路です。"
+      ]),
+      adv: "順序回路は、「次の状態を計算する組み合わせ回路」と「状態を覚える記憶」の組み合わせとして考えられます。CPU も、レジスタという記憶と、ALU などの組み合わせ回路が、クロックに合わせて動くしくみです（第9回以降）。"
+    };
+  });
+
+  /* ---------- ct：回路図から Y の列 ---------- */
+  /* 式は { s: 文字列, op: "and"|"or"|"xor"|"atom" }。外側の演算より弱い中身だけにかっこを付ける（バーの中は付けない） */
+  function wrap(e, outer) {
+    if (e.op === "atom" || e.op === outer || (outer === "or" && e.op === "and")) return e.s;
+    return "(" + e.s + ")";
+  }
+  function exprOf(type, x, y) {
+    switch (type) {
+      case "AND": return { s: wrap(x, "and") + "·" + wrap(y, "and"), op: "and" };
+      case "OR": return { s: wrap(x, "or") + "＋" + wrap(y, "or"), op: "or" };
+      case "XOR": return { s: wrap(x, "xor") + "⊕" + wrap(y, "xor"), op: "xor" };
+      case "NAND": return { s: ov(wrap(x, "and") + "·" + wrap(y, "and")), op: "atom" };
+      case "NOR": return { s: ov(wrap(x, "or") + "＋" + wrap(y, "or")), op: "atom" };
+      case "NOT": return { s: ov(x.s), op: "atom" };
+      default: return x;
+    }
+  }
+  add(/^ct:(.+)$/, function (key, m) {
+    var spec = m[1].split(";").map(function (s) { var mm = s.match(/^(\w+)\((.*)\)$/); return { type: mm[1], in: mm[2].split(",") }; });
+    var ids = spec.length === 2 ? ["P", "Y"] : ["P", "Q", "Y"];
+    var c = { inputs: ["A", "B"], gates: spec.map(function (g, i) { return { id: ids[i], type: g.type, in: g.in }; }), out: "Y" };
+    var K = CA.circuit, mids = ids.slice(0, -1);
+    var rowsV = ROWS.map(function (r) { return K.evalCircuit(c, r); });
+    var colY = rowsV.map(function (v) { return v.Y; }).join("");
+    var colsMid = mids.map(function (id) { return id + " の列 " + num(rowsV.map(function (v) { return v[id]; }).join(" ")); }).join("、");
+    var tbl = G().tableHTML(["A", "B"].concat(mids).concat(["Y"]), rowsV.map(function (v) { return [v.A, v.B].concat(mids.map(function (id) { return v[id]; })).concat([v.Y]).map(String); }));
+    var ex = { A: { s: "A", op: "atom" }, B: { s: "B", op: "atom" } };
+    c.gates.forEach(function (g) { ex[g.id] = exprOf(g.type, ex[g.in[0]], g.in[1] != null ? ex[g.in[1]] : null); });
+    var named = G().NAMES2.filter(function (n) { return colOf(n) === colY; })[0];
+    var gateDesc = c.gates.map(function (g) { return g.id + " ＝ " + g.type + "(" + g.in.join(", ") + ")"; }).join("、");
+    var stepsList = ["途中の線に名前を付けます：" + gateDesc + "。"];
+    ROWS.forEach(function (r, i) {
+      var v = rowsV[i];
+      stepsList.push("A＝" + r[0] + "・B＝" + r[1] + "：" + c.gates.map(function (g) { return g.id + "＝" + v[g.id]; }).join("、"));
+    });
+    stepsList.push("Y の列を上から読むと " + num(colY.split("").join(" ")) + "。" + tbl);
+    var advText = named
+      ? "この回路の Y の列は " + named + " と同じです。式で書くと Y ＝ " + ex.Y.s + " で、ゲートが " + c.gates.length + " 個あっても、働きは " + named + " 1つと同じです。形が違っても真理値表が同じなら同じ働きなので、ブール代数で式を簡単にすれば、もっと少ないゲートで作れます。"
+      : (/^(0000|1111)$/.test(colY) ? "この回路の Y はいつも " + colY.charAt(0) + " です。" : "") + "式で書くと Y ＝ " + ex.Y.s + " です。2入力の論理関数は全部で 16 種類あり、名前の付いたゲート6つ以外の関数も、このようにゲートを組み合わせて作れます。式を簡単にすると、ゲートの数を減らせることがあります。";
+    return {
+      easy: "途中の線（" + mids.join("・") + "）の値を先に求めてから、最後のゲートで Y を出します。Y の列は " + num(colY.split("").join(" ")) + " です。",
+      normal: "入力に近いゲートから順に計算します。" + colsMid + " です。最後のゲート（" + c.gates[c.gates.length - 1].type + "）に入れて、Y の列は " + num(colY.split("").join(" ")) + " になります。",
+      detail: ol(stepsList),
+      adv: advText
+    };
+  });
+
+  /* ---------- fc：1桁分の足し算（全加算器の1行分。表にはまとめない） ---------- */
+  add(/^fc:([01])([01])([01])$/, function (key, m) {
+    var a = +m[1], b = +m[2], ci = +m[3], t = a + b + ci, s = t & 1, co = t >> 1;
+    return {
+      easy: "3つを足して2進数で書きます。右の桁が S、左の桁が Cout です。" + a + "＋" + b + "＋" + ci + " なら S＝" + s + "、Cout＝" + co + "。",
+      normal: "全加算器は A・B・下からの桁上がり Cin の3つを足します。" + a + "＋" + b + "＋" + ci + " ＝ " + t + " を2進数2桁で書くと " + num(bin2(t)) + " なので、この桁の和 S＝" + s + "、左の桁へ渡す Cout＝" + co + " です。",
+      detail: ol([
+        "足す3つを確かめます：A＝" + a + "、B＝" + b + "、下の桁から来た桁上がり Cin＝" + ci + "。",
+        "10進数で合計します：" + a + "＋" + b + "＋" + ci + " ＝ " + t + "。",
+        t + " を2進数の2桁で書きます：" + num(bin2(t)) + "。",
+        "1の位（右の桁）がこの桁の和 S＝" + s + "、2の位（左の桁）が左の桁へ渡す Cout＝" + co + "。"
+      ]),
+      adv: "全加算器を並べて桁上がりを右から順に渡す加算器（桁上げ伝搬加算器）では、左の桁ほど右の桁の Cout を待つので遅くなります。これを速くするのが桁上げ先見加算器で、各桁が「自分で桁上がりを作るか」「下から来た桁上がりをそのまま通すか」を先に調べておき、桁上がりをまとめて計算します（スライド17）。"
+    };
+  });
+
+  /* ---------- mx：4入力マルチプレクサ ---------- */
+  add(/^mx:([01]{2})([01]{4})$/, function (key, m) {
+    var sb = m[1], data = m[2].split("").map(Number), sel = parseInt(sb, 2), d = data[sel];
+    var tbl = "<table class=\"ref\"><tr><th>選ぶ信号</th><th>番号</th><th>出る入力</th><th>その値</th></tr>" +
+      [0, 1, 2, 3].map(function (i) { var code = (i >> 1) + "" + (i & 1); return "<tr><td>" + code + "</td><td>" + i + "</td><td>入力" + i + "</td><td>" + (i === sel ? "<b>" + data[i] + "</b>" : data[i]) + "</td></tr>"; }).join("") + "</table>";
+    return {
+      easy: "選ぶ信号を2進数として読んだ番号の入力が出ます。" + sb + " は " + sel + " なので、入力" + sel + "（値 " + d + "）です。",
+      normal: "4入力の MUX は、2ビットの選ぶ信号で入力0〜3 の1つを選びます。" + sb + " を2進数として読むと " + sel + "（上の桁 × 2 ＋ 下の桁 ＝ " + sb.charAt(0) + "×2＋" + sb.charAt(1) + "）なので、入力" + sel + " の値 " + d + " が出力に出ます。",
+      detail: ol([
+        "選ぶ信号 " + sb + " を2進数として読みます：" + sb.charAt(0) + "×2 ＋ " + sb.charAt(1) + "×1 ＝ " + sel + "。",
+        "入力0〜3 の値を並べます：" + data.join("、") + "。",
+        "番号 " + sel + " の入力を選ぶので、出力は " + d + "。" + tbl
+      ]),
+      adv: "入力0〜3 に 0 か 1 を固定して置き、選ぶ信号の2本を入力 A・B とみなすと、MUX はどんな2入力の論理関数にもなります（入力0〜3 の値が、そのまま真理値表の Y の列になる）。FPGA という書きかえられる回路の部品「ルックアップテーブル」は、この考え方で作られています。"
+    };
+  });
+
+  if (typeof module !== "undefined" && module.exports) module.exports = CA.EXP;
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+/* 解説（簡単・通常・詳細・発展）：第4回 予習の動画の問題。復習ページ（exp-w04r.js）とは分けて、公開日前の復習の中身が予習ページに入らないようにする。 */
+(function (root) {
+  "use strict";
+  var CA = root.CA = root.CA || {};
+  CA.EXP_ITEMS = CA.EXP_ITEMS || {};
+  CA.EXP_Q = CA.EXP_Q || {};
+
+  CA.EXP_Q.w04p = {
+    filmq1: {
+      easy: 'PMOS と NMOS は、反対の入力で ON になるスイッチの組です。入力が 0 のとき ON になるのは、○の付いた PMOS です。',
+      normal: 'NMOS は入力（ゲート）が 1 のとき ON、PMOS は入力が 0 のとき ON になります。記号の○は「0 で ON」の印です。入力が 0 なら PMOS が ON、NMOS が OFF なので、出力は PMOS を通って上の 1V の線とつながり、1 になります。',
+      detail: '<ol><li>入力の値を見る：0（0V）</li><li>ON になる側を決める：0 で ON になるのは PMOS（○付き）。NMOS は OFF</li><li>出力がつながる線を見る：PMOS は上の 1V の線とつながっている</li><li>出力は 1</li></ol>入力 0 に対して出力 1 なので、入力と反対の値が出ています。<br>よくある間違いは、「○が付いているから OFF」と思う、両方が半分ずつ ON になると思う、の2つです。PMOS と NMOS には同じ入力が入るので、いつもどちらか一方だけが ON です。',
+      adv: 'p 型と n 型という性質の違うトランジスタを組（相補型、Complementary）で使うので、CMOS と呼びます。いまの CPU やスマートフォンのチップのほとんどは CMOS で作られていて、1つのチップに数十億個のトランジスタが入っています。'
+    },
+    filmq2: {
+      easy: '入力が 1 のとき ON になるのは NMOS です。下の 0V の線とつながるので、出力は 0 です。',
+      normal: '入力が 1 なら NMOS が ON、PMOS が OFF になります。出力は NMOS を通って下の 0V の線とつながり、0 になります。入力 0 のときと合わせると、出力はいつも入力の反対なので、この回路は NOT（インバータ）です。',
+      detail: '<table class="ref"><tr><th>入力</th><th>PMOS（上）</th><th>NMOS（下）</th><th>出力がつながる線</th><th>出力</th></tr><tr><td>0</td><td>ON</td><td>OFF</td><td>1V</td><td>1</td></tr><tr><td>1</td><td>OFF</td><td>ON</td><td>0V</td><td>0</td></tr></table>手順：①入力の値を見る、②ON になる側を決める、③ON の側の線の電圧が出力になる。<br>「どこにもつながらない」は誤りです。入力が 0 でも 1 でも、上下のどちらか一方は必ず ON になっています。',
+      adv: '上下の両方を OFF にして、出力がどこにもつながらない状態（ハイインピーダンス）をわざと作る回路もあります（3ステートバッファ）。1本の線（バス）をいくつもの回路で順番に使うときに、使っていない回路を線から切り離すために使います。'
+    },
+    filmq3: {
+      easy: '水道にたとえると、上の蛇口か下の排水口のどちらかがいつも閉まっているので、水が流れっぱなしになりません。',
+      normal: '入力が 0 でも 1 でも、PMOS と NMOS のどちらか一方は OFF です。そのため 1V の線から 0V の線へまっすぐ通る道がいつも切れていて、値が変わらない間は電流がほとんど流れません。電気を使うのは、主に 0 と 1 が切りかわる瞬間です。',
+      detail: '<table class="ref"><tr><th>入力</th><th>上（PMOS）</th><th>下（NMOS）</th><th>1V から 0V への道</th></tr><tr><td>0</td><td>ON</td><td>OFF</td><td>切れている</td></tr><tr><td>1</td><td>OFF</td><td>ON</td><td>切れている</td></tr></table>もし上下が同時に ON になる回路なら、1V から 0V へ電流が流れ続けてしまいます。<br>よくある間違いは、「1V」を電流の量だと思う（1V は電圧、つまり電気を押す強さ）、トランジスタの数が少ないからだと思う、の2つです。',
+      adv: 'CMOS の電力は、主に 0 と 1 が切りかわるときに使われ、おおよそ「1秒に切りかわる回数（クロック周波数）× 電圧の2乗」に比例します。そこでスマートフォンや PC は、忙しくないときにクロック周波数と電圧を下げて電池を長持ちさせます。トランジスタが小さくなるほど、OFF でも少しずつ漏れる電流（リーク電流）が増えることも課題です。'
+    }
+  };
+
+  if (typeof module !== "undefined" && module.exports) module.exports = { items: CA.EXP_ITEMS, q: CA.EXP_Q };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>CA.explainItems((CA.EXP_ITEMS || {})[window.CA_PAGE]); CA.sidebar();</script>
 <script>
 (function () {
   var B = CA.bits, h = CA.h;
