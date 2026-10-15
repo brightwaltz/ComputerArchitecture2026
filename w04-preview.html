@@ -399,6 +399,12 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
 .film-big { white-space: nowrap; }
 @media (max-width: 520px) { .film { padding: 10px; } .film-big { padding: 6px 14px; font-size: var(--fs-small); gap: 8px; } .film-big .tri { border-left-width: 12px; border-top-width: 8px; border-bottom-width: 8px; } }
 
+.movie-link { display: flex; gap: 14px; align-items: center; max-width: 40em; padding: 12px 18px; border-radius: var(--radius);
+  border: 2px solid var(--accent); background: var(--panel); color: var(--ink); text-decoration: none; }
+.movie-link:hover { background: var(--accent-soft); }
+.movie-link .tri { flex: none; width: 0; height: 0; border-left: 16px solid var(--accent); border-top: 10px solid transparent; border-bottom: 10px solid transparent; }
+#movie { scroll-margin-top: 120px; }
+
 </style>
 <header class="mast">
   <div class="mast-inner">
@@ -416,6 +422,7 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
     <p class="prose">第3回では、0 と 1 の並びで<b>数</b>を表しました。第4回は、0 と 1 で<b>判断</b>をする計算、「論理演算」を学びます。授業の前に、このページの3つをやっておきましょう。</p>
     <div class="meta"><span>目安 20〜25分（動画 約1分15秒を含む）</span><span>書き込んだ内容はこのブラウザの中だけに残ります</span></div>
     <div id="levels"></div>
+    <a class="movie-link" href="#movie"><span class="tri" aria-hidden="true"></span><span><b>動画を見る</b>：NOT ゲートの中身（CMOS インバータ、約1分15秒）</span></a>
     <ol class="checklist" id="todo" aria-label="授業までにやること"></ol>
   </section>
 
@@ -448,7 +455,7 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
       <h2>前回の確認（3問）</h2>
       <span class="slides">第3回 デジタルデータの表現と演算</span>
     </div>
-    <p class="prose">第4回では、第3回の2進数の足し算（桁上がり）を回路にした「半加算器」が出てきます。解けなかったら、<a href="w03-review.html">第3回 復習ページ</a>で確かめてから授業に来てください。</p>
+    <p class="prose">第4回では、第3回の2進数の足し算（桁上がり）を回路にした「半加算器」が出てきます。解けなかったら、<a href="w03-review.html?v=202610151357">第3回 復習ページ</a>で確かめてから授業に来てください。</p>
     <div id="review"></div>
   </section>
 

@@ -399,6 +399,12 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
 .film-big { white-space: nowrap; }
 @media (max-width: 520px) { .film { padding: 10px; } .film-big { padding: 6px 14px; font-size: var(--fs-small); gap: 8px; } .film-big .tri { border-left-width: 12px; border-top-width: 8px; border-bottom-width: 8px; } }
 
+.movie-link { display: flex; gap: 14px; align-items: center; max-width: 40em; padding: 12px 18px; border-radius: var(--radius);
+  border: 2px solid var(--accent); background: var(--panel); color: var(--ink); text-decoration: none; }
+.movie-link:hover { background: var(--accent-soft); }
+.movie-link .tri { flex: none; width: 0; height: 0; border-left: 16px solid var(--accent); border-top: 10px solid transparent; border-bottom: 10px solid transparent; }
+#movie { scroll-margin-top: 120px; }
+
 </style>
 <header class="mast">
   <div class="mast-inner">
@@ -416,6 +422,7 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
     <p class="prose">0 と 1 の並びを、数としてどう読むか。今日の授業の「最低限これだけ」7項目を、自分の手で計算できるようにするページです。各項目の<b>確認問題</b>に正解すると、上のランプが点きます。</p>
     <div class="meta"><span>目安 40〜45分（動画 約1分30秒を含む）</span><span>整数編（1〜6）と小数編（7）</span><span>記録はこのブラウザの中だけに残ります</span></div>
     <div id="levels"></div>
+    <a class="movie-link" href="#movie"><span class="tri" aria-hidden="true"></span><span><b>動画を見る</b>：なぜ「反転して＋1」で負の数になるのか（約1分30秒）</span></a>
     <nav class="toc" aria-label="項目">
       <a href="#i1"><span class="n">1</span>2進→10進</a>
       <a href="#i2"><span class="n">2</span>10進→2進</a>
@@ -584,7 +591,7 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
     <h2>仕上げの5問</h2>
     <p class="prose">7項目から5問を出します。間違えたら、その項目に戻って確認問題と練習をもう一度。</p>
     <div id="fin"></div>
-    <div class="done-banner" id="banner" role="status">7項目すべての確認問題に正解しました。次回（10/22）はブール代数と論理演算です。<a href="w04-preview.html">第4回 予習ページ</a>も見ておきましょう。</div>
+    <div class="done-banner" id="banner" role="status">7項目すべての確認問題に正解しました。次回（10/22）はブール代数と論理演算です。<a href="w04-preview.html?v=202610151357">第4回 予習ページ</a>も見ておきましょう。</div>
   </section>
 
   <footer>
