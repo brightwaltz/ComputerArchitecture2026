@@ -359,6 +359,46 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
 .circuits h3 { font-size: var(--fs-h3); }
 .checklist a { color: var(--ink); }
 
+/* 動画プレイヤー */
+.film { display: grid; gap: 10px; background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); padding: 16px; min-width: 0; }
+.film > * { min-width: 0; }
+.film-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; align-items: baseline; }
+.film-title { font-weight: 700; }
+.film-scene { font-size: var(--fs-small); color: var(--muted); }
+.film-stage { position: relative; aspect-ratio: 16 / 9; max-width: 100%; background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.film-stage:fullscreen { border: 0; border-radius: 0; display: grid; place-items: center; }
+.film-stage svg { width: 100%; height: 100%; display: block; }
+.film-big { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; gap: 12px; align-items: center;
+  font-size: var(--fs-body); font-weight: 700; background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 999px; padding: 12px 26px; }
+.film-big .tri { width: 0; height: 0; border-left: 18px solid currentColor; border-top: 11px solid transparent; border-bottom: 11px solid transparent; }
+.film-pause { display: grid; gap: 10px; padding: 14px 16px; border-radius: 8px; border: 2px solid var(--wire); background: var(--wire-soft); }
+.film-pause .q { font-weight: 700; }
+.film-pause .choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.film-pause .choices button { font-size: var(--fs-body); }
+.film-pause .skip { justify-self: start; border: 0; background: transparent; color: var(--wire); text-decoration: underline; padding: 2px 0; }
+.film-cap { min-height: 3.6em; }
+.film-pred { font-size: var(--fs-small); min-height: 1.4em; }
+.film-pred.ok { color: var(--ok); font-weight: 700; }
+.film-pred.ng { color: var(--ng); font-weight: 700; }
+.film-ctrl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.film-ctrl input[type="range"] { flex: 1 1 160px; accent-color: var(--accent); min-width: 0; }
+.film-time { font: var(--fs-small) var(--font-mono); color: var(--muted); }
+.film-chaps { display: flex; flex-wrap: wrap; gap: 6px; }
+.film-chaps button { padding: 4px 12px; border-radius: 999px; }
+.film-chaps button[aria-current="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.film-chaps b { font-family: var(--font-mono); color: var(--accent); }
+.film-script summary { cursor: pointer; font-size: var(--fs-small); color: var(--wire); }
+.film-script ol { font-size: var(--fs-small); display: grid; gap: 6px; padding-left: 1.4em; margin: 8px 0 0; }
+.film svg .ft { font-family: var(--font-body); }
+.film svg .fm { font-family: var(--font-mono); }
+.film svg .k-ink { fill: var(--ink); } .film svg .k-mut { fill: var(--muted); } .film svg .k-acc { fill: var(--accent); } .film svg .k-accink { fill: var(--accent-ink); }
+.film svg .k-lamp { fill: var(--lamp); } .film svg .k-lampink { fill: var(--lamp-ink); } .film svg .k-wire { fill: var(--wire); } .film svg .k-wiresoft { fill: var(--wire-soft); }
+.film svg .k-ng { fill: var(--ng); } .film svg .k-panel { fill: var(--panel); } .film svg .k-off { fill: var(--lamp-off); } .film svg .k-none { fill: none; }
+.film svg .s-ink { stroke: var(--ink); } .film svg .s-mut { stroke: var(--muted); } .film svg .s-acc { stroke: var(--accent); } .film svg .s-lamp { stroke: var(--lamp); }
+.film svg .s-wire { stroke: var(--wire); } .film svg .s-ng { stroke: var(--ng); } .film svg .s-rule { stroke: var(--rule); } .film svg .s-none { stroke: none; }
+.film-big { white-space: nowrap; }
+@media (max-width: 520px) { .film { padding: 10px; } .film-big { padding: 6px 14px; font-size: var(--fs-small); gap: 8px; } .film-big .tri { border-left-width: 12px; border-top-width: 8px; border-bottom-width: 8px; } }
+
 </style>
 <header class="mast">
   <div class="mast-inner">
@@ -450,6 +490,11 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
       <span class="slides">授業スライド 11〜14</span>
     </div>
     <p class="keyline">正の数の全ビットを反転して 1 を足すと、その負の数になる。最上位ビットが 1 なら負。n ビットで表せるのは −2<sup>n−1</sup> 〜 2<sup>n−1</sup>−1（4ビットなら −8〜+7）。</p>
+    <div class="stack" id="movie">
+      <p class="prose">まず動画で、「反転して＋1」がなぜ負の数になるのかを見てみましょう。途中で止まったら、予想を選んでから続きを見てください。最低限5（引き算とオーバーフロー）の内容も含みます。</p>
+      <div id="film"></div>
+      <div id="filmq"></div>
+    </div>
     <div class="lab" id="s4"></div>
     <div class="stack">
       <h3>符号/絶対値表現と比べると</h3>
@@ -1778,6 +1823,459 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
 
 </script>
 <script>
+/* 動画プレイヤー：時刻 t の関数として描く SVG アニメーションを、再生・一時停止・シーク・字幕・場面の頭出しつきで見せる。
+   予測の場面では自動で止まり、予想を選ぶと続きが再生される。自動再生はしない。
+   場面は { name, dur, cues: [[t, 字幕]], pause: { t, q, choices, answer, reveal }, draw(t, F) -> SVG の中身 } */
+(function (root) {
+  "use strict";
+  var CA = root.CA, h = CA.h;
+  var REDUCE = !!(root.matchMedia && root.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+  /* ---------- 描画の道具（どれも SVG の文字列を返す） ---------- */
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function attrs(o) {
+    var s = "";
+    for (var k in o) if (o[k] != null && o[k] !== false) s += " " + k + "=\"" + o[k] + "\"";
+    return s;
+  }
+  function clamp(x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
+  function ease(p) { return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; }
+  var F = {
+    REDUCE: REDUCE,
+    /* start から dur かけて 0→1。動きを減らす設定なら start で一気に 1 */
+    tw: function (t, start, dur) {
+      if (REDUCE) return t >= start ? 1 : 0;
+      return ease(clamp((t - start) / (dur || 400)));
+    },
+    on: function (t, start) { return t >= start; },
+    lerp: function (a, b, p) { return a + (b - a) * p; },
+    text: function (x, y, str, o) {
+      o = o || {};
+      return "<text" + attrs({ x: x, y: y, "font-size": o.size || 32, "font-weight": o.weight || null, "text-anchor": o.anchor || "start",
+        "class": (o.mono ? "fm " : "ft ") + (o.cls || "k-ink"), opacity: o.op != null ? o.op : null, "dominant-baseline": o.base || null }) + ">" + esc(str) + "</text>";
+    },
+    rect: function (x, y, w, hh, o) {
+      o = o || {};
+      return "<rect" + attrs({ x: x, y: y, width: w, height: hh, rx: o.rx != null ? o.rx : 10, "class": o.cls || "k-panel s-rule", "stroke-width": o.sw || 2, opacity: o.op != null ? o.op : null, "stroke-dasharray": o.dash || null }) + "/>";
+    },
+    line: function (x1, y1, x2, y2, o) {
+      o = o || {};
+      return "<line" + attrs({ x1: x1, y1: y1, x2: x2, y2: y2, "class": o.cls || "s-mut", "stroke-width": o.sw || 4, "stroke-linecap": "round", "stroke-dasharray": o.dash || null, opacity: o.op != null ? o.op : null }) + "/>";
+    },
+    circle: function (cx, cy, r, o) {
+      o = o || {};
+      return "<circle" + attrs({ cx: cx, cy: cy, r: r, "class": o.cls || "k-off s-rule", "stroke-width": o.sw || 2, opacity: o.op != null ? o.op : null }) + "/>";
+    },
+    path: function (d, o) {
+      o = o || {};
+      var c = o.cls || "s-mut";
+      return "<path" + attrs({ d: d, "class": c, fill: o.fill || (/(^| )k-/.test(c) ? null : "none"), "stroke-width": o.sw || 4, "stroke-linecap": "round", "stroke-linejoin": "round", "stroke-dasharray": o.dash || null, opacity: o.op != null ? o.op : null }) + "/>";
+    },
+    group: function (inner, o) {
+      o = o || {};
+      return "<g" + attrs({ transform: o.tr || null, opacity: o.op != null ? o.op : null, "clip-path": o.clip || null }) + ">" + inner + "</g>";
+    },
+    /* 吹き出し風の問い（予測の場面で見せる） */
+    ask: function (x, y, str, op, w) {
+      w = w || 460;
+      return F.group(F.rect(x - w / 2, y - 44, w, 72, { cls: "k-wiresoft s-wire", sw: 3, rx: 36 }) + F.text(x, y + 4, str, { size: 34, anchor: "middle", weight: 700, cls: "k-wire", base: "middle" }), { op: op });
+    }
+  };
+  CA.filmTools = F;
+
+  function fmtTime(ms) {
+    var s = Math.max(0, Math.round(ms / 1000));
+    return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
+  }
+
+  CA.film = function (mount, opts) {
+    var scenes = opts.scenes, starts = [], total = 0;
+    scenes.forEach(function (sc) { starts.push(total); total += sc.dur; });
+    var T = 0, playing = false, last = 0, raf = 0, pred = {}, waiting = null, passed = -1;
+
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 800 450");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", opts.title + "（動画。字幕は下に表示されます）");
+    var big = h("button", { type: "button", class: "film-big", "aria-label": "再生" }, h("span", { class: "tri", "aria-hidden": "true" }), h("span", { text: "再生（" + fmtTime(total) + "）" }));
+    var pauseBox = h("div", { class: "film-pause", role: "dialog", "aria-label": "予想してみよう" });
+    pauseBox.hidden = true;
+    var stage = h("div", { class: "film-stage" }, svg, big);
+    var sceneLab = h("div", { class: "film-scene" });
+    var cap = h("p", { class: "film-cap", "aria-live": "polite" });
+    var predNote = h("p", { class: "film-pred" });
+    var bPlay = h("button", { type: "button", class: "primary", text: "再生" });
+    var bPrev = h("button", { type: "button", text: "◀ 前の場面" });
+    var bNext = h("button", { type: "button", text: "次の場面 ▶" });
+    var seek = h("input", { type: "range", min: 0, max: total, step: 100, value: 0, "aria-label": "再生位置" });
+    var time = h("span", { class: "film-time" });
+    var bFull = h("button", { type: "button", text: "全画面" });
+    bFull.onclick = function () {
+      try { var r = stage.requestFullscreen ? stage.requestFullscreen() : null; if (r && r.catch) r.catch(function () {}); } catch (e) { /* 全画面にできない環境 */ }
+    };
+    var chaps = h("div", { class: "film-chaps", role: "group", "aria-label": "場面の頭出し" });
+    scenes.forEach(function (sc, i) {
+      chaps.appendChild(h("button", { type: "button", "data-i": i, onclick: function () { go(starts[i]); } }, h("b", { text: String(i + 1) }), " " + sc.name));
+    });
+    var script = h("details", { class: "film-script" }, h("summary", { text: "字幕の全文を読む" }));
+    var ol = h("ol");
+    scenes.forEach(function (sc, i) {
+      ol.appendChild(h("li", null, h("b", { text: "場面" + (i + 1) + "　" + sc.name + "：" }), sc.cues.map(function (c) { return c[1]; }).join(" ")));
+    });
+    script.appendChild(ol);
+
+    function at(Tg) {
+      var i = 0;
+      while (i < scenes.length - 1 && Tg >= starts[i + 1]) i++;
+      return { i: i, t: Tg - starts[i] };
+    }
+    function render() {
+      var p = at(T), sc = scenes[p.i];
+      svg.innerHTML = sc.draw(p.t, { pred: pred[p.i], scene: p.i }) || "";
+      var c = "";
+      sc.cues.forEach(function (cu) { if (p.t >= cu[0]) c = cu[1]; });
+      if (cap.textContent !== c) cap.textContent = c;
+      sceneLab.textContent = "場面 " + (p.i + 1) + " / " + scenes.length + "：" + sc.name;
+      var note = "";
+      if (sc.pause && pred[p.i] != null && p.t >= (sc.pause.reveal != null ? sc.pause.reveal : sc.pause.t + 600)) {
+        var ok = pred[p.i] === sc.pause.answer;
+        note = "あなたの予想：" + sc.pause.choices[pred[p.i]] + (ok ? "　→ 当たり" : "　→ 答えは「" + sc.pause.choices[sc.pause.answer] + "」");
+      }
+      predNote.textContent = note;
+      predNote.className = "film-pred" + (note ? (pred[p.i] === sc.pause.answer ? " ok" : " ng") : "");
+      seek.value = Math.round(T);
+      time.textContent = fmtTime(T) + " / " + fmtTime(total);
+      chaps.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-current", +b.getAttribute("data-i") === p.i ? "true" : "false"); });
+    }
+    function setPlaying(v) {
+      playing = v;
+      bPlay.textContent = v ? "一時停止" : (T >= total ? "もう一度見る" : "再生");
+      big.hidden = v || waiting != null;
+      if (v) { last = performance.now(); raf = requestAnimationFrame(tick); }
+      else cancelAnimationFrame(raf);
+    }
+    function showPause(i) {
+      var ps = scenes[i].pause;
+      waiting = i;
+      pauseBox.innerHTML = "";
+      pauseBox.appendChild(h("p", { class: "q", text: "予想してみよう：" + ps.q }));
+      var row = h("div", { class: "choices" });
+      ps.choices.forEach(function (c, k) {
+        row.appendChild(h("button", { type: "button", text: c, onclick: function () { pred[i] = k; resume(); } }));
+      });
+      pauseBox.appendChild(row);
+      pauseBox.appendChild(h("button", { type: "button", class: "skip", text: "予想せずに続きを見る", onclick: resume }));
+      pauseBox.hidden = false;
+      big.hidden = true;
+      setPlaying(false);
+      var first = row.querySelector("button");
+      if (first) first.focus();
+    }
+    function resume() {
+      passed = T; /* 再開した地点の予測では、もう止まらない */
+      waiting = null; pauseBox.hidden = true;
+      setPlaying(true);
+    }
+    function tick(now) {
+      if (!playing) return;
+      var prev = T;
+      T = Math.min(total, T + Math.max(0, now - last));
+      last = now;
+      /* 予測の場面を通り過ぎるところで止める */
+      for (var i = 0; i < scenes.length; i++) {
+        var ps = scenes[i].pause;
+        if (!ps) continue;
+        var pt = starts[i] + ps.t;
+        if (prev < pt && T >= pt && pt !== passed) { T = pt; render(); showPause(i); return; }
+      }
+      render();
+      if (T >= total) { setPlaying(false); return; }
+      raf = requestAnimationFrame(tick);
+    }
+    function go(Tg) {
+      waiting = null; pauseBox.hidden = true; passed = -1;
+      T = Math.max(0, Math.min(total, Tg));
+      render();
+      if (!playing) { big.hidden = T > 0; bPlay.textContent = T >= total ? "もう一度見る" : "再生"; }
+    }
+    function toggle() {
+      if (waiting != null) { resume(); return; }
+      if (playing) { setPlaying(false); return; }
+      if (T >= total) T = 0;
+      setPlaying(true);
+    }
+    big.onclick = toggle;
+    bPlay.onclick = toggle;
+    bPrev.onclick = function () { var p = at(T); go(p.t > 1500 || p.i === 0 ? starts[p.i] : starts[p.i - 1]); };
+    bNext.onclick = function () { var p = at(T); go(p.i < scenes.length - 1 ? starts[p.i + 1] : total); };
+    seek.oninput = function () { setPlaying(false); go(+seek.value); };
+    var box = h("div", { class: "film", tabindex: "-1" },
+      h("div", { class: "film-head" }, h("span", { class: "film-title", text: opts.title }), sceneLab),
+      stage, pauseBox, cap, predNote,
+      h("div", { class: "film-ctrl" }, bPlay, bPrev, bNext, seek, time, bFull),
+      chaps, script);
+    box.addEventListener("keydown", function (e) {
+      if (e.target === seek || /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+      if (e.key === " " || e.key === "k") { e.preventDefault(); toggle(); }
+      if (e.key === "ArrowRight") { e.preventDefault(); bNext.onclick(); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); bPrev.onclick(); }
+    });
+    mount.appendChild(box);
+    render();
+    return { go: go, total: total };
+  };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+/* 動画A：なぜ「反転して＋1」で負の数になるのか（第3回 復習）。絵コンテ 2026-10-15 承認。
+   到達目標：(1) −n＝16−n＝反転＋1 の理由 (2) 5桁目を捨ててよい理由 (3) 桁上がりとオーバーフローの区別
+   誤解：(a) 桁上がり＝オーバーフロー (b) 符号/絶対値との混同 (c) ＋1 忘れ */
+(function (root) {
+  "use strict";
+  var CA = root.CA, F = CA.filmTools, B = CA.bits;
+  var BW = 80, BH = 96, GAP = 14;
+
+  function bitBox(x, y, ch, on, sz) {
+    sz = sz || 64;
+    return F.rect(x, y, BW, BH, { cls: on ? "k-lamp s-lamp" : "k-off s-rule", sw: 3 }) +
+      F.text(x + BW / 2, y + BH / 2 + sz * 0.36, ch, { size: sz, anchor: "middle", mono: true, weight: 700, cls: on ? "k-lampink" : "k-mut" });
+  }
+  function bitsRow(x, y, s) {
+    var out = "";
+    for (var i = 0; i < s.length; i++) out += bitBox(x + i * (BW + GAP), y, s[i], s[i] === "1");
+    return out;
+  }
+  /* 1つ戻すときの繰り下がり：古い数字が下へ、新しい数字が上から入る */
+  function rollDigit(x, y, from, to, p, id) {
+    var base = y + BH / 2 + 64 * 0.36;
+    var clip = "<defs><clipPath id=\"" + id + "\"><rect x=\"" + x + "\" y=\"" + y + "\" width=\"" + BW + "\" height=\"" + BH + "\" rx=\"10\"/></clipPath></defs>";
+    var bg = F.rect(x, y, BW, BH, { cls: p > 0.5 ? "k-lamp s-lamp" : "k-off s-rule", sw: 3 });
+    var txt = F.text(x + BW / 2, base + p * BH, from, { size: 64, anchor: "middle", mono: true, weight: 700, cls: "k-mut" }) +
+      F.text(x + BW / 2, base - (1 - p) * BH, to, { size: 64, anchor: "middle", mono: true, weight: 700, cls: "k-lampink" });
+    return clip + bg + F.group(txt, { clip: "url(#" + id + ")" });
+  }
+  function sval(j) { var v = j < 8 ? j : j - 16; return v === 0 ? "0" : v > 0 ? "+" + v : "−" + (-v); }
+
+  var HATCH = "<defs><pattern id=\"hatchA\" width=\"14\" height=\"14\" patternUnits=\"userSpaceOnUse\" patternTransform=\"rotate(45)\"><line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"14\" class=\"s-mut\" stroke-width=\"5\"/></pattern></defs>";
+  /* 4ビットの時計。o: cx, cy, r, k（針の位置、小数可）, label(j), shade, border, borderHot, size */
+  function clock(o) {
+    var cx = o.cx, cy = o.cy, r = o.r, s = HATCH;
+    function pos(j, rr) { var a = (-90 + j * 22.5) * Math.PI / 180; return [cx + rr * Math.cos(a), cy + rr * Math.sin(a)]; }
+    if (o.shade) {
+      var R = r + 30, a1 = pos(7.5, R), a2 = pos(15.5, R);
+      s += "<path d=\"M" + cx + "," + cy + " L" + a1[0] + "," + a1[1] + " A" + R + "," + R + " 0 0 1 " + a2[0] + "," + a2[1] + " Z\" fill=\"url(#hatchA)\" opacity=\"" + (0.45 * o.shade) + "\"/>";
+    }
+    s += F.circle(cx, cy, r, { cls: "k-none s-rule", sw: 3 });
+    var cur = ((Math.round(o.k) % 16) + 16) % 16;
+    for (var j = 0; j < 16; j++) {
+      var p = pos(j, r);
+      s += F.circle(p[0], p[1], j === cur ? 13 : 9, { cls: j === cur ? "k-lamp s-lamp" : "k-off s-rule" });
+      if (o.label && o.label(j)) {
+        var q = pos(j, r + (o.lr || 40));
+        s += F.text(q[0], q[1] + 11, sval(j), { size: o.size || 32, anchor: "middle", mono: true, weight: 700, cls: j >= 8 ? "k-wire" : "k-ink" });
+      }
+    }
+    if (o.border) {
+      var b1 = pos(7.5, r - 34), b2 = pos(7.5, r + 34);
+      s += F.line(b1[0], b1[1], b2[0], b2[1], { cls: "s-ng", sw: o.borderHot ? 8 : 5, dash: "8 6", op: o.border });
+    }
+    if (o.top) {
+      var t1 = pos(15.5, r - 30), t2 = pos(15.5, r + 30);
+      s += F.line(t1[0], t1[1], t2[0], t2[1], { cls: "s-wire", sw: 5, dash: "3 6", op: o.top });
+    }
+    var hp = pos(o.k, r - 44);
+    s += F.line(cx, cy, hp[0], hp[1], { cls: "s-ink", sw: 6 }) + F.circle(cx, cy, 8, { cls: "k-ink s-ink" });
+    return s;
+  }
+  /* 筆算の足し算（4ビット）。n: 右から何桁目まで計算したか（5 で5桁目の桁上がりまで） */
+  function colAdd(a, b, xr, y0, n, o) {
+    o = o || {};
+    var res = B.addBits(parseInt(a, 2), parseInt(b, 2), 4), sum = B.toBin(res.sum, 4), W = 58, s = "";
+    function x(p) { return xr - p * W; }
+    if (n > 0 && n <= 4) s += F.rect(x(n - 1) - 26, y0 - 34, 52, 250, { cls: "k-wiresoft s-none", rx: 8, sw: 0 });
+    s += F.text(x(4) - 20, y0, "桁上がり", { size: 26, anchor: "end", cls: "k-wire" });
+    for (var p = 0; p < 4; p++) {
+      s += F.text(x(p), y0 + 64, a[3 - p], { size: 52, anchor: "middle", mono: true });
+      s += F.text(x(p), y0 + 128, b[3 - p], { size: 52, anchor: "middle", mono: true });
+      if (n > p) {
+        s += F.text(x(p), y0 + 212, sum[3 - p], { size: 52, anchor: "middle", mono: true, weight: 700, cls: "k-acc" });
+        if (res.carries[p + 1]) s += F.text(x(p + 1), y0, "1", { size: 30, anchor: "middle", mono: true, weight: 700, cls: "k-wire" });
+      }
+    }
+    s += F.text(x(4) - 6, y0 + 128, "+", { size: 52, anchor: "middle", mono: true });
+    s += F.line(x(4) - 30, y0 + 150, x(0) + 30, y0 + 150, { cls: "s-ink", sw: 4 });
+    if (n >= 5 && res.carryOut) {
+      s += F.text(x(4), y0 + 212, "1", { size: 52, anchor: "middle", mono: true, weight: 700, cls: o.strike ? "k-ng" : "k-acc" });
+      if (o.strike) s += F.line(x(4) - 22, y0 + 196, x(4) + 22, y0 + 172, { cls: "s-ng", sw: 6, op: o.strike });
+    }
+    return { svg: s, res: res, x: x };
+  }
+  function steps(t, list) { var n = 0; list.forEach(function (s) { if (t >= s) n++; }); return n; }
+
+  CA.films = CA.films || {};
+  CA.films.twos = {
+    title: "動画：なぜ「反転して＋1」で負の数になるのか（約1分30秒）",
+    scenes: [
+      {
+        name: "メーターを1つ戻す", dur: 14000,
+        cues: [[0, "4ビットしかないメーターが 0000 を指しています。"], [2000, "ここから1つ戻すと、どうなるでしょう？"],
+          [4300, "1つ戻すと、右の桁から順に繰り下がって 1111 になります。借りるはずの5桁目は、4ビットにはありません。"],
+          [9000, "0 の1つ前なので、1111 を −1 と決めます。これが2の補数の考え方です。"]],
+        pause: { t: 4000, q: "0000 から1つ戻すと？", choices: ["0000 のまま", "1111", "0001"], answer: 1, reveal: 5200 },
+        draw: function (t) {
+          var x0 = 400 - (4 * BW + 3 * GAP) / 2, y = 120, s = "";
+          s += F.text(400, 70, "4ビットのメーター", { size: 30, anchor: "middle", cls: "k-mut" });
+          for (var i = 0; i < 4; i++) {
+            var st = 4300 + (3 - i) * 180;
+            var p = F.tw(t, st, 450);
+            s += p <= 0 ? bitBox(x0 + i * (BW + GAP), y, "0", false) : rollDigit(x0 + i * (BW + GAP), y, "0", "1", p, "twA" + i);
+          }
+          var g = F.tw(t, 4300, 400) * (1 - F.tw(t, 7600, 400));
+          if (g > 0) s += F.group(F.rect(x0 - BW - GAP, y, BW, BH, { cls: "k-none s-mut", dash: "8 6", sw: 3 }) +
+            F.text(x0 - BW / 2 - GAP, y + BH + 40, "5桁目はない", { size: 26, anchor: "middle", cls: "k-mut" }), { op: g });
+          if (t >= 2000 && t < 4300) s += F.ask(400, 300, "1つ戻すと？", F.tw(t, 2000, 400));
+          s += F.group(F.text(400, 300, "0 の1つ前 ＝ 1111", { size: 40, anchor: "middle", weight: 700 }), { op: F.tw(t, 6000, 400) });
+          s += F.group(F.text(400, 380, "だから 1111 を −1 と決める", { size: 40, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 9000, 500) });
+          return s;
+        }
+      },
+      {
+        name: "円に並べる", dur: 15000,
+        cues: [[0, "16通りのビット列を円に並べます。時計回りに1つ進むと＋1です。"],
+          [4800, "反対回りに進むと −1、−2、…。0 から8つ戻った 1000 が −8 です。"],
+          [8500, "負の数になる左半分は、どれも最上位ビット（いちばん左）が 1。最上位ビットを見れば、正か負かが分かります。"],
+          [12000, "4ビットの2の補数で表せるのは −8 から +7 までの16通りです。"]],
+        draw: function (t) {
+          var k;
+          if (t < 1000) k = 0;
+          else if (t < 4000) k = F.lerp(0, 7, F.tw(t, 1000, 3000));
+          else if (t < 4800) k = F.lerp(7, 0, F.tw(t, 4200, 500));
+          else k = F.lerp(0, -8, F.tw(t, 4800, 3200));
+          var s = clock({ cx: 240, cy: 230, r: 150, k: k, shade: F.tw(t, 8500, 500),
+            label: function (j) { return j === 0 || (j < 8 ? t >= 1000 + j * 420 : t >= 4800 + (16 - j) * 390); } });
+          var cur = ((Math.round(k) % 16) + 16) % 16;
+          s += F.text(620, 150, B.toBin(cur, 4), { size: 72, anchor: "middle", mono: true, weight: 700 });
+          s += F.text(620, 210, "＝ " + sval(cur), { size: 44, anchor: "middle", weight: 700, cls: cur >= 8 ? "k-wire" : "k-ink" });
+          var sh = F.tw(t, 8500, 500);
+          if (sh > 0) s += F.group(F.text(620, 290, "左半分（斜線）は", { size: 30, anchor: "middle" }) +
+            F.text(620, 334, "最上位ビット ＝ 1 → 負", { size: 30, anchor: "middle", weight: 700, cls: "k-wire" }), { op: sh });
+          s += F.group(F.text(620, 410, "表せるのは −8〜+7", { size: 32, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 12000, 400) });
+          return s;
+        }
+      },
+      {
+        name: "−3 の場所", dur: 18000,
+        cues: [[0, "−3 はどこでしょう。0 から3つ戻ると 1101。これは 0 から13進んだ場所で、16 − 3 = 13 です。"],
+          [6000, "16 − 3 は (15 − 3) + 1。15 は 1111 なので、1111 − 0011 は繰り下がりがなく、ビットを反転するだけで 1100 になります。"],
+          [11000, "最後に 1 を足すと 1101。「反転して＋1」は、「16 から引く」を楽にした手順でした。"],
+          [15000, "符号/絶対値表現で −3 を表した 1011 とは、別のビット列です。"]],
+        draw: function (t) {
+          var k = F.lerp(0, -3, F.tw(t, 1200, 1600));
+          var s = clock({ cx: 220, cy: 230, r: 140, k: k, label: function (j) { return j === 0 || j === 13 || j === 15 || j === 14; } });
+          var a = 1 - F.tw(t, 5600, 400);
+          if (a > 0) s += F.group(
+            F.group(F.text(590, 150, "1101", { size: 72, anchor: "middle", mono: true, weight: 700 }), { op: F.tw(t, 3000, 400) }) +
+            F.group(F.text(590, 220, "0 から3つ戻る", { size: 30, anchor: "middle" }) + F.text(590, 262, "＝ 13 進む", { size: 30, anchor: "middle" }), { op: F.tw(t, 3600, 400) }) +
+            F.group(F.text(590, 340, "16 − 3 ＝ 13", { size: 40, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 4300, 400) }), { op: a });
+          var b = F.tw(t, 6000, 400) * (1 - F.tw(t, 14600, 400));
+          if (b > 0) {
+            var xr = 690, W = 58, top = "1111", sub = "0011", res = "1100", ss = "";
+            for (var p = 0; p < 4; p++) {
+              ss += F.text(xr - p * W, 120, top[3 - p], { size: 52, anchor: "middle", mono: true });
+              ss += F.text(xr - p * W, 184, sub[3 - p], { size: 52, anchor: "middle", mono: true });
+              if (t >= 6600 + p * 450) ss += F.text(xr - p * W, 258, res[3 - p], { size: 52, anchor: "middle", mono: true, weight: 700, cls: "k-acc" });
+            }
+            ss += F.text(xr - 4 * W, 184, "−", { size: 52, anchor: "middle", mono: true });
+            ss += F.line(xr - 4 * W - 24, 206, xr + 30, 206, { cls: "s-ink" });
+            ss += F.text(xr - 4 * W - 40, 120, "15", { size: 28, anchor: "end", cls: "k-mut" }) + F.text(xr - 4 * W - 40, 184, "3", { size: 28, anchor: "end", cls: "k-mut" });
+            ss += F.group(F.text(560, 318, "繰り下がりなし", { size: 30, anchor: "middle" }) + F.text(560, 358, "＝ 0 と 1 が入れかわる（反転）", { size: 30, anchor: "middle", weight: 700 }), { op: F.tw(t, 8500, 400) });
+            ss += F.group(F.text(560, 420, "1100 ＋ 1 ＝ 1101（−3）", { size: 38, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 11000, 400) });
+            s += F.group(ss, { op: b });
+          }
+          var c = F.tw(t, 14600, 400);
+          if (c > 0) s += F.group(F.text(590, 170, "反転して＋1", { size: 48, anchor: "middle", weight: 700, cls: "k-acc" }) +
+            F.text(590, 230, "＝ 16 から引く", { size: 40, anchor: "middle", weight: 700 }) +
+            F.group(F.text(590, 330, "符号/絶対値表現の −3（1011）", { size: 28, anchor: "middle", cls: "k-mut" }) + F.text(590, 370, "とは別のもの", { size: 28, anchor: "middle", cls: "k-mut" }), { op: F.tw(t, 15000, 400) }), { op: c });
+          return s;
+        }
+      },
+      {
+        name: "引き算と5桁目", dur: 17000,
+        cues: [[0, "5 − 3 は 5 + (−3)。−3 は 1101 なので、0101 + 1101 を右の桁から計算します。"],
+          [5700, "答えは 1 0010。4ビットからはみ出した5桁目に 1 が出ました。"],
+          [7600, "5桁目は捨てます。時計で見ると、5 から13進んで、ちょうど1周（16）した印だからです。"],
+          [12000, "残った 0010 は 2。5 − 3 の正しい答えです。桁上がりが出ても、答えは正しいのです。"]],
+        pause: { t: 7000, q: "5桁目の 1 はどうする？", choices: ["捨てる", "残して 10010 とする", "オーバーフローなので計算し直す"], answer: 0, reveal: 7600 },
+        draw: function (t) {
+          var s = F.text(400, 56, "5 − 3 ＝ 5 ＋ (−3) ＝ 0101 ＋ 1101", { size: 36, anchor: "middle", weight: 700 });
+          var n = steps(t, [2500, 3300, 4100, 4900, 5700]);
+          var ca = colAdd("0101", "1101", 380, 130, n, { strike: F.tw(t, 7600, 300) });
+          s += ca.svg;
+          if (t >= 7600) s += F.text(ca.x(4), 400, "捨てる", { size: 28, anchor: "middle", weight: 700, cls: "k-ng" });
+          if (t >= 6300 && t < 7600) s += F.ask(400, 420, "5桁目の 1 は？", F.tw(t, 6300, 400));
+          var m = F.tw(t, 8000, 300);
+          if (m > 0) {
+            var k = F.lerp(5, 18, F.tw(t, 8200, 3000));
+            s += F.group(clock({ cx: 625, cy: 245, r: 110, k: k, top: k >= 16 ? 1 : 0.5, lr: 34, size: 28,
+              label: function (j) { return j === 0 || j === 5 || j === 2; } }) +
+              F.group(F.text(625, 392, "1周（16）した", { size: 28, anchor: "middle", weight: 700, cls: "k-wire" }), { op: F.tw(t, 10600, 300) }), { op: m });
+          }
+          s += F.group(F.text(625, 438, "0010 ＝ 2（正しい）", { size: 30, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 12000, 400) });
+          return s;
+        }
+      },
+      {
+        name: "オーバーフロー", dur: 17000,
+        cues: [[0, "今度は 5 + 4。0101 + 0100 を計算すると 1001。5桁目への桁上がりは出ていません。"],
+          [6000, "1001 は −7。時計で見ると、針が +7 と −8 の境目を越えています。"],
+          [9000, "本当の答え 9 は、4ビットで表せる −8〜+7 に入りません。これがオーバーフローです。"],
+          [12500, "桁上がりが出るかどうかと、オーバーフローかどうかは別の話です。"]],
+        pause: { t: 5500, q: "1001 は10進数でいくつ？（2の補数）", choices: ["9", "−7", "−1"], answer: 1, reveal: 6000 },
+        draw: function (t) {
+          var c = F.tw(t, 12500, 400), s = "", m = "";
+          m += F.text(250, 56, "5 ＋ 4 ＝ 0101 ＋ 0100", { size: 36, anchor: "middle", weight: 700 });
+          var n = steps(t, [1000, 1700, 2400, 3100, 3800]);
+          var ca = colAdd("0101", "0100", 380, 130, n);
+          m += ca.svg;
+          m += F.group(F.text(250, 400, "5桁目への桁上がり：なし", { size: 28, anchor: "middle", cls: "k-mut" }), { op: (t < 4600 || t >= 6000) ? F.tw(t, 3800, 400) : 0 });
+          if (t >= 4600 && t < 6000) m += F.ask(400, 420, "1001 はいくつ？", F.tw(t, 4600, 400));
+          var k = F.lerp(5, 9, F.tw(t, 6000, 2400));
+          var hot = k > 7.5;
+          m += clock({ cx: 620, cy: 196, r: 115, k: k, border: 1, borderHot: hot, lr: 36, size: 30,
+            label: function (j) { return j === 0 || j === 5 || j === 7 || j === 8 || j === 9; } });
+          if (hot) m += F.text(620, 432, "境目を越えた → −7", { size: 32, anchor: "middle", weight: 700, cls: "k-ng" });
+          s += F.group(m, { op: 1 - c });
+          if (c > 0) s += F.group(
+            F.text(400, 90, "桁上がりとオーバーフローは別のもの", { size: 36, anchor: "middle", weight: 700 }) +
+            F.rect(40, 150, 340, 170, { cls: "k-panel s-acc", sw: 4 }) + F.text(210, 200, "場面4：5 − 3", { size: 28, anchor: "middle", cls: "k-mut" }) +
+            F.text(210, 250, "桁上がり あり", { size: 32, anchor: "middle", weight: 700 }) + F.text(210, 296, "→ 答えは正しい", { size: 32, anchor: "middle", weight: 700, cls: "k-acc" }) +
+            F.rect(420, 150, 340, 170, { cls: "k-panel s-ng", sw: 4, dash: "12 8" }) + F.text(590, 200, "場面5：5 ＋ 4", { size: 28, anchor: "middle", cls: "k-mut" }) +
+            F.text(590, 250, "桁上がり なし", { size: 32, anchor: "middle", weight: 700 }) + F.text(590, 296, "→ オーバーフロー", { size: 32, anchor: "middle", weight: 700, cls: "k-ng" }) +
+            F.text(400, 390, "見るのは「本当の答えが −8〜+7 に入るか」", { size: 30, anchor: "middle" }), { op: c });
+          return s;
+        }
+      },
+      {
+        name: "まとめ", dur: 9000,
+        cues: [[0, "まとめです。"], [600, "−n は「反転して＋1」。引き算は補数を足し、5桁目の桁上がりは捨てる。+7 と −8 の境目を越えたらオーバーフロー。"]],
+        draw: function (t) {
+          var s = F.text(60, 80, "まとめ", { size: 44, weight: 700 });
+          var L = ["−n は「反転して＋1」＝ 16 から引く", "引き算は補数を足し、5桁目は捨てる", "+7 と −8 の境目を越えたらオーバーフロー"];
+          L.forEach(function (line, i) {
+            var op = F.tw(t, 600 + i * 1400, 400);
+            s += F.group(F.circle(84, 170 + i * 96, 26, { cls: "k-acc s-acc" }) + F.text(84, 181 + i * 96, String(i + 1), { size: 30, anchor: "middle", weight: 700, cls: "k-accink" }) +
+              F.text(128, 181 + i * 96, line, { size: 32, weight: 700 }), { op: op });
+          });
+          return s;
+        }
+      }
+    ]
+  };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
 (function () {
   var B = CA.bits;
   var ITEMS = [
@@ -1803,6 +2301,29 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
       }
     };
   }
+
+  /* 動画：なぜ「反転して＋1」なのか */
+  CA.film($("film"), CA.films.twos);
+  function choiceQ(prompt, choices, answer, msgs, solution) {
+    return function () { return { type: "choice", prompt: prompt, choices: choices, answer: answer, solution: solution,
+      check: function (i) { return i === answer ? { ok: true } : { ok: false, msg: msgs[i] }; } }; };
+  }
+  CA.quiz($("filmq"), { mode: "seq", id: "filmq", title: "動画の確認", seq: [
+    choiceQ("4ビットの2の補数で <span class=\"num\">0110 + 0011</span> を計算すると <span class=\"num\">1001</span> になった。正しい説明は？",
+      ["答えは −7。+7 と −8 の境目を越えたので、オーバーフロー", "答えは 9 で、正しく計算できている", "5桁目への桁上がりが出ていないので、オーバーフローではない"], 0,
+      [null, "9 は符号なしとして読んだ値です。4ビットの2の補数で表せるのは −8〜+7 なので、9 は表せません。", "桁上がりがなくてもオーバーフローは起きます（動画の場面5）。本当の答え 6 + 3 = 9 が −8〜+7 に入るかで判断します。"],
+      "6 + 3 = 9 は −8〜+7 に入らないのでオーバーフロー。1001 は2の補数では −7 と読めてしまいます。"),
+    choiceQ("<span class=\"num\">0011 − 0001</span> を <span class=\"num\">0011 + 1111</span> で計算すると <span class=\"num\">1 0010</span> になった。5桁目の 1 はどうする？",
+      ["捨てる。答えは 0010（= 2）", "オーバーフローなので、この計算は使えない", "残す。答えは 10010（= 18）"], 0,
+      [null, "5桁目の桁上がりは、時計を1周した印です。オーバーフローは本当の答えが範囲を越えたときで、3 − 1 = 2 は範囲内です。", "4ビットで計算しているので、5桁目は入りません。捨てると 0010 = 2 で、3 − 1 と合います。"],
+      "5桁目の 1 は4ビットに入らないので捨てる。残った 0010 = 2 が 3 − 1 の答え。")
+  ], onFinish: function (ok, n, box) {
+    var again = CA.h("button", { type: "button", text: "もう一度" });
+    var msg = CA.h("div", { class: "feedback " + (ok === n ? "ok" : "ng"), html: "<span class=\"head\">" + n + " 問中 " + ok + " 問正解</span>　" + (ok === n ? "動画の要点をつかめています。" : "動画の場面4・5をもう一度見てみましょう。") });
+    again.onclick = function () { msg.remove(); box.restart(); };
+    msg.appendChild(CA.h("div", { class: "row", style: "margin-top:8px" }, again));
+    box.appendChild(msg);
+  } });
 
   /* 1 */
   CA.steps.binToDec($("s1"), "101101");

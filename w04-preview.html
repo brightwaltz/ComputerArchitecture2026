@@ -359,6 +359,46 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
 .circuits h3 { font-size: var(--fs-h3); }
 .checklist a { color: var(--ink); }
 
+/* 動画プレイヤー */
+.film { display: grid; gap: 10px; background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); padding: 16px; min-width: 0; }
+.film > * { min-width: 0; }
+.film-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; align-items: baseline; }
+.film-title { font-weight: 700; }
+.film-scene { font-size: var(--fs-small); color: var(--muted); }
+.film-stage { position: relative; aspect-ratio: 16 / 9; max-width: 100%; background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.film-stage:fullscreen { border: 0; border-radius: 0; display: grid; place-items: center; }
+.film-stage svg { width: 100%; height: 100%; display: block; }
+.film-big { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; gap: 12px; align-items: center;
+  font-size: var(--fs-body); font-weight: 700; background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 999px; padding: 12px 26px; }
+.film-big .tri { width: 0; height: 0; border-left: 18px solid currentColor; border-top: 11px solid transparent; border-bottom: 11px solid transparent; }
+.film-pause { display: grid; gap: 10px; padding: 14px 16px; border-radius: 8px; border: 2px solid var(--wire); background: var(--wire-soft); }
+.film-pause .q { font-weight: 700; }
+.film-pause .choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.film-pause .choices button { font-size: var(--fs-body); }
+.film-pause .skip { justify-self: start; border: 0; background: transparent; color: var(--wire); text-decoration: underline; padding: 2px 0; }
+.film-cap { min-height: 3.6em; }
+.film-pred { font-size: var(--fs-small); min-height: 1.4em; }
+.film-pred.ok { color: var(--ok); font-weight: 700; }
+.film-pred.ng { color: var(--ng); font-weight: 700; }
+.film-ctrl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.film-ctrl input[type="range"] { flex: 1 1 160px; accent-color: var(--accent); min-width: 0; }
+.film-time { font: var(--fs-small) var(--font-mono); color: var(--muted); }
+.film-chaps { display: flex; flex-wrap: wrap; gap: 6px; }
+.film-chaps button { padding: 4px 12px; border-radius: 999px; }
+.film-chaps button[aria-current="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.film-chaps b { font-family: var(--font-mono); color: var(--accent); }
+.film-script summary { cursor: pointer; font-size: var(--fs-small); color: var(--wire); }
+.film-script ol { font-size: var(--fs-small); display: grid; gap: 6px; padding-left: 1.4em; margin: 8px 0 0; }
+.film svg .ft { font-family: var(--font-body); }
+.film svg .fm { font-family: var(--font-mono); }
+.film svg .k-ink { fill: var(--ink); } .film svg .k-mut { fill: var(--muted); } .film svg .k-acc { fill: var(--accent); } .film svg .k-accink { fill: var(--accent-ink); }
+.film svg .k-lamp { fill: var(--lamp); } .film svg .k-lampink { fill: var(--lamp-ink); } .film svg .k-wire { fill: var(--wire); } .film svg .k-wiresoft { fill: var(--wire-soft); }
+.film svg .k-ng { fill: var(--ng); } .film svg .k-panel { fill: var(--panel); } .film svg .k-off { fill: var(--lamp-off); } .film svg .k-none { fill: none; }
+.film svg .s-ink { stroke: var(--ink); } .film svg .s-mut { stroke: var(--muted); } .film svg .s-acc { stroke: var(--accent); } .film svg .s-lamp { stroke: var(--lamp); }
+.film svg .s-wire { stroke: var(--wire); } .film svg .s-ng { stroke: var(--ng); } .film svg .s-rule { stroke: var(--rule); } .film svg .s-none { stroke: none; }
+.film-big { white-space: nowrap; }
+@media (max-width: 520px) { .film { padding: 10px; } .film-big { padding: 6px 14px; font-size: var(--fs-small); gap: 8px; } .film-big .tri { border-left-width: 12px; border-top-width: 8px; border-bottom-width: 8px; } }
+
 </style>
 <header class="mast">
   <div class="mast-inner">
@@ -383,6 +423,13 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
     <h2 id="hook-title">今日の問い：スイッチ2つと電球1つ。つなぎ方で、点く条件はどう変わる？</h2>
     <p class="hint">スイッチ A と B を押して、ON と OFF の4通りをすべて試してください。試した組から、下の表が埋まっていきます。</p>
     <div id="switches"></div>
+  </section>
+
+  <section class="stack" id="movie" aria-labelledby="movie-title">
+    <h2 id="movie-title">動画：スイッチの中身はトランジスタ</h2>
+    <p class="prose">上の実験のスイッチは、コンピュータの中ではトランジスタです。NOT ゲートの中で、2つのトランジスタがどう動くかを見てみましょう（第2回の CMOS の続きです）。途中で止まったら、予想を選んでから続きを見てください。</p>
+    <div id="film"></div>
+    <div id="filmq"></div>
   </section>
 
   <section class="item" id="t1">
@@ -1412,6 +1459,392 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
 
 </script>
 <script>
+/* 動画プレイヤー：時刻 t の関数として描く SVG アニメーションを、再生・一時停止・シーク・字幕・場面の頭出しつきで見せる。
+   予測の場面では自動で止まり、予想を選ぶと続きが再生される。自動再生はしない。
+   場面は { name, dur, cues: [[t, 字幕]], pause: { t, q, choices, answer, reveal }, draw(t, F) -> SVG の中身 } */
+(function (root) {
+  "use strict";
+  var CA = root.CA, h = CA.h;
+  var REDUCE = !!(root.matchMedia && root.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+  /* ---------- 描画の道具（どれも SVG の文字列を返す） ---------- */
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function attrs(o) {
+    var s = "";
+    for (var k in o) if (o[k] != null && o[k] !== false) s += " " + k + "=\"" + o[k] + "\"";
+    return s;
+  }
+  function clamp(x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
+  function ease(p) { return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; }
+  var F = {
+    REDUCE: REDUCE,
+    /* start から dur かけて 0→1。動きを減らす設定なら start で一気に 1 */
+    tw: function (t, start, dur) {
+      if (REDUCE) return t >= start ? 1 : 0;
+      return ease(clamp((t - start) / (dur || 400)));
+    },
+    on: function (t, start) { return t >= start; },
+    lerp: function (a, b, p) { return a + (b - a) * p; },
+    text: function (x, y, str, o) {
+      o = o || {};
+      return "<text" + attrs({ x: x, y: y, "font-size": o.size || 32, "font-weight": o.weight || null, "text-anchor": o.anchor || "start",
+        "class": (o.mono ? "fm " : "ft ") + (o.cls || "k-ink"), opacity: o.op != null ? o.op : null, "dominant-baseline": o.base || null }) + ">" + esc(str) + "</text>";
+    },
+    rect: function (x, y, w, hh, o) {
+      o = o || {};
+      return "<rect" + attrs({ x: x, y: y, width: w, height: hh, rx: o.rx != null ? o.rx : 10, "class": o.cls || "k-panel s-rule", "stroke-width": o.sw || 2, opacity: o.op != null ? o.op : null, "stroke-dasharray": o.dash || null }) + "/>";
+    },
+    line: function (x1, y1, x2, y2, o) {
+      o = o || {};
+      return "<line" + attrs({ x1: x1, y1: y1, x2: x2, y2: y2, "class": o.cls || "s-mut", "stroke-width": o.sw || 4, "stroke-linecap": "round", "stroke-dasharray": o.dash || null, opacity: o.op != null ? o.op : null }) + "/>";
+    },
+    circle: function (cx, cy, r, o) {
+      o = o || {};
+      return "<circle" + attrs({ cx: cx, cy: cy, r: r, "class": o.cls || "k-off s-rule", "stroke-width": o.sw || 2, opacity: o.op != null ? o.op : null }) + "/>";
+    },
+    path: function (d, o) {
+      o = o || {};
+      var c = o.cls || "s-mut";
+      return "<path" + attrs({ d: d, "class": c, fill: o.fill || (/(^| )k-/.test(c) ? null : "none"), "stroke-width": o.sw || 4, "stroke-linecap": "round", "stroke-linejoin": "round", "stroke-dasharray": o.dash || null, opacity: o.op != null ? o.op : null }) + "/>";
+    },
+    group: function (inner, o) {
+      o = o || {};
+      return "<g" + attrs({ transform: o.tr || null, opacity: o.op != null ? o.op : null, "clip-path": o.clip || null }) + ">" + inner + "</g>";
+    },
+    /* 吹き出し風の問い（予測の場面で見せる） */
+    ask: function (x, y, str, op, w) {
+      w = w || 460;
+      return F.group(F.rect(x - w / 2, y - 44, w, 72, { cls: "k-wiresoft s-wire", sw: 3, rx: 36 }) + F.text(x, y + 4, str, { size: 34, anchor: "middle", weight: 700, cls: "k-wire", base: "middle" }), { op: op });
+    }
+  };
+  CA.filmTools = F;
+
+  function fmtTime(ms) {
+    var s = Math.max(0, Math.round(ms / 1000));
+    return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
+  }
+
+  CA.film = function (mount, opts) {
+    var scenes = opts.scenes, starts = [], total = 0;
+    scenes.forEach(function (sc) { starts.push(total); total += sc.dur; });
+    var T = 0, playing = false, last = 0, raf = 0, pred = {}, waiting = null, passed = -1;
+
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 800 450");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", opts.title + "（動画。字幕は下に表示されます）");
+    var big = h("button", { type: "button", class: "film-big", "aria-label": "再生" }, h("span", { class: "tri", "aria-hidden": "true" }), h("span", { text: "再生（" + fmtTime(total) + "）" }));
+    var pauseBox = h("div", { class: "film-pause", role: "dialog", "aria-label": "予想してみよう" });
+    pauseBox.hidden = true;
+    var stage = h("div", { class: "film-stage" }, svg, big);
+    var sceneLab = h("div", { class: "film-scene" });
+    var cap = h("p", { class: "film-cap", "aria-live": "polite" });
+    var predNote = h("p", { class: "film-pred" });
+    var bPlay = h("button", { type: "button", class: "primary", text: "再生" });
+    var bPrev = h("button", { type: "button", text: "◀ 前の場面" });
+    var bNext = h("button", { type: "button", text: "次の場面 ▶" });
+    var seek = h("input", { type: "range", min: 0, max: total, step: 100, value: 0, "aria-label": "再生位置" });
+    var time = h("span", { class: "film-time" });
+    var bFull = h("button", { type: "button", text: "全画面" });
+    bFull.onclick = function () {
+      try { var r = stage.requestFullscreen ? stage.requestFullscreen() : null; if (r && r.catch) r.catch(function () {}); } catch (e) { /* 全画面にできない環境 */ }
+    };
+    var chaps = h("div", { class: "film-chaps", role: "group", "aria-label": "場面の頭出し" });
+    scenes.forEach(function (sc, i) {
+      chaps.appendChild(h("button", { type: "button", "data-i": i, onclick: function () { go(starts[i]); } }, h("b", { text: String(i + 1) }), " " + sc.name));
+    });
+    var script = h("details", { class: "film-script" }, h("summary", { text: "字幕の全文を読む" }));
+    var ol = h("ol");
+    scenes.forEach(function (sc, i) {
+      ol.appendChild(h("li", null, h("b", { text: "場面" + (i + 1) + "　" + sc.name + "：" }), sc.cues.map(function (c) { return c[1]; }).join(" ")));
+    });
+    script.appendChild(ol);
+
+    function at(Tg) {
+      var i = 0;
+      while (i < scenes.length - 1 && Tg >= starts[i + 1]) i++;
+      return { i: i, t: Tg - starts[i] };
+    }
+    function render() {
+      var p = at(T), sc = scenes[p.i];
+      svg.innerHTML = sc.draw(p.t, { pred: pred[p.i], scene: p.i }) || "";
+      var c = "";
+      sc.cues.forEach(function (cu) { if (p.t >= cu[0]) c = cu[1]; });
+      if (cap.textContent !== c) cap.textContent = c;
+      sceneLab.textContent = "場面 " + (p.i + 1) + " / " + scenes.length + "：" + sc.name;
+      var note = "";
+      if (sc.pause && pred[p.i] != null && p.t >= (sc.pause.reveal != null ? sc.pause.reveal : sc.pause.t + 600)) {
+        var ok = pred[p.i] === sc.pause.answer;
+        note = "あなたの予想：" + sc.pause.choices[pred[p.i]] + (ok ? "　→ 当たり" : "　→ 答えは「" + sc.pause.choices[sc.pause.answer] + "」");
+      }
+      predNote.textContent = note;
+      predNote.className = "film-pred" + (note ? (pred[p.i] === sc.pause.answer ? " ok" : " ng") : "");
+      seek.value = Math.round(T);
+      time.textContent = fmtTime(T) + " / " + fmtTime(total);
+      chaps.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-current", +b.getAttribute("data-i") === p.i ? "true" : "false"); });
+    }
+    function setPlaying(v) {
+      playing = v;
+      bPlay.textContent = v ? "一時停止" : (T >= total ? "もう一度見る" : "再生");
+      big.hidden = v || waiting != null;
+      if (v) { last = performance.now(); raf = requestAnimationFrame(tick); }
+      else cancelAnimationFrame(raf);
+    }
+    function showPause(i) {
+      var ps = scenes[i].pause;
+      waiting = i;
+      pauseBox.innerHTML = "";
+      pauseBox.appendChild(h("p", { class: "q", text: "予想してみよう：" + ps.q }));
+      var row = h("div", { class: "choices" });
+      ps.choices.forEach(function (c, k) {
+        row.appendChild(h("button", { type: "button", text: c, onclick: function () { pred[i] = k; resume(); } }));
+      });
+      pauseBox.appendChild(row);
+      pauseBox.appendChild(h("button", { type: "button", class: "skip", text: "予想せずに続きを見る", onclick: resume }));
+      pauseBox.hidden = false;
+      big.hidden = true;
+      setPlaying(false);
+      var first = row.querySelector("button");
+      if (first) first.focus();
+    }
+    function resume() {
+      passed = T; /* 再開した地点の予測では、もう止まらない */
+      waiting = null; pauseBox.hidden = true;
+      setPlaying(true);
+    }
+    function tick(now) {
+      if (!playing) return;
+      var prev = T;
+      T = Math.min(total, T + Math.max(0, now - last));
+      last = now;
+      /* 予測の場面を通り過ぎるところで止める */
+      for (var i = 0; i < scenes.length; i++) {
+        var ps = scenes[i].pause;
+        if (!ps) continue;
+        var pt = starts[i] + ps.t;
+        if (prev < pt && T >= pt && pt !== passed) { T = pt; render(); showPause(i); return; }
+      }
+      render();
+      if (T >= total) { setPlaying(false); return; }
+      raf = requestAnimationFrame(tick);
+    }
+    function go(Tg) {
+      waiting = null; pauseBox.hidden = true; passed = -1;
+      T = Math.max(0, Math.min(total, Tg));
+      render();
+      if (!playing) { big.hidden = T > 0; bPlay.textContent = T >= total ? "もう一度見る" : "再生"; }
+    }
+    function toggle() {
+      if (waiting != null) { resume(); return; }
+      if (playing) { setPlaying(false); return; }
+      if (T >= total) T = 0;
+      setPlaying(true);
+    }
+    big.onclick = toggle;
+    bPlay.onclick = toggle;
+    bPrev.onclick = function () { var p = at(T); go(p.t > 1500 || p.i === 0 ? starts[p.i] : starts[p.i - 1]); };
+    bNext.onclick = function () { var p = at(T); go(p.i < scenes.length - 1 ? starts[p.i + 1] : total); };
+    seek.oninput = function () { setPlaying(false); go(+seek.value); };
+    var box = h("div", { class: "film", tabindex: "-1" },
+      h("div", { class: "film-head" }, h("span", { class: "film-title", text: opts.title }), sceneLab),
+      stage, pauseBox, cap, predNote,
+      h("div", { class: "film-ctrl" }, bPlay, bPrev, bNext, seek, time, bFull),
+      chaps, script);
+    box.addEventListener("keydown", function (e) {
+      if (e.target === seek || /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+      if (e.key === " " || e.key === "k") { e.preventDefault(); toggle(); }
+      if (e.key === "ArrowRight") { e.preventDefault(); bNext.onclick(); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); bPrev.onclick(); }
+    });
+    mount.appendChild(box);
+    render();
+    return { go: go, total: total };
+  };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+/* 動画B：NOT ゲートの中身（CMOS インバータ）（第4回 予習）。絵コンテ 2026-10-15 承認。
+   到達目標：(1)(2) 入力 0／1 のとき ON になるトランジスタと出力を説明できる (3) 消費電力が小さい理由を「どちらか一方は必ず OFF」で説明できる
+   誤解：(a) 入力 0V で出力も 0V (b) 電圧と電流の混同 (c) ゲートとトランジスタは別物 */
+(function (root) {
+  "use strict";
+  var CA = root.CA, F = CA.filmTools;
+  var X = 330, YR1 = 70, YP1 = 110, YP2 = 190, YO = 230, YN1 = 270, YN2 = 350, YR2 = 390;
+
+  /* 縦向きのスイッチ。p：0＝切れている、1＝つながっている */
+  function sw(x, y1, y2, p, hot) {
+    var ox = x + 46, oy = y2 - 14;
+    var ex = F.lerp(ox, x, p), ey = F.lerp(oy, y2, p);
+    return F.circle(x, y1, 7, { cls: "k-ink s-ink" }) + F.circle(x, y2, 7, { cls: "k-ink s-ink" }) +
+      F.line(x, y1, ex, ey, { cls: hot ? "s-lamp" : "s-ink", sw: 7 });
+  }
+  function state(x, y, name, on, unknown) {
+    return F.text(x, y, name, { size: 30, weight: 700, mono: true }) +
+      F.text(x, y + 36, unknown ? "？" : on ? "ON（つながる）" : "OFF（切れる）", { size: 26, weight: on ? 700 : null, cls: unknown ? "k-mut" : on ? "k-acc" : "k-mut" });
+  }
+  /* 組み立てた CMOS インバータ。o: inp, pP, pN, up, down, out, unknownP, unknownN, op{rails,pmos,nmos,io}, cross */
+  function circuit(o) {
+    var op = o.op || {}, s = "";
+    function O(k) { return op[k] == null ? 1 : op[k]; }
+    s += F.group(
+      F.line(230, YR1, 430, YR1, { cls: "s-ink", sw: 6 }) + F.text(X, YR1 - 22, "1V（電源）", { size: 28, anchor: "middle", weight: 700 }) +
+      F.line(230, YR2, 430, YR2, { cls: "s-ink", sw: 6 }) + F.text(X, YR2 + 40, "0V（グラウンド）", { size: 28, anchor: "middle", weight: 700 }), { op: O("rails") });
+    s += F.group(
+      F.line(X, YR1, X, YP1, { cls: o.up ? "s-lamp" : "s-mut", sw: o.up ? 9 : 4 }) +
+      sw(X, YP1, YP2, o.pP, o.up) +
+      F.line(X - 30, 150, 220, 150, { cls: "s-mut" }) + F.circle(X - 22, 150, 8, { cls: "k-panel s-ink", sw: 3 }) +
+      state(X + 64, 146, "PMOS", o.pP > 0.5, o.unknownP), { op: O("pmos") });
+    s += F.group(
+      F.line(X, YN2, X, YR2, { cls: o.down ? "s-lamp" : "s-mut", sw: o.down ? 9 : 4 }) +
+      sw(X, YN1, YN2, o.pN, o.down) +
+      F.line(X - 14, 310, 220, 310, { cls: "s-mut" }) +
+      state(X + 64, 306, "NMOS", o.pN > 0.5, o.unknownN), { op: O("nmos") });
+    var hotO = o.up || o.down;
+    s += F.group(
+      F.line(X, YP2, X, YN1, { cls: hotO ? "s-lamp" : "s-mut", sw: hotO ? 9 : 4 }) + F.circle(X, YO, 7, { cls: "k-ink s-ink" }) +
+      F.line(X, YO, 630, YO, { cls: hotO ? "s-lamp" : "s-mut", sw: hotO ? 9 : 4 }) +
+      F.rect(630, 195, 120, 70, { cls: "k-panel s-ink", sw: 3 }) + F.text(690, 182, "出力", { size: 26, anchor: "middle", cls: "k-mut" }) +
+      F.text(690, 248, o.out == null ? "?" : o.out, { size: 48, anchor: "middle", mono: true, weight: 700, cls: o.out == null ? "k-mut" : "k-acc" }) +
+      F.line(220, 150, 220, 310, { cls: "s-mut" }) + F.line(150, YO, 220, YO, { cls: "s-mut" }) +
+      F.rect(40, 195, 110, 70, { cls: "k-panel s-wire", sw: 3 }) + F.text(95, 182, "入力", { size: 26, anchor: "middle", cls: "k-mut" }) +
+      F.text(95, 248, o.inp == null ? "" : o.inp, { size: 48, anchor: "middle", mono: true, weight: 700, cls: "k-wire" }), { op: O("io") });
+    if (o.cross) {
+      var cy = o.cross === "P" ? (YP1 + YP2) / 2 : (YN1 + YN2) / 2;
+      s += F.line(X + 28, YR1 + 8, X + 28, YR2 - 8, { cls: "s-ng", sw: 4, dash: "10 8", op: o.crossOp });
+      s += F.group(F.line(X + 8, cy - 20, X + 48, cy + 20, { cls: "s-ng", sw: 7 }) + F.line(X + 8, cy + 20, X + 48, cy - 20, { cls: "s-ng", sw: 7 }), { op: o.crossOp });
+    }
+    return s;
+  }
+  function table(rows, op) {
+    var s = F.text(690, 316, "入力 → 出力", { size: 26, anchor: "middle", cls: "k-mut" });
+    rows.forEach(function (r, i) { s += F.group(F.text(690, 356 + i * 40, r, { size: 32, anchor: "middle", mono: true, weight: 700 }), { op: r ? 1 : 0 }); });
+    return F.group(s, { op: op });
+  }
+
+  CA.films = CA.films || {};
+  CA.films.cmos = {
+    title: "動画：NOT ゲートの中身（CMOS インバータ）（約1分15秒）",
+    scenes: [
+      {
+        name: "NOT の中身", dur: 10000,
+        cues: [[0, "第4回で習う NOT ゲート（インバータ）は、入力の 0 と 1 を反対にする部品です。"],
+          [3500, "中を開けると、トランジスタが2つ入っています。第2回で見た CMOS です。"],
+          [7000, "ここでは、トランジスタを「入力でつながったり切れたりするスイッチ」として見ます。"]],
+        draw: function (t) {
+          var s = F.text(200, 60, "ディジタル回路", { size: 26, anchor: "middle", cls: "k-mut" });
+          s += F.path("M130,120 L130,240 L250,180 Z", { cls: "k-panel s-ink", fill: null, sw: 5 }) + F.circle(264, 180, 13, { cls: "k-panel s-ink", sw: 5 });
+          s += F.line(60, 180, 130, 180, { cls: "s-ink", sw: 5 }) + F.line(277, 180, 340, 180, { cls: "s-ink", sw: 5 });
+          s += F.text(200, 300, "NOT ゲート", { size: 32, anchor: "middle", weight: 700 }) + F.text(200, 344, "0 → 1、1 → 0", { size: 30, anchor: "middle", mono: true });
+          var a = F.tw(t, 3500, 500);
+          if (a > 0) {
+            var g = F.text(400, 150, "中を開けると", { size: 26, anchor: "middle", cls: "k-wire" }) +
+              F.path("M360,180 L440,180 M425,166 L442,180 L425,194", { cls: "s-wire", sw: 5 }) +
+              F.rect(460, 80, 320, 300, { cls: "k-panel s-rule", sw: 3 }) +
+              F.text(620, 60, "デバイス（素子）", { size: 26, anchor: "middle", cls: "k-mut" }) +
+              F.text(620, 126, "トランジスタ 2つ", { size: 30, anchor: "middle", weight: 700 }) +
+              F.rect(520, 160, 200, 60, { cls: "k-off s-ink", sw: 3 }) + F.text(620, 200, "PMOS", { size: 30, anchor: "middle", mono: true, weight: 700 }) +
+              F.rect(520, 250, 200, 60, { cls: "k-off s-ink", sw: 3 }) + F.text(620, 290, "NMOS", { size: 30, anchor: "middle", mono: true, weight: 700 }) +
+              F.group(F.text(620, 356, "第2回の CMOS", { size: 28, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 5200, 400) });
+            s += F.group(g, { op: a });
+          }
+          s += F.group(F.text(400, 425, "トランジスタ ＝ 入力でつながったり切れたりするスイッチ", { size: 28, anchor: "middle", weight: 700 }), { op: F.tw(t, 7000, 400) });
+          return s;
+        }
+      },
+      {
+        name: "2種類のスイッチ", dur: 13000,
+        cues: [[0, "NMOS は、入力が 1 のときにつながるスイッチです。"],
+          [3500, "PMOS は反対で、入力が 0 のときにつながります。記号の小さな○は「反対に動く」しるしです。"],
+          [8000, "同じ入力を2つに入れると、いつもどちらか一方だけがつながります。"]],
+        draw: function (t) {
+          function inpAt(tt) { return tt < 1500 ? 0 : tt < 5500 ? 1 : tt < 9000 ? 0 : 1; }
+          var inp = inpAt(t);
+          var flips = [1500, 5500, 9000];
+          var pN = inp, pP = 1 - inp;
+          flips.forEach(function (f) {
+            if (t >= f && t < f + 400) { var q = F.tw(t, f, 400); pN = inpAt(f) ? q : 1 - q; pP = 1 - pN; }
+          });
+          var s = F.rect(320, 22, 160, 62, { cls: "k-panel s-wire", sw: 3 }) + F.text(400, 66, "入力 " + inp, { size: 36, anchor: "middle", mono: true, weight: 700, cls: "k-wire" });
+          s += F.line(400, 84, 400, 110, { cls: "s-mut" }) + F.line(150, 110, 650, 110, { cls: "s-mut" });
+          [[230, "NMOS", pN, "入力が 1 で ON", false], [570, "PMOS", pP, "入力が 0 で ON", true]].forEach(function (d) {
+            var x = d[0];
+            s += F.line(x - 80, 110, x - 80, 205, { cls: "s-mut" }) + F.line(x - 80, 205, x - (d[4] ? 30 : 14), 205, { cls: "s-mut" });
+            if (d[4]) s += F.circle(x - 22, 205, 8, { cls: "k-panel s-ink", sw: 3 });
+            s += F.line(x, 130, x, 160, { cls: "s-mut" }) + sw(x, 160, 250, d[2], d[2] > 0.5) + F.line(x, 250, x, 280, { cls: "s-mut" });
+            s += F.text(x + 50, 200, d[2] > 0.5 ? "ON" : "OFF", { size: 32, weight: 700, mono: true, cls: d[2] > 0.5 ? "k-acc" : "k-mut" });
+            s += F.text(x, 336, d[1], { size: 32, anchor: "middle", weight: 700, mono: true }) + F.text(x, 376, d[3], { size: 28, anchor: "middle" });
+          });
+          s += F.group(F.text(570, 416, "○ ＝ 反対に動く", { size: 28, anchor: "middle", weight: 700, cls: "k-wire" }), { op: F.tw(t, 3500, 400) });
+          s += F.group(F.text(230, 416, "いつも片方だけ ON", { size: 28, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 8000, 400) });
+          return s;
+        }
+      },
+      {
+        name: "組み立てる", dur: 10000,
+        cues: [[0, "組み立てます。上の線は 1V（電源）、下の線は 0V（グラウンド）。"],
+          [2000, "上に PMOS、下に NMOS をつなぎます。"],
+          [6000, "真ん中から出力を取り出し、入力は2つのトランジスタに共通につなぎます。"]],
+        draw: function (t) {
+          return circuit({ pP: 0, pN: 0, inp: null, out: null, unknownP: true, unknownN: true,
+            op: { rails: F.tw(t, 0, 500), pmos: F.tw(t, 2000, 500), nmos: F.tw(t, 4000, 500), io: F.tw(t, 6000, 500) } });
+        }
+      },
+      {
+        name: "入力 0 のとき", dur: 15000,
+        cues: [[0, "入力に 0（0V）を入れます。"], [1200, "出力は 1V と 0V のどちらにつながるでしょう？"],
+          [3000, "入力が 0 なので、PMOS がつながり、NMOS は切れます。"],
+          [4800, "出力は 1V の線とつながるので、出力は 1。0 を入れると 1 が出てきました。"],
+          [9000, "真理値表の1行目：入力 0 → 出力 1。"]],
+        pause: { t: 2600, q: "入力 0 のとき、出力は？", choices: ["1（1V とつながる）", "0（0V とつながる）"], answer: 0, reveal: 3600 },
+        draw: function (t) {
+          var r = F.tw(t, 3000, 500);
+          var s = circuit({ inp: "0", pP: F.lerp(0.5, 1, r), pN: F.lerp(0.5, 0, r), unknownP: r === 0, unknownN: r === 0,
+            up: t >= 4800, out: t >= 4800 ? "1" : null });
+          if (t >= 1200 && t < 3000) s += F.ask(620, 370, "出力は 1 か 0 か？", F.tw(t, 1200, 400), 330);
+          s += table(["0 → 1", ""], F.tw(t, 9000, 400));
+          return s;
+        }
+      },
+      {
+        name: "入力 1 のとき", dur: 12000,
+        cues: [[0, "入力を 1（1V）にします。"], [800, "今度は PMOS が切れて、NMOS がつながります。"],
+          [2600, "出力は 0V の線とつながるので、出力は 0。"],
+          [6500, "真理値表が完成しました。入力と出力が反対になる、NOT の表です。"]],
+        draw: function (t) {
+          var s = circuit({ inp: "1", pP: 1 - F.tw(t, 800, 500), pN: F.tw(t, 1300, 500), down: t >= 2600, out: t >= 2600 ? "0" : null });
+          s += table(["0 → 1", t >= 6500 ? "1 → 0" : ""], 1);
+          return s;
+        }
+      },
+      {
+        name: "電流の通り道", dur: 16000,
+        cues: [[0, "電流の通り道を見ます。入力 0 のとき、NMOS が切れているので、1V から 0V へ抜ける道はありません。"],
+          [5000, "入力 1 のときは PMOS が切れていて、やはり道はありません。"],
+          [9500, "どちらの場合も電流はほとんど流れ続けません。出力の 1 と 0 は、電流ではなく、つながった側の電圧で決まります。だから CMOS は消費電力が小さいのです。"],
+          [13000, "同じスイッチを直列や並列に組むと、NAND や NOR も作れます。ページの上のスイッチ実験を思い出してみましょう。"]],
+        draw: function (t) {
+          var one = t >= 5000;
+          var fade = F.tw(t, 9500, 500);
+          var s = F.group(circuit({ inp: one ? "1" : "0", pP: one ? 0 : 1, pN: one ? 1 : 0, up: !one, down: one, out: one ? "0" : "1",
+            cross: one ? "P" : "N", crossOp: F.tw(t, one ? 5600 : 1000, 400) }), { op: 1 - 0.88 * fade });
+          s += F.group(F.text(690, 318, "1V → 0V の道は", { size: 26, anchor: "middle", weight: 700, cls: "k-ng" }) +
+            F.text(690, 354, "✕ 切れている", { size: 26, anchor: "middle", weight: 700, cls: "k-ng" }), { op: F.tw(t, 1000, 400) * (1 - fade) });
+          if (fade > 0) s += F.group(
+            F.text(400, 110, "出力の 1 と 0 は、つながった側の電圧で決まる", { size: 30, anchor: "middle", weight: 700 }) +
+            F.text(400, 180, "1V から 0V へ抜ける道は、いつも切れている", { size: 30, anchor: "middle" }) +
+            F.text(400, 240, "→ 電流はほとんど流れ続けない", { size: 30, anchor: "middle" }) +
+            F.text(400, 310, "→ 消費電力が小さい", { size: 38, anchor: "middle", weight: 700, cls: "k-acc" }) +
+            F.group(F.text(400, 400, "直列・並列に組むと NAND・NOR も作れる", { size: 28, anchor: "middle", cls: "k-mut" }), { op: F.tw(t, 13000, 400) }), { op: fade });
+          return s;
+        }
+      }
+    ]
+  };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
 (function () {
   var B = CA.bits, h = CA.h;
   function $(id) { return document.getElementById(id); }
@@ -1431,6 +1864,29 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
 
   /* つかみ：スイッチと電球 */
   CA.switchLab($("switches"));
+
+  /* 動画：NOT ゲートの中身 */
+  CA.film($("film"), CA.films.cmos);
+  function choiceQ(prompt, choices, answer, msgs, solution) {
+    return function () { return { type: "choice", prompt: prompt, choices: choices, answer: answer, solution: solution,
+      check: function (i) { return i === answer ? { ok: true } : { ok: false, msg: msgs[i] }; } }; };
+  }
+  CA.quiz($("filmq"), { mode: "seq", id: "filmq", title: "動画の確認", seq: [
+    choiceQ("CMOS インバータ（NOT ゲート）に 0（0V）を入れたとき、ON になるのは？",
+      ["PMOS（出力は 1）", "NMOS（出力は 0）", "両方（出力は 0.5V くらい）"], 0,
+      [null, "NMOS が ON になるのは入力が 1 のときです。入力が 0 なので、ON になるのは○の付いた PMOS。出力は 1V 側とつながって 1 になります。", "同じ入力が2つに入るので、PMOS と NMOS はいつもどちらか一方だけが ON です。"],
+      "入力 0 → PMOS が ON・NMOS が OFF → 出力は 1V とつながって 1。"),
+    choiceQ("CMOS の消費電力が小さい理由として正しいのは？",
+      ["入力がどちらでも上下のどちらかが OFF で、1V から 0V へ電流が流れ続ける道がないから", "PMOS に 1V の電流が流れて、出力が 1 になるから", "トランジスタが2つしかないから"], 0,
+      [null, "「1V」は電圧（電気を押す強さ）で、電流（流れる量）ではありません。出力の 1 と 0 は、つながった側の電圧で決まります。", "数が少ないからではなく、1V から 0V への通り道がいつも切れているからです。"],
+      "どちらの入力でも上下のどちらかが切れているので、1V から 0V へ電流が流れ続けない。")
+  ], onFinish: function (ok, n, box) {
+    var again = h("button", { type: "button", text: "もう一度" });
+    var msg = h("div", { class: "feedback " + (ok === n ? "ok" : "ng"), html: "<span class=\"head\">" + n + " 問中 " + ok + " 問正解</span>　" + (ok === n ? "授業の NOT ゲートの話がつながりやすくなります。" : "動画の場面4〜6をもう一度見てみましょう。") });
+    again.onclick = function () { msg.remove(); box.restart(); };
+    msg.appendChild(h("div", { class: "row", style: "margin-top:8px" }, again));
+    box.appendChild(msg);
+  } });
 
   /* やること 1：調べる */
   var TASKS = [
