@@ -2309,6 +2309,10 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
       check: function (i) { return i === answer ? { ok: true } : { ok: false, msg: msgs[i] }; } }; };
   }
   CA.quiz($("filmq"), { mode: "seq", id: "filmq", title: "動画の確認", seq: [
+    choiceQ("4ビットの2の補数で −7 を表すと？　動画の「16 から引く」で考えてみよう。",
+      ["16 − 7 = 9 なので 1001", "符号のビットを 1 にして 1111", "7（0111）を反転して 1000"], 0,
+      [null, "それは符号/絶対値表現です。2の補数の −7 は、時計で 0 から7つ戻った場所、16 − 7 = 9 の 1001 です。", "反転しただけでは 15 − 7 = 8 です。もう 1 足して 9 = 1001 になります（＋1 を忘れない）。"],
+      "−7 は 16 − 7 = 9 の位置。9 = 1001。手順で言えば 0111 → 反転 1000 → ＋1 → 1001。"),
     choiceQ("4ビットの2の補数で <span class=\"num\">0110 + 0011</span> を計算すると <span class=\"num\">1001</span> になった。正しい説明は？",
       ["答えは −7。+7 と −8 の境目を越えたので、オーバーフロー", "答えは 9 で、正しく計算できている", "5桁目への桁上がりが出ていないので、オーバーフローではない"], 0,
       [null, "9 は符号なしとして読んだ値です。4ビットの2の補数で表せるのは −8〜+7 なので、9 は表せません。", "桁上がりがなくてもオーバーフローは起きます（動画の場面5）。本当の答え 6 + 3 = 9 が −8〜+7 に入るかで判断します。"],
@@ -2319,7 +2323,7 @@ footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid 
       "5桁目の 1 は4ビットに入らないので捨てる。残った 0010 = 2 が 3 − 1 の答え。")
   ], onFinish: function (ok, n, box) {
     var again = CA.h("button", { type: "button", text: "もう一度" });
-    var msg = CA.h("div", { class: "feedback " + (ok === n ? "ok" : "ng"), html: "<span class=\"head\">" + n + " 問中 " + ok + " 問正解</span>　" + (ok === n ? "動画の要点をつかめています。" : "動画の場面4・5をもう一度見てみましょう。") });
+    var msg = CA.h("div", { class: "feedback " + (ok === n ? "ok" : "ng"), html: "<span class=\"head\">" + n + " 問中 " + ok + " 問正解</span>　" + (ok === n ? "動画の要点をつかめています。" : "間違えた問題に関係する場面（1問目は場面3、2・3問目は場面4・5）をもう一度見てみましょう。") });
     again.onclick = function () { msg.remove(); box.restart(); };
     msg.appendChild(CA.h("div", { class: "row", style: "margin-top:8px" }, again));
     box.appendChild(msg);
