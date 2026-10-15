@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>コンピュータアーキテクチャ 第4回 予習</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&family=BIZ+UDPGothic:wght@400;700&display=swap">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<style>
+/* レイアウト：1カラムの「実験ノート」。読む部分は 40em、手を動かす実験台は方眼のパネルで少し広く。
+   色：授業スライドの緑を濃くしたものを地の色、点いたビットは表示灯の琥珀色、操作できるものは配線の青。 */
+:root {
+  --paper: #f4f7f5;
+  --panel: #ffffff;
+  --ink: #1b2620;
+  --muted: #53635a;
+  --rule: #cdd8d1;
+  --grid: rgba(43, 125, 71, 0.08);
+  --accent: #2b7d47;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2f0e6;
+  --lamp: #e89a00;
+  --lamp-ink: #2a1c00;
+  --lamp-glow: rgba(232, 154, 0, 0.35);
+  --lamp-off: #dde4df;
+  --wire: #1d62a6;
+  --wire-soft: #e3edf8;
+  --ok: #1d7a3d;
+  --ok-soft: #e1f2e6;
+  --ng: #b5361f;
+  --ng-soft: #fbe8e3;
+  --s-bit: #1d62a6;
+  --e-bit: #b86e00;
+  --f-bit: #2b7d47;
+  --font-body: "BIZ UDPGothic", "BIZ UDPゴシック", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+  --font-mono: "BIZ UDGothic", "BIZ UDゴシック", "Osaka-Mono", Menlo, Consolas, monospace;
+  --fs-body: 20px;
+  --fs-small: 16px;
+  --fs-h1: 32px;
+  --fs-h2: 28px;
+  --fs-h3: 22px;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #111714; --panel: #18201c; --ink: #e3ebe6; --muted: #9db0a4; --rule: #2e3a34;
+    --grid: rgba(91, 193, 125, 0.07); --accent: #5bc17d; --accent-ink: #0d1a12; --accent-soft: #1c3226;
+    --lamp: #ffb833; --lamp-ink: #241700; --lamp-glow: rgba(255, 184, 51, 0.45); --lamp-off: #2a3530;
+    --wire: #74b3f2; --wire-soft: #1a2a3a; --ok: #63c986; --ok-soft: #1b3325; --ng: #ff7d69; --ng-soft: #3b211c;
+    --s-bit: #74b3f2; --e-bit: #ffb833; --f-bit: #5bc17d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #111714; --panel: #18201c; --ink: #e3ebe6; --muted: #9db0a4; --rule: #2e3a34;
+  --grid: rgba(91, 193, 125, 0.07); --accent: #5bc17d; --accent-ink: #0d1a12; --accent-soft: #1c3226;
+  --lamp: #ffb833; --lamp-ink: #241700; --lamp-glow: rgba(255, 184, 51, 0.45); --lamp-off: #2a3530;
+  --wire: #74b3f2; --wire-soft: #1a2a3a; --ok: #63c986; --ok-soft: #1b3325; --ng: #ff7d69; --ng-soft: #3b211c;
+  --s-bit: #74b3f2; --e-bit: #ffb833; --f-bit: #5bc17d;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.8;
+  padding-inline: 16px;
+  padding-block: 0 64px;
+}
+.page { max-width: 960px; margin-inline: auto; display: grid; gap: 40px; }
+.prose { max-width: 40em; }
+h1, h2, h3 { line-height: 1.4; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--fs-h1); }
+h2 { font-size: var(--fs-h2); }
+h3 { font-size: var(--fs-h3); }
+p { margin: 0; }
+a { color: var(--wire); }
+.mono, code, kbd { font-family: var(--font-mono); }
+.small { font-size: var(--fs-small); color: var(--muted); }
+sub { font-size: 0.7em; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.stack { display: grid; gap: 16px; }
+.page > *, .item > *, .stack > *, .lab > *, .intro > *, .quiz > *, .stepper > * { min-width: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+:focus-visible { outline: 3px solid var(--wire); outline-offset: 2px; }
+
+/* 見出しまわり */
+.mast {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+  padding-block: 12px;
+  margin-inline: -16px; padding-inline: 16px;
+}
+.mast-inner { max-width: 960px; margin-inline: auto; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; justify-content: space-between; }
+.mast .course { font-size: var(--fs-small); color: var(--muted); }
+.mast .title { font-size: var(--fs-h3); font-weight: 700; line-height: 1.4; }
+.badge {
+  display: inline-block; font-size: var(--fs-small); line-height: 1.4; padding: 2px 10px; border-radius: 999px;
+  border: 1px solid var(--lamp); color: var(--ink); background: transparent; vertical-align: middle; margin-left: 8px;
+}
+.lamps { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lamps .label { font-size: var(--fs-small); color: var(--muted); margin-right: 4px; }
+.lamp {
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  font: 700 var(--fs-small)/1 var(--font-mono); color: var(--muted);
+  background: var(--lamp-off); border: 1px solid var(--rule); text-decoration: none;
+}
+.lamp.on { background: var(--lamp); color: var(--lamp-ink); border-color: var(--lamp); box-shadow: 0 0 0 4px var(--lamp-glow); }
+
+.intro { display: grid; gap: 16px; padding-top: 24px; }
+.intro h1 .sub { display: block; font-size: var(--fs-h3); font-weight: 400; color: var(--muted); }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: var(--fs-small); color: var(--muted); }
+
+/* 抽象レベルの地図 */
+.levels { border: 1px solid var(--rule); border-radius: var(--radius); background: var(--panel); padding: 12px 16px; }
+.levels summary { cursor: pointer; font-size: var(--fs-small); color: var(--muted); }
+.levels ol { list-style: none; margin: 12px 0 4px; padding: 0; display: grid; gap: 4px; }
+.levels li { display: grid; grid-template-columns: 15em 1fr; gap: 12px; align-items: baseline; padding: 4px 10px; border-radius: 6px; font-size: var(--fs-small); }
+.levels li .ex { color: var(--muted); }
+.levels li.here { background: var(--accent-soft); outline: 2px solid var(--accent); }
+.levels li.here .ex { color: var(--ink); }
+@media (max-width: 520px) { .levels li { grid-template-columns: 1fr; gap: 0; } }
+
+/* 目次 */
+.toc { display: flex; flex-wrap: wrap; gap: 8px; }
+.toc a {
+  font-size: var(--fs-small); text-decoration: none; color: var(--ink);
+  border: 1px solid var(--rule); background: var(--panel); border-radius: 999px; padding: 4px 14px;
+}
+.toc a .n { font-family: var(--font-mono); color: var(--accent); margin-right: 6px; }
+
+/* 実験台（方眼のパネル） */
+.lab {
+  background-color: var(--panel);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 20px 20px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: grid; gap: 16px;
+  min-width: 0;
+}
+.lab > h3 { font-size: var(--fs-h3); }
+.lab .hint { font-size: var(--fs-small); color: var(--muted); }
+
+/* 項目 */
+.item { display: grid; gap: 20px; scroll-margin-top: 120px; }
+.item-head { display: grid; gap: 6px; border-top: 3px solid var(--accent); padding-top: 16px; }
+.item-head .no { font: 700 var(--fs-small)/1 var(--font-mono); color: var(--accent); letter-spacing: 0.08em; }
+.item-head .rule { font-size: var(--fs-body); }
+.item-head .slides { font-size: var(--fs-small); color: var(--muted); }
+.keyline {
+  font-weight: 700; background: var(--accent-soft); border-radius: 6px; padding: 10px 14px; max-width: 40em;
+}
+
+/* ステップ再生 */
+.stepper { display: grid; gap: 12px; min-width: 0; }
+.stepper .stage { min-height: 160px; overflow-x: auto; display: grid; align-content: center; padding: 8px 0; }
+.stepper .caption { min-height: 3.6em; max-width: 40em; }
+.stepper .ctrl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.stepper input[type="range"] { flex: 1 1 140px; accent-color: var(--accent); min-width: 0; }
+.stepper .count { font: var(--fs-small) var(--font-mono); color: var(--muted); min-width: 3.5em; text-align: right; }
+
+/* ボタンと入力 */
+button, .btn {
+  font: inherit; font-size: var(--fs-small); line-height: 1.4;
+  padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--rule); background: var(--panel); color: var(--ink);
+}
+button:hover { border-color: var(--wire); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+button:disabled { opacity: 0.45; cursor: default; }
+input[type="text"], textarea {
+  font: 24px/1.4 var(--font-mono); padding: 8px 12px; border-radius: 8px;
+  border: 2px solid var(--rule); background: var(--panel); color: var(--ink); width: 100%; max-width: 16em;
+}
+textarea { font: var(--fs-body)/1.7 var(--font-body); max-width: 100%; min-height: 4.5em; resize: vertical; }
+input[type="text"]:focus, textarea:focus { border-color: var(--wire); outline: none; }
+
+/* ドリル・確認問題 */
+.quiz { display: grid; gap: 12px; padding: 16px 20px; border-radius: var(--radius); border: 1px solid var(--rule); background: var(--panel); min-width: 0; }
+.quiz .kind { font-size: var(--fs-small); color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+.quiz .kind b { color: var(--ink); }
+.quiz .prompt { font-size: var(--fs-body); }
+.quiz .answer-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.quiz .answer-row label { font-size: var(--fs-small); color: var(--muted); }
+.quiz .choices { display: grid; gap: 8px; }
+.quiz .choices button { text-align: left; font-size: var(--fs-body); padding: 10px 16px; }
+.quiz .choices button.picked-ok { border-color: var(--ok); background: var(--ok-soft); }
+.quiz .choices button.picked-ng { border-color: var(--ng); background: var(--ng-soft); }
+.feedback { border-radius: 8px; padding: 10px 14px; display: none; }
+.feedback.ok { display: block; background: var(--ok-soft); border-left: 6px solid var(--ok); }
+.feedback.ng { display: block; background: var(--ng-soft); border-left: 6px solid var(--ng); }
+.feedback .head { font-weight: 700; }
+.solution { border-top: 1px dashed var(--rule); padding-top: 10px; }
+.solution summary { cursor: pointer; font-size: var(--fs-small); color: var(--wire); }
+.check-quiz { border: 2px solid var(--lamp); }
+.check-quiz.done { border-color: var(--ok); }
+.score { font: var(--fs-small) var(--font-mono); color: var(--muted); }
+
+/* ビット */
+.bits { display: inline-flex; gap: 6px; flex-wrap: nowrap; }
+.bit {
+  width: 44px; height: 52px; border-radius: 8px; display: grid; place-items: center;
+  font: 700 26px/1 var(--font-mono); border: 2px solid var(--rule); background: var(--lamp-off); color: var(--muted);
+}
+.bit.on { background: var(--lamp); color: var(--lamp-ink); border-color: var(--lamp); box-shadow: 0 0 0 3px var(--lamp-glow); }
+button.bit { padding: 0; }
+.bitcol { display: grid; gap: 4px; justify-items: center; }
+.bitcol .w { font: var(--fs-small)/1 var(--font-mono); color: var(--muted); }
+.bitcol.dim .w { opacity: 0.5; }
+.gap4 { width: 10px; }
+.readout { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; align-items: baseline; }
+.readout dt { font-size: var(--fs-small); color: var(--muted); }
+.readout dd { margin: 0; font: 700 24px/1.4 var(--font-mono); overflow-wrap: anywhere; }
+.readout dd .expr { font-weight: 400; font-size: var(--fs-small); color: var(--muted); display: block; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+
+/* 計算の表（筆算） */
+.calc { border-collapse: collapse; font: 26px/1.3 var(--font-mono); margin: 0 auto; }
+.calc td { width: 1.25em; text-align: center; padding: 2px 0; }
+.calc td.rl { width: auto; text-align: right; padding-right: 12px; font: var(--fs-small) var(--font-body); color: var(--muted); white-space: nowrap; }
+.calc tr.carry td { font-size: var(--fs-small); color: var(--wire); height: 1.4em; }
+.calc tr.sum td { border-top: 2px solid var(--ink); }
+.calc td.hl { background: var(--wire-soft); border-radius: 4px; }
+.calc td.drop { color: var(--ng); text-decoration: line-through; }
+.calc td.ghost { color: transparent; }
+.calc td.flip { color: var(--wire); }
+
+.divtable { border-collapse: collapse; font: 24px/1.5 var(--font-mono); margin: 0 auto; }
+.divtable td { padding: 2px 10px; text-align: right; }
+.divtable td.r { color: var(--lamp-ink); background: var(--lamp); border-radius: 6px; text-align: center; min-width: 1.6em; }
+.divtable td.r.off { background: transparent; color: var(--muted); }
+.divtable td.note { font: var(--fs-small) var(--font-body); color: var(--muted); text-align: left; }
+.divwrap { display: flex; gap: 16px; align-items: stretch; justify-content: center; flex-wrap: wrap; }
+.uparrow { display: grid; align-content: stretch; justify-items: center; color: var(--wire); font: 700 var(--fs-small)/1.3 var(--font-body); }
+.uparrow .bar { width: 6px; background: var(--wire); border-radius: 3px; flex: 1; min-height: 60px; position: relative; }
+.uparrow .bar::before { content: ""; position: absolute; top: -10px; left: -7px; border: 10px solid transparent; border-bottom-color: var(--wire); border-top: 0; }
+
+.result { text-align: center; font: 700 28px/1.4 var(--font-mono); }
+.result .small { font-family: var(--font-body); }
+
+/* 一覧の表 */
+.tbl-wrap { overflow-x: auto; }
+table.ref { border-collapse: collapse; font-size: var(--fs-small); }
+table.ref th, table.ref td { border: 1px solid var(--rule); padding: 4px 10px; text-align: center; }
+table.ref th { background: var(--accent-soft); font-weight: 700; }
+table.ref td.mono { font-family: var(--font-mono); }
+
+/* 4ビットの時計 */
+.clock-wrap { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 20px; align-items: center; }
+@media (max-width: 720px) { .clock-wrap { grid-template-columns: 1fr; } }
+.clock svg { width: 100%; height: auto; display: block; }
+.clock .t-bits { font: 700 24px var(--font-mono); fill: var(--ink); }
+.clock .t-dec { font: 24px var(--font-mono); fill: var(--muted); }
+.clock .t-sdec { font: 700 24px var(--font-mono); fill: var(--wire); }
+.clock .dot { fill: var(--lamp-off); stroke: var(--rule); }
+.clock .dot.cur { fill: var(--lamp); stroke: var(--lamp); }
+.clock .boundary-s { stroke: var(--ng); stroke-width: 4; stroke-dasharray: 6 5; }
+.clock .boundary-u { stroke: var(--wire); stroke-width: 4; stroke-dasharray: 2 5; }
+.clock .hand { stroke: var(--ink); stroke-width: 4; stroke-linecap: round; }
+.clock .hub { fill: var(--ink); }
+.clock .ring { fill: none; stroke: var(--rule); stroke-width: 2; }
+select { font: 18px/1.4 var(--font-mono); padding: 6px 8px; border-radius: 8px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); }
+
+.log { font-size: var(--fs-small); min-height: 3em; }
+.log .warn { color: var(--ng); font-weight: 700; }
+.log .warnu { color: var(--wire); font-weight: 700; }
+
+/* 浮動小数点 */
+.fbits { display: flex; flex-wrap: wrap; gap: 3px; align-items: flex-end; }
+.fgroup { display: grid; gap: 4px; }
+.fgroup .glab { font-size: var(--fs-small); font-weight: 700; }
+.fgroup .gbits { display: flex; flex-wrap: wrap; gap: 3px; }
+.fbit { width: 26px; height: 36px; padding: 0; border-radius: 5px; font: 700 18px/1 var(--font-mono); border: 2px solid var(--rule); background: var(--panel); color: var(--muted); }
+.fbit.on { color: var(--panel); }
+.g-s .glab { color: var(--s-bit); } .g-s .fbit.on { background: var(--s-bit); border-color: var(--s-bit); }
+.g-e .glab { color: var(--e-bit); } .g-e .fbit.on { background: var(--e-bit); border-color: var(--e-bit); }
+.g-f .glab { color: var(--f-bit); } .g-f .fbit.on { background: var(--f-bit); border-color: var(--f-bit); }
+.formula { font: 22px/1.6 var(--font-mono); overflow-wrap: anywhere; }
+.formula .s { color: var(--s-bit); } .formula .e { color: var(--e-bit); } .formula .f { color: var(--f-bit); }
+
+/* つまずき・仕上げ */
+.pitfalls { display: grid; gap: 12px; }
+.pitfalls ul { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 40em; }
+.final .quiz { border-width: 2px; }
+.done-banner { display: none; padding: 16px 20px; border-radius: var(--radius); background: var(--ok-soft); border: 2px solid var(--ok); font-weight: 700; }
+.done-banner.show { display: block; }
+footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid var(--rule); padding-top: 16px; display: grid; gap: 6px; }
+
+/* 予習ページ */
+.research { display: grid; gap: 16px; }
+.task { display: grid; gap: 10px; padding: 16px 20px; border-radius: var(--radius); background: var(--panel); border: 1px solid var(--rule); min-width: 0; }
+.task h3 { font-size: var(--fs-h3); }
+.task dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: var(--fs-small); }
+.task dt { color: var(--muted); }
+.task dd { margin: 0; }
+.task .saved { font-size: var(--fs-small); color: var(--ok); min-height: 1.4em; }
+@media (max-width: 520px) { .task dl { grid-template-columns: 1fr; } .task dt { margin-top: 6px; } }
+.checklist { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.checklist li { display: flex; gap: 10px; align-items: baseline; }
+.checklist .box { width: 22px; height: 22px; border-radius: 5px; border: 2px solid var(--rule); flex: none; display: inline-grid; place-items: center; font-size: 16px; }
+.checklist li.done .box { background: var(--ok); border-color: var(--ok); color: var(--panel); }
+
+/* 回路図（SVG） */
+.circuit svg { width: 100%; max-width: 620px; height: auto; display: block; margin: 0 auto; }
+.circuit .wire { stroke: var(--muted); stroke-width: 4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.circuit .wire.live { stroke: var(--lamp); }
+.circuit .t { font: 24px var(--font-body); fill: var(--ink); }
+.circuit .tm { font: 700 24px var(--font-mono); fill: var(--ink); }
+.circuit .bulb { fill: var(--lamp-off); stroke: var(--muted); stroke-width: 3; }
+.circuit .bulb.lit { fill: var(--lamp); stroke: var(--lamp); filter: drop-shadow(0 0 10px var(--lamp-glow)); }
+.circuit .batt { stroke: var(--ink); stroke-width: 4; }
+.circuit .sw { stroke: var(--ink); stroke-width: 5; stroke-linecap: round; transition: transform 0.2s; }
+.circuit .swpost { fill: var(--ink); }
+.circuit .box { fill: var(--panel); stroke: var(--ink); stroke-width: 3; }
+.circuit .boxq { font: 700 44px var(--font-mono); fill: var(--muted); }
+.swbtns { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.swbtns button { font-size: var(--fs-body); min-width: 7em; }
+.swbtns button[aria-pressed="true"] { background: var(--lamp); color: var(--lamp-ink); border-color: var(--lamp); font-weight: 700; }
+.ttable { border-collapse: collapse; font: 20px/1.4 var(--font-mono); }
+.ttable th, .ttable td { border: 1px solid var(--rule); padding: 4px 14px; text-align: center; }
+.ttable th { font-family: var(--font-body); font-size: var(--fs-small); background: var(--accent-soft); }
+.ttable td.unk { color: var(--muted); }
+.ttable tr.cur td { background: var(--wire-soft); }
+.cands { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 8px; }
+.cands button { text-align: left; display: grid; gap: 2px; padding: 10px 14px; }
+.cands button b { font-size: var(--fs-body); font-family: var(--font-mono); }
+.cands button span { font-size: var(--fs-small); color: var(--muted); }
+.cands button.right { border-color: var(--ok); background: var(--ok-soft); }
+.cands button.wrong { border-color: var(--ng); background: var(--ng-soft); }
+.stars { font-size: 26px; letter-spacing: 4px; color: var(--lamp); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+@media (max-width: 520px) {
+  .bit { width: 34px; height: 44px; font-size: 22px; }
+  .bits { gap: 4px; }
+  .lab { padding: 14px; }
+  .calc { font-size: 22px; }
+  .mast .title { font-size: 18px; }
+  .readout { grid-template-columns: 1fr; gap: 0; }
+  .readout dd { margin-bottom: 10px; }
+}
+.circuits { display: grid; grid-template-columns: 1fr; gap: 24px; }
+@media (min-width: 860px) { .circuits { grid-template-columns: 1fr 1fr; } }
+.circuits h3 { font-size: var(--fs-h3); }
+.checklist a { color: var(--ink); }
+
+</style>
+<header class="mast">
+  <div class="mast-inner">
+    <div>
+      <div class="course"><a href="./">コンピュータアーキテクチャ 2026 予習・復習ページ一覧</a></div>
+      <div class="title">第4回 予習　ブール代数と論理演算</div>
+    </div>
+    <div class="lamps" data-lamps></div>
+  </div>
+</header>
+
+<main class="page">
+  <section class="intro">
+    <h1>第4回 予習<span class="sub">ブール代数と論理演算（10/22 の授業の前に）</span></h1>
+    <p class="prose">第3回では、0 と 1 の並びで<b>数</b>を表しました。第4回は、0 と 1 で<b>判断</b>をする計算、「論理演算」を学びます。授業の前に、このページの3つをやっておきましょう。</p>
+    <div class="meta"><span>目安 15〜20分</span><span>書き込んだ内容はこのブラウザの中だけに残ります</span></div>
+    <div id="levels"></div>
+    <ol class="checklist" id="todo" aria-label="授業までにやること"></ol>
+  </section>
+
+  <section class="lab" aria-labelledby="hook-title">
+    <h2 id="hook-title">今日の問い：スイッチ2つと電球1つ。つなぎ方で、点く条件はどう変わる？</h2>
+    <p class="hint">スイッチ A と B を押して、ON と OFF の4通りをすべて試してください。試した組から、下の表が埋まっていきます。</p>
+    <div id="switches"></div>
+  </section>
+
+  <section class="item" id="t1">
+    <div class="item-head">
+      <span class="no">やること 1</span>
+      <h2>調べてから来よう（4つ）</h2>
+      <span class="slides">それぞれ、授業のどこで使うかを書いてあります</span>
+    </div>
+    <p class="prose">答えは1〜2行のメモで十分です。3つ以上に書き込むと、上のランプ 1 が点きます。</p>
+    <div class="research" id="research"></div>
+  </section>
+
+  <section class="item" id="t2">
+    <div class="item-head">
+      <span class="no">やること 2</span>
+      <h2>前回の確認（3問）</h2>
+      <span class="slides">第3回 デジタルデータの表現と演算</span>
+    </div>
+    <p class="prose">第4回では、第3回の2進数の足し算（桁上がり）を回路にした「半加算器」が出てきます。解けなかったら、<a href="w03-review.html">第3回 復習ページ</a>で確かめてから授業に来てください。</p>
+    <div id="review"></div>
+  </section>
+
+  <section class="item" id="t3">
+    <div class="item-head">
+      <span class="no">やること 3</span>
+      <h2>ゲーム：中身はどのゲート？</h2>
+      <span class="slides">授業スライド 10〜12 で出てくる5つのゲート</span>
+    </div>
+    <p class="prose">箱の中に、論理ゲートが1つ隠れています。入力 A と B を切りかえて出力を調べ、どのゲートかを当ててください。5つの箱を開けると、ランプ 3 が点きます。</p>
+    <div id="game"></div>
+  </section>
+
+  <section class="pitfalls">
+    <h2>授業の前に知っておくと楽になること</h2>
+    <ul>
+      <li>論理演算では、<b>1 を「真（ON）」、0 を「偽（OFF）」</b>として扱います。</li>
+      <li>OR の記号には「+」を使うことがあります。このとき <span class="num">1 + 1 = 1</span> です。足し算の + とは別のものです。</li>
+      <li>記号の小さな丸 ○ は「反転（NOT）」を表します。NAND は AND の出口に ○ を付けた形です。</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>コンピュータアーキテクチャ（2026年度 秋・木曜3・4限）第4回 予習ページ</span>
+    <span>調べた内容のメモは、このブラウザの中だけに保存されます（提出は不要です）。</span>
+  </footer>
+</main>
+
+<script>window.CA_PAGE = "w04p";</script>
+<script>
+/* 部品① ビットの計算（画面に依存しない関数と、ドリルの問題生成）。node のテストからも読む。 */
+(function (root) {
+  "use strict";
+
+  /* ---------- 基本の変換 ---------- */
+  function toBin(n, width) {
+    var s = (n >>> 0).toString(2);
+    if (width) {
+      s = s.slice(-width);
+      while (s.length < width) s = "0" + s;
+    }
+    return s;
+  }
+  function fromBin(s) { return parseInt(s, 2); }
+  function group4(s) {
+    var out = [];
+    for (var i = s.length; i > 0; i -= 4) out.unshift(s.slice(Math.max(0, i - 4), i));
+    return out.join(" ");
+  }
+  function toHex(n, digits) {
+    var s = (n >>> 0).toString(16).toUpperCase();
+    while (digits && s.length < digits) s = "0" + s;
+    return s;
+  }
+  function weights(width) {
+    var w = [];
+    for (var i = width - 1; i >= 0; i--) w.push(Math.pow(2, i));
+    return w;
+  }
+  /* 2の補数として読む（width ビット） */
+  function signedValue(n, width) {
+    var m = Math.pow(2, width);
+    n = ((n % m) + m) % m;
+    return n >= m / 2 ? n - m : n;
+  }
+  /* 値を width ビットの2の補数のビット列にする */
+  function encodeSigned(v, width) {
+    var m = Math.pow(2, width);
+    return ((v % m) + m) % m;
+  }
+  function invert(n, width) { return (~n) & (Math.pow(2, width) - 1); }
+  function twosComplement(n, width) { return (invert(n, width) + 1) & (Math.pow(2, width) - 1); }
+  /* 符号/絶対値表現 */
+  function signMagnitude(v, width) {
+    var mag = Math.abs(v);
+    return (v < 0 ? Math.pow(2, width - 1) : 0) + mag;
+  }
+  function onesComplementOf(v, width) { return v < 0 ? invert(-v, width) : v; }
+  function reverseBits(s) { return s.split("").reverse().join(""); }
+  /* 画面に出す負の数はマイナス記号（−）で書く */
+  function mn(v) { return v < 0 ? "−" + (-v) : String(v); }
+
+  /* ---------- 2で割る方法の手順 ---------- */
+  function divSteps(n) {
+    var rows = [];
+    if (n === 0) return [{ n: 0, q: 0, r: 0 }];
+    while (n > 0) {
+      rows.push({ n: n, q: Math.floor(n / 2), r: n % 2 });
+      n = Math.floor(n / 2);
+    }
+    return rows;
+  }
+
+  /* ---------- 足し算（桁上がりつき） ---------- */
+  function addBits(a, b, width) {
+    var carries = new Array(width + 1).fill(0); // carries[i] = i桁目（右から0）へ入る桁上がり
+    var sum = 0;
+    for (var i = 0; i < width; i++) {
+      var x = (a >> i) & 1, y = (b >> i) & 1, c = carries[i];
+      var s = x + y + c;
+      if (s & 1) sum |= (1 << i);
+      carries[i + 1] = s >> 1;
+    }
+    var carryOut = carries[width];
+    var sa = signedValue(a, width), sb = signedValue(b, width), ss = signedValue(sum, width);
+    var signedOverflow = (sa >= 0 && sb >= 0 && ss < 0) || (sa < 0 && sb < 0 && ss >= 0);
+    return { sum: sum, carries: carries, carryOut: carryOut, signedOverflow: signedOverflow };
+  }
+  /* 補数を足す引き算 a − b */
+  function subByComplement(a, b, width) {
+    var nb = twosComplement(b, width);
+    var r = addBits(a, nb, width);
+    return { negB: nb, sum: r.sum, carries: r.carries, carryOut: r.carryOut, value: signedValue(r.sum, width), signedOverflow: r.signedOverflow };
+  }
+
+  /* ---------- 掛け算（ずらして足す） ---------- */
+  function mulSteps(a, b, width) {
+    var partials = [];
+    for (var i = 0; i < width; i++) {
+      var bit = (b >> i) & 1;
+      partials.push({ shift: i, bit: bit, value: bit ? a * Math.pow(2, i) : 0 });
+    }
+    return { partials: partials, product: a * b };
+  }
+
+  /* ---------- 浮動小数点（IEEE754 単精度） ---------- */
+  function floatBits(x) {
+    var dv = new DataView(new ArrayBuffer(4));
+    dv.setFloat32(0, x);
+    return dv.getUint32(0);
+  }
+  function bitsToFloat(u) {
+    var dv = new DataView(new ArrayBuffer(4));
+    dv.setUint32(0, u >>> 0);
+    return dv.getFloat32(0);
+  }
+  function floatParts(u) {
+    u = u >>> 0;
+    var s = u >>> 31, e = (u >>> 23) & 0xff, f = u & 0x7fffff;
+    var kind = "normal";
+    if (e === 0 && f === 0) kind = "zero";
+    else if (e === 0) kind = "subnormal";
+    else if (e === 255 && f === 0) kind = "inf";
+    else if (e === 255) kind = "nan";
+    return { s: s, e: e, f: f, frac: f / Math.pow(2, 23), kind: kind, value: bitsToFloat(u) };
+  }
+
+  /* ---------- 入力の正規化（全角・空白・マイナス記号） ---------- */
+  function normalize(str) {
+    if (str == null) return "";
+    return String(str)
+      .replace(/[０-９Ａ-Ｚａ-ｚ]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xfee0); })
+      .replace(/[−－ー‐―–—]/g, "-")
+      .replace(/[＋]/g, "+")
+      .replace(/[．。]/g, ".")
+      .replace(/[\s_　,，]/g, "")
+      .replace(/[₀-₉]/g, "")
+      .trim();
+  }
+  function normBin(str) { return normalize(str).replace(/^0b/i, ""); }
+  function normHex(str) { return normalize(str).replace(/^0x/i, "").replace(/[hH]$/, "").toUpperCase(); }
+  function isBin(s) { return /^[01]+$/.test(s); }
+  function stripZeros(s) { var t = s.replace(/^0+/, ""); return t === "" ? "0" : t; }
+
+  /* ---------- 出してはいけない問題（テストと同じ問題）の照合 ---------- */
+  /* ページには問題の文字列を載せず、ハッシュだけを持つ。 */
+  function hash(key) {
+    var h = 0x811c9dc5, s = "ca2026|" + key;
+    for (var i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    return ("00000000" + h.toString(16)).slice(-8);
+  }
+  var BLOCK = { perm: [], temp: [] };
+  function setBlock(b) { BLOCK = b || { perm: [], temp: [] }; }
+  function isBlocked(key, now) {
+    var h = hash(key);
+    if (BLOCK.perm.indexOf(h) >= 0) return true;
+    var t = now || Date.now();
+    for (var i = 0; i < BLOCK.temp.length; i++) {
+      if (BLOCK.temp[i].h === h && t < Date.parse(BLOCK.temp[i].until)) return true;
+    }
+    return false;
+  }
+
+  /* ---------- 乱数 ---------- */
+  function mulberry32(seed) {
+    return function () {
+      seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+      var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function randInt(rng, lo, hi) { return lo + Math.floor(rng() * (hi - lo + 1)); }
+  function pick(rng, arr) { return arr[Math.floor(rng() * arr.length)]; }
+  /* 出してはいけない問題に当たったら引き直す */
+  function draw(rng, make, now) {
+    for (var k = 0; k < 200; k++) {
+      var p = make(rng);
+      if (!p) continue;
+      if (!isBlocked(p.key, now)) return p;
+    }
+    throw new Error("問題を作れませんでした");
+  }
+
+  /* ---------- 問題の生成 ----------
+     どれも { key, prompt, answer, check(input)->{ok, msg}, solution } を返す。
+     key はテストとの照合に使う正規形。 */
+  var G = {};
+
+  G.binToDec = function (rng, now) {
+    return draw(rng, function (r) {
+      var width = pick(r, [5, 6, 7, 8]);
+      var n = randInt(r, Math.pow(2, width - 1), Math.pow(2, width) - 1);
+      var s = toBin(n, width);
+      var rev = fromBin(reverseBits(s));
+      var allW = Math.pow(2, width) - 1;
+      var terms = [];
+      for (var i = 0; i < width; i++) if (s[i] === "1") terms.push(Math.pow(2, width - 1 - i));
+      return {
+        key: "b2d:" + stripZeros(s),
+        prompt: "2進数 <span class=\"num\">" + s + "<sub>2</sub></span> を10進数で表すと？",
+        inputLabel: "10進数",
+        answer: String(n),
+        check: function (input) {
+          var v = normalize(input);
+          if (v === String(n)) return { ok: true };
+          if (v === String(rev) && rev !== n) return { ok: false, msg: "左右を逆にして読んでいませんか。右端が 1 の桁です。" };
+          if (v === String(allW)) return { ok: false, msg: "0 の桁の重みまで足していませんか。足すのは 1 の桁だけです。" };
+          if (v === s) return { ok: false, msg: "10進数の数字で答えます。" };
+          return { ok: false };
+        },
+        solution: "1 の桁の重みを足す：" + terms.join(" + ") + " = " + n
+      };
+    }, now);
+  };
+
+  G.decToBin = function (rng, now) {
+    return draw(rng, function (r) {
+      var n = randInt(r, 9, 200);
+      var s = toBin(n);
+      var steps = divSteps(n).map(function (x) { return x.n + "÷2=" + x.q + " 余り" + x.r; });
+      return {
+        key: "d2b:" + n,
+        prompt: "10進数 <span class=\"num\">" + n + "</span> を2進数で表すと？",
+        inputLabel: "2進数",
+        answer: s,
+        check: function (input) {
+          var v = normBin(input);
+          if (!isBin(v)) return { ok: false, msg: "0 と 1 だけで答えます。" };
+          if (stripZeros(v) === s) return { ok: true };
+          if (stripZeros(reverseBits(v)) === s) return { ok: false, msg: "余りを上から読んでいませんか。余りは下から上へ読みます（最後に出た余りが左端の桁）。" };
+          return { ok: false };
+        },
+        solution: "2で割り続けて余りを下から読む：" + steps.join("、") + " → " + s
+      };
+    }, now);
+  };
+
+  G.binToHex = function (rng, now) {
+    return draw(rng, function (r) {
+      var n = randInt(r, 17, 255);
+      var s = toBin(n, 8);
+      var h = toHex(n, 2);
+      var hi = (n >> 4), lo = n & 15;
+      return {
+        key: "b2h:" + s,
+        prompt: "2進数 <span class=\"num\">" + group4(s) + "<sub>2</sub></span> を16進数で表すと？",
+        inputLabel: "16進数",
+        answer: h,
+        check: function (input) {
+          var v = normHex(input);
+          if (v === h || stripZeros(v) === stripZeros(h)) return { ok: true };
+          if (v === String(hi) + String(lo) && (hi > 9 || lo > 9)) return { ok: false, msg: "10〜15 は A〜F の1文字で書きます（10=A、11=B、…、15=F）。" };
+          if (v === String(n)) return { ok: false, msg: "それは10進数の値です。4ビットずつ区切って、それぞれを16進数の1桁にします。" };
+          if (v === toHex(lo, 1) + toHex(hi, 1)) return { ok: false, msg: "上位と下位の順が逆です。左の4ビットが上の桁です。" };
+          return { ok: false };
+        },
+        solution: group4(s) + " → " + toBin(hi, 4) + "=" + hi + "=" + toHex(hi, 1) + "、" + toBin(lo, 4) + "=" + lo + "=" + toHex(lo, 1) + " → " + h
+      };
+    }, now);
+  };
+
+  G.hexToBin = function (rng, now) {
+    return draw(rng, function (r) {
+      var n = randInt(r, 17, 255);
+      var h = toHex(n, 2), s = toBin(n, 8);
+      return {
+        key: "h2b:" + h,
+        prompt: "16進数 <span class=\"num\">" + h + "<sub>16</sub></span> を8ビットの2進数で表すと？",
+        inputLabel: "2進数（8ビット）",
+        answer: s,
+        check: function (input) {
+          var v = normBin(input);
+          if (!isBin(v)) return { ok: false, msg: "0 と 1 だけで答えます。" };
+          if (v === s) return { ok: true };
+          if (stripZeros(v) === stripZeros(s)) return { ok: false, msg: "値は合っています。8ビットになるよう、左に 0 を補って書きましょう。" };
+          return { ok: false };
+        },
+        solution: "1桁ずつ4ビットに：" + h[0] + "→" + toBin(parseInt(h[0], 16), 4) + "、" + h[1] + "→" + toBin(parseInt(h[1], 16), 4) + " → " + group4(s)
+      };
+    }, now);
+  };
+
+  /* 10進の負の数 → 2の補数 */
+  G.negToTwos = function (rng, now) {
+    return draw(rng, function (r) {
+      var width = pick(r, [4, 8, 8]);
+      var v = -randInt(r, 2, width === 4 ? 7 : 100);
+      var u = encodeSigned(v, width), s = toBin(u, width);
+      var sm = toBin(signMagnitude(v, width), width);
+      var oc = toBin(onesComplementOf(v, width), width);
+      var pos = toBin(-v, width);
+      return {
+        key: "n2t" + width + ":" + v,
+        prompt: "10進数 <span class=\"num\">" + mn(v) + "</span> を " + width + "ビットの2の補数で表すと？",
+        inputLabel: "2進数（" + width + "ビット）",
+        answer: s,
+        check: function (input) {
+          var x = normBin(input);
+          if (!isBin(x)) return { ok: false, msg: "0 と 1 だけで答えます。" };
+          if (x === s) return { ok: true };
+          if (x.length !== width && stripZeros(x) === stripZeros(s)) return { ok: false, msg: width + "ビットで書きます。" };
+          if (v !== -Math.pow(2, width - 1) && x === sm) return { ok: false, msg: "それは符号/絶対値表現です。2の補数は「反転して＋1」で作ります。" };
+          if (x === oc) return { ok: false, msg: "反転したあとの「＋1」を忘れていませんか。" };
+          if (x === pos) return { ok: false, msg: "それは +" + (-v) + " です。負にするには、反転して＋1します。" };
+          return { ok: false };
+        },
+        solution: "+" + (-v) + " = " + group4(pos) + " → 反転 " + group4(toBin(invert(-v, width), width)) + " → ＋1 → " + group4(s)
+      };
+    }, now);
+  };
+
+  /* 2の補数のビット列 → 10進 */
+  G.twosToDec = function (rng, now) {
+    return draw(rng, function (r) {
+      var width = pick(r, [4, 8, 8]);
+      var m = Math.pow(2, width);
+      var u = randInt(r, m / 2 + 1, m - 2); // 負の数
+      var s = toBin(u, width), v = signedValue(u, width);
+      var magBits = toBin(twosComplement(u, width), width);
+      var smv = -(u - m / 2);
+      var oc = -invert(u, width);
+      return {
+        key: "t2n" + width + ":" + s,
+        prompt: width + "ビットの2の補数 <span class=\"num\">" + group4(s) + "</span> は10進数でいくつ？",
+        inputLabel: "10進数",
+        answer: String(v),
+        check: function (input) {
+          var x = normalize(input);
+          if (x === String(v)) return { ok: true };
+          if (x === String(u)) return { ok: false, msg: "符号なしとして読んでいます。最上位ビットが 1 なので負の数です。" };
+          if (x === String(-v)) return { ok: false, msg: "大きさは合っています。最上位ビットが 1 なので負の数です。" };
+          if (x === String(smv)) return { ok: false, msg: "それは符号/絶対値表現として読んだ値です。2の補数は、もう一度「反転して＋1」して大きさを求めます。" };
+          if (x === String(oc)) return { ok: false, msg: "反転したあとの「＋1」を忘れていませんか。" };
+          return { ok: false };
+        },
+        solution: "最上位が 1 → 負。反転して＋1：" + group4(magBits) + " = " + (-v) + " → " + mn(v)
+      };
+    }, now);
+  };
+
+  /* 補数を足す引き算（4ビット） */
+  G.sub4 = function (rng, now) {
+    return draw(rng, function (r) {
+      var a = randInt(r, 1, 7), b = randInt(r, 1, 7);
+      var x = a - b;
+      if (x < -8 || x > 7) return null;
+      var sa = toBin(a, 4), sb = toBin(b, 4);
+      var res = subByComplement(a, b, 4);
+      var ans = toBin(res.sum, 4);
+      var noPlus1 = toBin((a + invert(b, 4)) & 15, 4);
+      var withCarry = "1" + ans;
+      return {
+        key: "sub4:" + sa + "-" + sb,
+        prompt: "4ビットの2の補数で <span class=\"num\">" + sa + " − " + sb + "</span> を、引く数の補数を足す方法で計算すると？（4ビットで答える）",
+        inputLabel: "2進数（4ビット）",
+        answer: ans,
+        value: x,
+        check: function (input) {
+          var v = normBin(input);
+          if (!isBin(v)) return { ok: false, msg: "0 と 1 だけで答えます。" };
+          if (v === ans) return { ok: true };
+          if (res.carryOut && v === withCarry) return { ok: false, msg: "5桁目にあふれた桁上がりは捨てます。答えは4ビットです。" };
+          if (v === noPlus1) return { ok: false, msg: sb + " の2の補数は、反転したあと＋1 します。" };
+          if (x < 0 && v === toBin(signMagnitude(x, 4), 4)) return { ok: false, msg: "それは符号/絶対値表現の " + x + " です。計算の結果はそのまま2の補数で書きます。" };
+          return { ok: false };
+        },
+        solution: sb + " の2の補数は " + toBin(res.negB, 4) + "。" + sa + " + " + toBin(res.negB, 4) + " = " + (res.carryOut ? "1 " : "") + ans + (res.carryOut ? "（5桁目の 1 は捨てる）" : "") + " → " + ans + "（10進で " + mn(x) + "）"
+      };
+    }, now);
+  };
+
+  /* 8ビットの足し算（2の補数、あふれない組） */
+  G.add8 = function (rng, now) {
+    return draw(rng, function (r) {
+      var a = randInt(r, 20, 100), b = randInt(r, 10, 127 - a);
+      if (b < 5) return null;
+      var sa = toBin(a, 8), sb = toBin(b, 8);
+      var res = addBits(a, b, 8);
+      var ans = toBin(res.sum, 8);
+      var noCarry = toBin(a ^ b, 8);
+      return {
+        key: "add8:" + sa + "+" + sb,
+        prompt: "8ビットの2の補数で <span class=\"num\">" + group4(sa) + " + " + group4(sb) + "</span> を計算すると？",
+        inputLabel: "2進数（8ビット）",
+        answer: ans,
+        check: function (input) {
+          var v = normBin(input);
+          if (!isBin(v)) return { ok: false, msg: "0 と 1 だけで答えます。" };
+          if (v === ans) return { ok: true };
+          if (v === noCarry) return { ok: false, msg: "桁上がりを足し忘れていませんか。1+1 は 0 で、左の桁へ 1 を上げます。" };
+          return { ok: false };
+        },
+        solution: group4(sa) + "（" + a + "）+ " + group4(sb) + "（" + b + "）= " + group4(ans) + "（" + (a + b) + "）"
+      };
+    }, now);
+  };
+
+  /* オーバーフローの判定（4ビット、2の補数） */
+  G.overflow4 = function (rng, now) {
+    return draw(rng, function (r) {
+      var a = randInt(r, -8, 7), b = randInt(r, -8, 7);
+      var res = addBits(encodeSigned(a, 4), encodeSigned(b, 4), 4);
+      var ov = res.signedOverflow;
+      var sa = toBin(encodeSigned(a, 4), 4), sb = toBin(encodeSigned(b, 4), 4);
+      return {
+        key: "ov4:" + sa + "+" + sb,
+        type: "choice",
+        prompt: "4ビットの2の補数で <span class=\"num\">" + sa + " + " + sb + "</span>（" + mn(a) + " + " + (b < 0 ? "(" + mn(b) + ")" : b) + "）を計算する。結果は4ビットに収まる？",
+        choices: ["収まる（オーバーフローしない）", "収まらない（オーバーフローする）"],
+        answer: ov ? 1 : 0,
+        check: function (i) {
+          if (i === (ov ? 1 : 0)) return { ok: true };
+          if (!ov && res.carryOut) return { ok: false, msg: "5桁目に桁上がりは出ますが、それは捨てます。" + mn(a + b) + " は −8〜+7 に収まります。" };
+          return { ok: false, msg: "答えは " + mn(a + b) + "。4ビットの2の補数で表せるのは −8〜+7 です。" };
+        },
+        solution: mn(a) + " + " + (b < 0 ? "(" + mn(b) + ")" : b) + " = " + mn(a + b) + "。4ビットの2の補数の範囲は −8〜+7 なので、" + (ov ? "収まらない（結果は " + toBin(res.sum, 4) + " = " + mn(signedValue(res.sum, 4)) + " と誤って読める）" : "収まる（" + toBin(res.sum, 4) + "）")
+      };
+    }, now);
+  };
+
+  /* 符号なしの掛け算（4ビット×4ビット） */
+  G.mul4 = function (rng, now) {
+    return draw(rng, function (r) {
+      var a = randInt(r, 5, 15), b = randInt(r, 3, 15);
+      var bits = toBin(b, 4);
+      var ones = bits.split("").filter(function (c) { return c === "1"; }).length;
+      if (ones < 2) return null;
+      var sa = toBin(a, 4), sb = toBin(b, 4);
+      var p = a * b, ans = toBin(p);
+      var steps = mulSteps(a, b, 4).partials.filter(function (x) { return x.bit; }).map(function (x) { return toBin(x.value); });
+      var noShift = toBin(mulSteps(a, b, 4).partials.filter(function (x) { return x.bit; }).length * a);
+      return {
+        key: "mul4:" + sa + "x" + sb,
+        prompt: "符号なし2進数で <span class=\"num\">" + sa + " × " + sb + "</span> を計算すると？",
+        inputLabel: "2進数",
+        answer: ans,
+        check: function (input) {
+          var v = normBin(input);
+          if (!isBin(v)) return { ok: false, msg: "0 と 1 だけで答えます。" };
+          if (stripZeros(v) === ans) return { ok: true };
+          if (stripZeros(v) === stripZeros(noShift)) return { ok: false, msg: "部分積を1桁ずつ左へずらしていますか。かける数の右から k 桁目の 1 は、k−1 桁ずらします。" };
+          if (stripZeros(v) === toBin(a + b)) return { ok: false, msg: "それは足し算の答えです。" };
+          return { ok: false };
+        },
+        solution: "かける数 " + sb + " の 1 の桁ごとに、" + sa + " をずらして並べる：" + steps.join(" + ") + " = " + ans + "（" + a + "×" + b + "=" + p + "）"
+      };
+    }, now);
+  };
+
+  /* 浮動小数点を読む（手で計算できる値だけ） */
+  var FLOAT_POOL = [0.75, 1.5, 2.5, 3, 3.5, 6, 7, 9, 10, 12, 13, 14, 20, 0.375, 0.625, 1.25, 1.75, 2.75, 4.5, 5.5, 7.5, 24, 40, 48];
+  G.floatRead = function (rng, now) {
+    return draw(rng, function (r) {
+      var x = pick(r, FLOAT_POOL) * (r() < 0.35 ? -1 : 1);
+      var u = floatBits(x), p = floatParts(u);
+      var full = toBin(u, 32);
+      var fShown = full.slice(9, 9 + 8);
+      var exp = p.e - 127;
+      var mant = 1 + p.frac;
+      return {
+        key: "fr:" + full,
+        prompt: "IEEE754 単精度で 符号部 <span class=\"num\">" + full[0] + "</span>、指数部 <span class=\"num\">" + group4(full.slice(1, 9)) + "</span>、仮数部 <span class=\"num\">" + group4(fShown) + "…</span>（残りはすべて 0）の値は？",
+        inputLabel: "10進数",
+        answer: String(x),
+        check: function (input) {
+          var v = parseFloat(normalize(input));
+          if (v === x) return { ok: true };
+          if (v === -x) return { ok: false, msg: "符号部が " + full[0] + " なので、" + (p.s ? "負" : "正") + "の数です。" };
+          if (v === Math.pow(2, exp) * p.frac * (p.s ? -1 : 1)) return { ok: false, msg: "仮数部には先頭の「1.」を足します（1 + F）。" };
+          if (v === Math.pow(2, p.e) * mant * (p.s ? -1 : 1)) return { ok: false, msg: "指数部から 127 を引きます（E − 127）。" };
+          return { ok: false };
+        },
+        solution: "E = " + p.e + " → 2<sup>" + p.e + "−127</sup> = 2<sup>" + exp + "</sup>、1 + F = " + mant + "、値 = " + (p.s ? "−" : "") + "2<sup>" + exp + "</sup> × " + mant + " = " + x
+      };
+    }, now);
+  };
+
+  var api = {
+    toBin: toBin, fromBin: fromBin, group4: group4, toHex: toHex, weights: weights,
+    signedValue: signedValue, encodeSigned: encodeSigned, invert: invert, twosComplement: twosComplement,
+    signMagnitude: signMagnitude, divSteps: divSteps, addBits: addBits, subByComplement: subByComplement,
+    mulSteps: mulSteps, floatBits: floatBits, bitsToFloat: bitsToFloat, floatParts: floatParts,
+    normalize: normalize, normBin: normBin, normHex: normHex, hash: hash, setBlock: setBlock, isBlocked: isBlocked,
+    mulberry32: mulberry32, mn: mn, randInt: randInt, pick: pick, gen: G, FLOAT_POOL: FLOAT_POOL
+  };
+  root.CA = root.CA || {};
+  root.CA.bits = api;
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>CA.bits.setBlock({"perm":["b937960f","3e9df3fe","9f325bba","83fdb36d","3f9df591"],"temp":[{"h":"e89a773c","until":"2026-10-22T11:00:00+09:00"},{"h":"6be83c2a","until":"2026-10-22T11:00:00+09:00"},{"h":"2247196f","until":"2026-10-22T11:00:00+09:00"},{"h":"c5accc69","until":"2026-10-22T11:00:00+09:00"},{"h":"d8aaabbb","until":"2026-10-22T11:00:00+09:00"}]});</script>
+<script>
+/* 共通の部品：保存、ステップ再生、ドリル・確認問題、進み具合のランプ、抽象レベルの地図 */
+(function (root) {
+  "use strict";
+  var CA = root.CA = root.CA || {};
+
+  /* ---------- 小さな道具 ---------- */
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      if (attrs[k] == null || attrs[k] === false) continue;
+      if (k === "html") el.innerHTML = attrs[k];
+      else if (k === "text") el.textContent = attrs[k];
+      else if (k === "class") el.className = attrs[k];
+      else if (k.slice(0, 2) === "on") el.addEventListener(k.slice(2), attrs[k]);
+      else el.setAttribute(k, attrs[k] === true ? "" : attrs[k]);
+    }
+    for (var i = 2; i < arguments.length; i++) {
+      var c = arguments[i];
+      if (c == null) continue;
+      if (Array.isArray(c)) c.forEach(function (x) { if (x != null) el.appendChild(typeof x === "string" ? document.createTextNode(x) : x); });
+      else el.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+    }
+    return el;
+  }
+  CA.h = h;
+  var uid = 0;
+  CA.uid = function (p) { uid += 1; return (p || "u") + uid; };
+
+  /* ---------- 保存（ブラウザの中だけ。使えなくても動く） ---------- */
+  var PAGE = root.CA_PAGE || "page";
+  var PREFIX = "ca2026." + PAGE + ".";
+  CA.store = {
+    get: function (k, d) {
+      try { var v = localStorage.getItem(PREFIX + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; }
+    },
+    set: function (k, v) {
+      try { localStorage.setItem(PREFIX + k, JSON.stringify(v)); } catch (e) { /* 保存できない環境 */ }
+    }
+  };
+
+  /* ---------- 進み具合（最低限の項目ごとのランプ） ---------- */
+  var progress = { items: [], done: {}, listeners: [] };
+  CA.progress = {
+    init: function (items) {
+      progress.items = items;
+      progress.done = CA.store.get("done", {}) || {};
+      this.render();
+    },
+    mark: function (id) {
+      if (progress.done[id]) return;
+      progress.done[id] = true;
+      CA.store.set("done", progress.done);
+      this.render();
+    },
+    isDone: function (id) { return !!progress.done[id]; },
+    count: function () { return progress.items.filter(function (it) { return progress.done[it.id]; }).length; },
+    onChange: function (fn) { progress.listeners.push(fn); },
+    render: function () {
+      var n = this.count(), total = progress.items.length;
+      document.querySelectorAll("[data-lamps]").forEach(function (box) {
+        box.innerHTML = "";
+        box.appendChild(h("span", { class: "label", text: "最低限 " + n + " / " + total }));
+        progress.items.forEach(function (it, i) {
+          box.appendChild(h("a", {
+            class: "lamp" + (progress.done[it.id] ? " on" : ""), href: "#" + it.id,
+            title: (i + 1) + ". " + it.title + (progress.done[it.id] ? "（確認問題に正解）" : "（まだ）"),
+            "aria-label": (i + 1) + "番 " + it.title + (progress.done[it.id] ? " 正解済み" : " まだ")
+          }, String(i + 1)));
+        });
+      });
+      document.querySelectorAll("[data-item-state]").forEach(function (el) {
+        var id = el.getAttribute("data-item-state");
+        el.textContent = progress.done[id] ? "確認問題に正解しました" : "";
+      });
+      progress.listeners.forEach(function (fn) { fn(n, total); });
+    }
+  };
+
+  /* ---------- ステップ再生 ----------
+     frames: [{ caption, render(stageEl) }] */
+  CA.stepper = function (mount, opts) {
+    var frames = opts.frames, i = 0, timer = null;
+    var stage = h("div", { class: "stage", "aria-hidden": "false" });
+    var cap = h("p", { class: "caption", "aria-live": "polite" });
+    var rid = CA.uid("rng");
+    var range = h("input", { type: "range", min: 0, max: frames.length - 1, value: 0, id: rid, "aria-label": "場面" });
+    var count = h("span", { class: "count" });
+    var bFirst = h("button", { type: "button", text: "最初から" });
+    var bPrev = h("button", { type: "button", text: "◀ 前へ" });
+    var bNext = h("button", { type: "button", class: "primary", text: "次へ ▶" });
+    var bPlay = h("button", { type: "button", text: "自動で再生" });
+    function stop() { if (timer) { clearInterval(timer); timer = null; bPlay.textContent = "自動で再生"; } }
+    function show(k) {
+      i = Math.max(0, Math.min(frames.length - 1, k));
+      stage.innerHTML = "";
+      frames[i].render(stage);
+      cap.innerHTML = frames[i].caption;
+      range.value = i;
+      count.textContent = (i + 1) + " / " + frames.length;
+      bPrev.disabled = i === 0; bFirst.disabled = i === 0;
+      bNext.disabled = i === frames.length - 1;
+      if (i === frames.length - 1 && opts.onEnd) opts.onEnd();
+    }
+    bFirst.onclick = function () { stop(); show(0); };
+    bPrev.onclick = function () { stop(); show(i - 1); };
+    bNext.onclick = function () { stop(); show(i + 1); };
+    range.oninput = function () { stop(); show(+range.value); };
+    bPlay.onclick = function () {
+      if (timer) { stop(); return; }
+      if (i === frames.length - 1) show(0);
+      bPlay.textContent = "止める";
+      timer = setInterval(function () {
+        if (i >= frames.length - 1) { stop(); return; }
+        show(i + 1);
+      }, opts.interval || 2600);
+    };
+    var box = h("div", { class: "stepper" }, stage, cap,
+      h("div", { class: "ctrl" }, bFirst, bPrev, bNext, range, count, bPlay));
+    box.addEventListener("keydown", function (e) {
+      if (e.target === range) return;
+      if (e.key === "ArrowRight") { stop(); show(i + 1); }
+      if (e.key === "ArrowLeft") { stop(); show(i - 1); }
+    });
+    mount.appendChild(box);
+    show(0);
+    return { show: show };
+  };
+
+  /* ---------- ドリル・確認問題 ----------
+     opts.mode: "drill"（何問でも） / "check"（1問、正解で項目のランプが点く） / "seq"（決まった問題を順に）
+     opts.make(): 問題を返す。問題は { prompt, inputLabel, check(x)->{ok,msg}, solution, type, choices } */
+  CA.quiz = function (mount, opts) {
+    var mode = opts.mode || "drill";
+    var stats = CA.store.get("q." + opts.id, { ok: 0, tried: 0 }) || { ok: 0, tried: 0 };
+    var p = null, answered = false, wrongs = 0, seqIndex = 0, seqOk = 0;
+    var kind = h("div", { class: "kind" });
+    var prompt = h("div", { class: "prompt" });
+    var area = h("div");
+    var fb = h("div", { class: "feedback", role: "status", "aria-live": "polite" });
+    var sol = h("details", { class: "solution" }, h("summary", { text: "解き方を見る" }), h("div"));
+    var bNext = h("button", { type: "button", text: mode === "seq" ? "次の問題へ" : "別の問題を出す" });
+    var foot = h("div", { class: "row" });
+    if (mode !== "check") foot.appendChild(bNext);
+    var box = h("div", { class: "quiz" + (mode === "check" ? " check-quiz" : "") }, kind, prompt, area, fb, sol, foot);
+    if (mode === "check" && opts.itemId && CA.progress.isDone(opts.itemId)) box.classList.add("done");
+
+    function label() {
+      kind.innerHTML = "";
+      var title = mode === "check" ? "確認問題" : mode === "seq" ? (opts.title || "仕上げ") + "　" + (seqIndex + 1) + " / " + opts.seq.length : (opts.title || "練習");
+      kind.appendChild(h("b", { text: title }));
+      if (mode === "drill") kind.appendChild(h("span", { class: "score", text: "正解 " + stats.ok + " / " + stats.tried }));
+      if (mode === "check") kind.appendChild(h("span", { class: "score", "data-item-state": opts.itemId }));
+      if (mode === "seq") kind.appendChild(h("span", { class: "score", text: "正解 " + seqOk }));
+    }
+    function judge(res, picked) {
+      if (answered && mode !== "check") return;
+      if (mode !== "check" || !answered) { stats.tried += 1; }
+      if (res.ok) {
+        answered = true;
+        stats.ok += 1;
+        if (mode === "seq") seqOk += 1;
+        fb.className = "feedback ok";
+        fb.innerHTML = "<span class=\"head\">正解</span>" + (opts.okNote ? "　" + opts.okNote : "");
+        if (mode === "check") { box.classList.add("done"); if (opts.itemId) CA.progress.mark(opts.itemId); }
+        sol.open = false;
+        if (opts.onCorrect) opts.onCorrect();
+      } else {
+        wrongs += 1;
+        if (mode === "seq") answered = true;
+        fb.className = "feedback ng";
+        fb.innerHTML = "<span class=\"head\">" + (mode === "seq" ? "ちがいます" : "もう一度") + "</span>　" + (res.msg || (wrongs >= 2 || mode === "seq" ? "「解き方を見る」で手順を確かめましょう。" : "手順を一つずつ確かめてみましょう。"));
+        if (wrongs >= 2 || mode === "seq") sol.open = true;
+      }
+      CA.store.set("q." + opts.id, stats);
+      label();
+      if (mode === "seq") { bNext.disabled = false; if (seqIndex === opts.seq.length - 1) bNext.textContent = "結果を見る"; }
+    }
+    function load() {
+      answered = false; wrongs = 0;
+      p = mode === "seq" ? opts.seq[seqIndex]() : opts.make();
+      prompt.innerHTML = p.prompt;
+      sol.lastChild.innerHTML = p.solution;
+      sol.open = false;
+      fb.className = "feedback"; fb.innerHTML = "";
+      area.innerHTML = "";
+      if (p.type === "choice") {
+        var list = h("div", { class: "choices" });
+        p.choices.forEach(function (c, k) {
+          var b = h("button", { type: "button", html: c });
+          b.onclick = function () {
+            if (answered) return;
+            var res = p.check(k);
+            list.querySelectorAll("button").forEach(function (x) { x.classList.remove("picked-ng"); });
+            b.classList.add(res.ok ? "picked-ok" : "picked-ng");
+            judge(res, k);
+          };
+          list.appendChild(b);
+        });
+        area.appendChild(list);
+      } else {
+        var iid = CA.uid("ans");
+        var inp = h("input", { type: "text", id: iid, autocomplete: "off", autocapitalize: "off", spellcheck: "false", inputmode: p.inputMode || "text" });
+        var go = h("button", { type: "button", class: "primary", text: "答え合わせ" });
+        go.onclick = function () {
+          if (!inp.value.trim()) { fb.className = "feedback ng"; fb.innerHTML = "答えを入力してください。"; return; }
+          judge(p.check(inp.value));
+        };
+        inp.addEventListener("keydown", function (e) { if (e.key === "Enter") go.onclick(); });
+        area.appendChild(h("div", { class: "answer-row" }, h("label", { for: iid, text: p.inputLabel || "答え" }), inp, go));
+      }
+      if (mode === "seq") bNext.disabled = true;
+      label();
+      CA.progress.render();
+    }
+    bNext.onclick = function () {
+      if (mode === "seq") {
+        if (seqIndex === opts.seq.length - 1) { if (opts.onFinish) opts.onFinish(seqOk, opts.seq.length, box); return; }
+        seqIndex += 1;
+      }
+      load();
+    };
+    box.restart = function () { seqIndex = 0; seqOk = 0; bNext.textContent = "次の問題へ"; load(); };
+    mount.appendChild(box);
+    load();
+    return box;
+  };
+
+  /* ---------- 抽象レベルの地図（第3回スライド2の9層） ---------- */
+  var LEVELS = [
+    ["アプリケーションソフトウェア", "プログラム"],
+    ["OS", "デバイスドライバ"],
+    ["アーキテクチャ", "命令とレジスタ"],
+    ["マイクロアーキテクチャ", "データパス、コントローラ"],
+    ["論理", "加算器、メモリ"],
+    ["ディジタル回路", "ANDゲート、NOTゲート"],
+    ["アナログ回路", "増幅器、フィルタ"],
+    ["デバイス（素子）", "トランジスタ、ダイオード"],
+    ["物理", "電子"]
+  ];
+  CA.levels = function (mount, here, note) {
+    var ol = h("ol");
+    LEVELS.forEach(function (lv, k) {
+      var mark = here[k];
+      ol.appendChild(h("li", { class: mark ? "here" : "" }, h("span", { text: lv[0] }), h("span", { class: "ex", text: mark ? mark : lv[1] })));
+    });
+    var d = h("details", { class: "levels" }, h("summary", { text: note }), ol);
+    mount.appendChild(d);
+  };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+/* 部品② の入口：論理ゲートの関数、スイッチと電球の回路、ゲーム「中身はどのゲート？」 */
+(function (root) {
+  "use strict";
+  var CA = root.CA = root.CA || {};
+
+  var GATES = {
+    AND: { f: function (a, b) { return a & b; }, ja: "論理積", desc: "両方 1 のときだけ 1" },
+    OR: { f: function (a, b) { return a | b; }, ja: "論理和", desc: "どちらかが 1 なら 1" },
+    XOR: { f: function (a, b) { return a ^ b; }, ja: "排他的論理和", desc: "2つが違うときだけ 1" },
+    NAND: { f: function (a, b) { return 1 - (a & b); }, ja: "AND の反対", desc: "両方 1 のときだけ 0" },
+    NOR: { f: function (a, b) { return 1 - (a | b); }, ja: "OR の反対", desc: "両方 0 のときだけ 1" }
+  };
+  var ROWS = [[0, 0], [0, 1], [1, 0], [1, 1]];
+  /* 調べた行だけで、候補がいくつ残るか */
+  function remaining(observed, names) {
+    return names.filter(function (n) {
+      return Object.keys(observed).every(function (k) {
+        var ab = k.split(""), a = +ab[0], b = +ab[1];
+        return GATES[n].f(a, b) === observed[k];
+      });
+    });
+  }
+  CA.logic = { GATES: GATES, ROWS: ROWS, remaining: remaining };
+  if (typeof module !== "undefined" && module.exports) module.exports = CA.logic;
+  if (typeof document === "undefined") return;
+
+  var h = CA.h, NS = "http://www.w3.org/2000/svg";
+  function s(tag, attrs, text) {
+    var el = document.createElementNS(NS, tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    if (text != null) el.textContent = text;
+    return el;
+  }
+
+  /* ---------- スイッチと電球（直列＝AND、並列＝OR） ---------- */
+  function drawSwitch(g, x1, x2, y, closed, label) {
+    g.appendChild(s("circle", { cx: x1, cy: y, r: 6, class: "swpost" }));
+    g.appendChild(s("circle", { cx: x2, cy: y, r: 6, class: "swpost" }));
+    var ex = closed ? x2 : x1 + (x2 - x1) * 0.82, ey = closed ? y : y - 30;
+    g.appendChild(s("line", { x1: x1, y1: y, x2: ex, y2: ey, class: "sw" }));
+    g.appendChild(s("text", { x: (x1 + x2) / 2, y: y + 34, "text-anchor": "middle", class: "tm" }, label + (closed ? " ON" : " OFF")));
+  }
+  function drawBulb(g, x, y, lit) {
+    g.appendChild(s("circle", { cx: x, cy: y, r: 24, class: "bulb" + (lit ? " lit" : "") }));
+    g.appendChild(s("text", { x: x + 34, y: y + 8, class: "t" }, lit ? "点く" : "消灯"));
+  }
+  function drawBattery(g, x, y) {
+    g.appendChild(s("line", { x1: x - 16, y1: y - 6, x2: x + 16, y2: y - 6, class: "batt" }));
+    g.appendChild(s("line", { x1: x - 8, y1: y + 6, x2: x + 8, y2: y + 6, class: "batt" }));
+    g.appendChild(s("text", { x: x - 26, y: y + 8, "text-anchor": "end", class: "t" }, "電池"));
+  }
+  function wire(g, pts, live) {
+    g.appendChild(s("polyline", { points: pts.map(function (p) { return p.join(","); }).join(" "), class: "wire" + (live ? " live" : "") }));
+  }
+  function series(a, b) {
+    var lit = !!(a && b);
+    var svg = s("svg", { viewBox: "0 0 620 240", role: "img", "aria-label": "直列の回路。A " + (a ? "ON" : "OFF") + "、B " + (b ? "ON" : "OFF") + "、電球は" + (lit ? "点いている" : "消えている") });
+    var g = s("g", {});
+    wire(g, [[90, 104], [90, 50], [180, 50]], lit);
+    wire(g, [[250, 50], [330, 50]], lit);
+    wire(g, [[400, 50], [480, 50], [480, 96]], lit);
+    wire(g, [[480, 144], [480, 200], [90, 200], [90, 116]], lit);
+    drawSwitch(g, 180, 250, 50, a, "A");
+    drawSwitch(g, 330, 400, 50, b, "B");
+    drawBulb(g, 480, 120, lit);
+    drawBattery(g, 90, 110);
+    svg.appendChild(g);
+    return { svg: svg, lit: lit };
+  }
+  function parallel(a, b) {
+    var lit = !!(a || b);
+    var svg = s("svg", { viewBox: "0 0 620 240", role: "img", "aria-label": "並列の回路。A " + (a ? "ON" : "OFF") + "、B " + (b ? "ON" : "OFF") + "、電球は" + (lit ? "点いている" : "消えている") });
+    var g = s("g", {});
+    wire(g, [[90, 104], [90, 40], [160, 40]], lit);
+    wire(g, [[160, 40], [230, 40]], lit && a);
+    wire(g, [[300, 40], [400, 40]], lit && a);
+    wire(g, [[160, 40], [160, 120], [230, 120]], lit && b);
+    wire(g, [[300, 120], [400, 120], [400, 40]], lit && b);
+    wire(g, [[400, 40], [480, 40], [480, 96]], lit);
+    wire(g, [[480, 144], [480, 210], [90, 210], [90, 116]], lit);
+    drawSwitch(g, 230, 300, 40, a, "A");
+    drawSwitch(g, 230, 300, 120, b, "B");
+    drawBulb(g, 480, 120, lit);
+    drawBattery(g, 90, 110);
+    svg.appendChild(g);
+    return { svg: svg, lit: lit };
+  }
+  function truthTable(seen, current, outName) {
+    var t = h("table", { class: "ttable" });
+    t.appendChild(h("tr", null, h("th", { text: "A" }), h("th", { text: "B" }), h("th", { text: outName })));
+    ROWS.forEach(function (r) {
+      var k = r.join("");
+      var v = seen[k];
+      t.appendChild(h("tr", { class: current === k ? "cur" : "" }, h("td", { text: String(r[0]) }), h("td", { text: String(r[1]) }), h("td", { class: v == null ? "unk" : "", text: v == null ? "?" : String(v) })));
+    });
+    return t;
+  }
+
+  CA.switchLab = function (mount, onAllSeen) {
+    var a = 0, b = 0, seenS = {}, seenP = {}, timer = null, announced = false;
+    var bA = h("button", { type: "button", "aria-pressed": "false" }), bB = h("button", { type: "button", "aria-pressed": "false" });
+    var auto = h("button", { type: "button", text: "自動で4通りを見る" });
+    var left = h("div", { class: "stack circuit" }), right = h("div", { class: "stack circuit" });
+    var note = h("div", { class: "feedback", role: "status", "aria-live": "polite" });
+    function render() {
+      bA.textContent = "スイッチ A：" + (a ? "ON (1)" : "OFF (0)");
+      bB.textContent = "スイッチ B：" + (b ? "ON (1)" : "OFF (0)");
+      bA.setAttribute("aria-pressed", a ? "true" : "false");
+      bB.setAttribute("aria-pressed", b ? "true" : "false");
+      var k = "" + a + b;
+      var S = series(a, b), P = parallel(a, b);
+      seenS[k] = S.lit ? 1 : 0; seenP[k] = P.lit ? 1 : 0;
+      left.innerHTML = ""; right.innerHTML = "";
+      left.appendChild(h("h3", { text: "つなぎ方 1：一列につなぐ（直列）" }));
+      left.appendChild(S.svg);
+      left.appendChild(h("div", { class: "row", style: "justify-content:center" }, truthTable(seenS, k, "電球")));
+      right.appendChild(h("h3", { text: "つなぎ方 2：枝分かれさせる（並列）" }));
+      right.appendChild(P.svg);
+      right.appendChild(h("div", { class: "row", style: "justify-content:center" }, truthTable(seenP, k, "電球")));
+      if (Object.keys(seenS).length === 4 && !announced) {
+        announced = true;
+        note.className = "feedback ok";
+        note.innerHTML = "<span class=\"head\">4通りすべて試しました</span>　ON を 1、OFF を 0、点くを 1 と書いた表を<b>真理値表</b>といいます。直列は「両方 1 のときだけ 1」で <b>AND（論理積）</b>、並列は「どちらかが 1 なら 1」で <b>OR（論理和）</b>。授業ではこれを記号と式で扱います。";
+        if (onAllSeen) onAllSeen();
+      }
+    }
+    function stop() { if (timer) { clearInterval(timer); timer = null; auto.textContent = "自動で4通りを見る"; } }
+    bA.onclick = function () { stop(); a = 1 - a; render(); };
+    bB.onclick = function () { stop(); b = 1 - b; render(); };
+    auto.onclick = function () {
+      if (timer) { stop(); return; }
+      var i = 0; auto.textContent = "止める";
+      a = 0; b = 0; render();
+      timer = setInterval(function () {
+        i += 1;
+        if (i >= 4) { stop(); return; }
+        a = ROWS[i][0]; b = ROWS[i][1]; render();
+      }, 1400);
+    };
+    var grid = h("div", { class: "circuits" }, left, right);
+    mount.appendChild(h("div", { class: "stack" }, h("div", { class: "swbtns" }, bA, bB, auto), grid, note));
+    render();
+  };
+
+  /* ---------- ゲーム「中身はどのゲート？」 ---------- */
+  CA.gateGame = function (mount, opts) {
+    var names = Object.keys(GATES);
+    var order = names.slice().sort(function () { return Math.random() - 0.5; });
+    var round = 0, a = 0, b = 0, observed = {}, guesses = 0, results = [], solved = false;
+    var title = h("div", { class: "kind" });
+    var svgBox = h("div", { class: "circuit" });
+    var bA = h("button", { type: "button" }), bB = h("button", { type: "button" });
+    var tableBox = h("div", { class: "row", style: "justify-content:center" });
+    var cands = h("div", { class: "cands" });
+    var fb = h("div", { class: "feedback", role: "status", "aria-live": "polite" });
+    var next = h("button", { type: "button", class: "primary", text: "次の箱へ" });
+    next.hidden = true;
+    function box(out) {
+      var svg = s("svg", { viewBox: "0 0 560 200", role: "img", "aria-label": "中身の分からない箱。入力 A=" + a + "、B=" + b + "、出力 " + out });
+      svg.appendChild(s("polyline", { points: "80,70 200,70", class: "wire" + (a ? " live" : "") }));
+      svg.appendChild(s("polyline", { points: "80,130 200,130", class: "wire" + (b ? " live" : "") }));
+      svg.appendChild(s("polyline", { points: "360,100 450,100", class: "wire" + (out ? " live" : "") }));
+      svg.appendChild(s("text", { x: 12, y: 79, class: "tm" }, "A=" + a));
+      svg.appendChild(s("text", { x: 12, y: 139, class: "tm" }, "B=" + b));
+      svg.appendChild(s("rect", { x: 200, y: 30, width: 160, height: 140, rx: 14, class: "box" }));
+      svg.appendChild(s("text", { x: 280, y: 116, "text-anchor": "middle", class: "boxq" }, "?"));
+      svg.appendChild(s("circle", { cx: 478, cy: 100, r: 26, class: "bulb" + (out ? " lit" : "") }));
+      svg.appendChild(s("text", { x: 478, y: 166, "text-anchor": "middle", class: "tm" }, "出力 " + out));
+      return svg;
+    }
+    function render() {
+      var g = order[round];
+      var out = GATES[g].f(a, b);
+      observed["" + a + b] = out;
+      title.innerHTML = "";
+      title.appendChild(h("b", { text: "箱 " + (round + 1) + " / " + order.length }));
+      title.appendChild(h("span", { class: "score", text: "調べた入力の組 " + Object.keys(observed).length + " / 4" }));
+      svgBox.innerHTML = ""; svgBox.appendChild(box(out));
+      bA.textContent = "入力 A を " + (a ? "0" : "1") + " にする";
+      bB.textContent = "入力 B を " + (b ? "0" : "1") + " にする";
+      tableBox.innerHTML = ""; tableBox.appendChild(truthTable(observed, "" + a + b, "出力"));
+    }
+    function buildCands() {
+      cands.innerHTML = "";
+      names.forEach(function (n) {
+        var btn = h("button", { type: "button" }, h("b", { text: n }), h("span", { text: GATES[n].ja + "：" + GATES[n].desc }));
+        btn.onclick = function () {
+          if (solved) return;
+          guesses += 1;
+          var g = order[round];
+          if (n === g) {
+            solved = true;
+            btn.classList.add("right");
+            var left = remaining(observed, names);
+            var stars = guesses === 1 ? 3 : guesses === 2 ? 2 : 1;
+            results.push({ gate: g, guesses: guesses, sure: left.length === 1 });
+            fb.className = "feedback ok";
+            fb.innerHTML = "<span class=\"head\">正解：" + g + "</span>　<span class=\"stars\" aria-label=\"星" + stars + "つ\">" + "★★★".slice(0, stars) + "☆☆☆".slice(0, 3 - stars) + "</span><br>" +
+              (left.length === 1 ? "調べた入力の組だけで、答えは1つに絞れていました。" : "実は、調べた組だけではまだ " + left.filter(function (x) { return x !== g; }).join("・") + " の可能性も残っていました。4通りすべてを調べると確実です。");
+            next.hidden = false;
+            next.textContent = round === order.length - 1 ? "結果を見る" : "次の箱へ";
+          } else {
+            btn.classList.add("wrong");
+            var outOf = Object.keys(observed).filter(function (k) { return GATES[n].f(+k[0], +k[1]) !== observed[k]; });
+            fb.className = "feedback ng";
+            fb.innerHTML = "<span class=\"head\">ちがいます</span>　" + (outOf.length ? n + " なら、A=" + outOf[0][0] + "・B=" + outOf[0][1] + " の出力は " + GATES[n].f(+outOf[0][0], +outOf[0][1]) + " のはずです。" : "まだ調べていない入力の組を試してみましょう。");
+          }
+        };
+        cands.appendChild(btn);
+      });
+    }
+    bA.onclick = function () { if (solved) return; a = 1 - a; render(); };
+    bB.onclick = function () { if (solved) return; b = 1 - b; render(); };
+    next.onclick = function () {
+      if (round === order.length - 1) { finish(); return; }
+      round += 1; a = 0; b = 0; observed = {}; guesses = 0; solved = false;
+      fb.className = "feedback"; fb.innerHTML = ""; next.hidden = true;
+      buildCands(); render();
+    };
+    function finish() {
+      var first = results.filter(function (r) { return r.guesses === 1; }).length;
+      var sure = results.filter(function (r) { return r.sure; }).length;
+      wrap.innerHTML = "";
+      var again = h("button", { type: "button", class: "primary", text: "もう一度遊ぶ（箱の順番が変わります）" });
+      again.onclick = function () { mount.innerHTML = ""; CA.gateGame(mount, opts); };
+      wrap.appendChild(h("div", { class: "feedback ok", style: "display:block" },
+        h("span", { class: "head", text: "5つの箱をすべて開けました" }),
+        h("p", { html: "1回目で当てた箱：" + first + " / 5　　確実に絞り込んでから答えた箱：" + sure + " / 5" }),
+        h("p", { html: "入力の組をすべて試して出力を書いた表が<b>真理値表</b>です。AND・OR・XOR・NAND・NOR の5つは授業でも出てきます。名前と「どんなときに 1 になるか」を覚えておきましょう。" })));
+      wrap.appendChild(again);
+      if (opts && opts.onFinish) opts.onFinish();
+    }
+    var wrap = h("div", { class: "quiz" }, title, svgBox, h("div", { class: "swbtns" }, bA, bB), tableBox,
+      h("p", { class: "hint", text: "入力を切りかえて出力を調べ、中身を下から選んでください。" }), cands, fb, h("div", { class: "row" }, next));
+    mount.appendChild(wrap);
+    buildCands(); render();
+  };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+(function () {
+  var B = CA.bits, h = CA.h;
+  function $(id) { return document.getElementById(id); }
+  var ITEMS = [{ id: "t1", title: "調べてから来よう" }, { id: "t2", title: "前回の確認" }, { id: "t3", title: "ゲーム" }];
+  CA.progress.init(ITEMS);
+  CA.levels($("levels"), { 5: "AND ゲート、NOT ゲート（今日はここ）", 7: "トランジスタ（第2回の CMOS）" }, "全体の中での位置：今日は「ディジタル回路」の層（開くと9層の図）");
+
+  /* やることの一覧（ランプと連動） */
+  function todo() {
+    var ol = $("todo"); ol.innerHTML = "";
+    ITEMS.forEach(function (it, i) {
+      var done = CA.progress.isDone(it.id);
+      ol.appendChild(h("li", { class: done ? "done" : "" }, h("span", { class: "box", "aria-hidden": "true", text: done ? "✓" : "" }), h("a", { href: "#" + it.id, text: (i + 1) + ". " + it.title + (done ? "（済み）" : "") })));
+    });
+  }
+  CA.progress.onChange(todo);
+
+  /* つかみ：スイッチと電球 */
+  CA.switchLab($("switches"));
+
+  /* やること 1：調べる */
+  var TASKS = [
+    { id: "boole", title: "ジョージ・ブールは、どんな人で何を考えた？", q: "「ブール代数」の「ブール」は人の名前です。いつごろの、どこの国の人で、何を考えた人か。", kw: "ジョージ・ブール、ブール代数", how: "百科事典やWikipediaで、生まれた年と国、代表的な本の名前を確かめる。", use: "スライド7「ブール代数とは」" },
+    { id: "venn", title: "ベン図で A∩B と A∪B を描くと？", q: "高校数学の集合で、A∩B（共通部分）と A∪B（和集合）をベン図に描くと、どこを塗る？ 塗った部分を言葉で書こう。", kw: "ベン図、共通部分、和集合", how: "ノートに円を2つ重ねて描き、塗ってみる。", use: "スライド10・11（AND と OR の記号）" },
+    { id: "java", title: "Java の & と &&、| と || の違いは？", q: "Java で 5 & 3、5 | 3、5 ^ 3 を計算すると、それぞれいくつ？ && と & は何が違う？", kw: "Java ビット演算子、論理演算子", how: "ターミナル（Windows は「ターミナル」か「コマンドプロンプト」、Mac は「ターミナル」）で jshell と入力して Enter。続けて 5 & 3 と入力して Enter。5 と 3 を2進数にして、桁ごとに見比べると理由が分かります（第3回の復習）。", use: "スライド8〜12（!A、~A などの書き方）" },
+    { id: "stairs", title: "階段の照明は、どんなときに点いている？", q: "階段の上と下にスイッチがあり、どちらでも点けたり消したりできる照明。上と下のスイッチの ON/OFF の4通りで、照明が点くのはどれ？ 表にしてみよう。", kw: "3路スイッチ、しくみ", how: "家や学校の階段で実際に試すか、しくみの図を探す。", use: "スライド12（XOR：排他的論理和）" }
+  ];
+  var notes = CA.store.get("notes", {}) || {};
+  function countFilled() { return TASKS.filter(function (t) { return (notes[t.id] || "").trim().length >= 2; }).length; }
+  TASKS.forEach(function (t, i) {
+    var tid = "note-" + t.id;
+    var ta = h("textarea", { id: tid, placeholder: "調べたことを1〜2行で" });
+    ta.value = notes[t.id] || "";
+    var saved = h("div", { class: "saved", "aria-live": "polite" });
+    var timer = null;
+    ta.addEventListener("input", function () {
+      notes[t.id] = ta.value;
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        CA.store.set("notes", notes);
+        saved.textContent = "このブラウザに保存しました";
+        if (countFilled() >= 3) CA.progress.mark("t1");
+      }, 400);
+    });
+    $("research").appendChild(h("div", { class: "task" },
+      h("h3", { text: (i + 1) + ". " + t.title }),
+      h("p", { text: t.q }),
+      h("dl", null,
+        h("dt", { text: "検索語の例" }), h("dd", { text: t.kw }),
+        h("dt", { text: "確かめ方" }), h("dd", { text: t.how }),
+        h("dt", { text: "授業で使う場所" }), h("dd", { text: t.use })),
+      h("label", { for: tid, class: "small", text: "メモ" }), ta, saved));
+  });
+
+  /* やること 2：前回の確認 */
+  var seq = [
+    function () { return B.gen.binToDec(Math.random); },
+    function () { return B.gen.twosToDec(Math.random); },
+    function () { return B.gen.sub4(Math.random); }
+  ];
+  CA.quiz($("review"), { mode: "seq", id: "rev", title: "前回の確認", seq: seq, onFinish: function (ok, n, box) {
+    CA.progress.mark("t2");
+    var again = h("button", { type: "button", text: "別の数でもう一度" });
+    var msg = h("div", { class: "feedback " + (ok === n ? "ok" : "ng"), html: "<span class=\"head\">" + n + " 問中 " + ok + " 問正解</span>　" + (ok === n ? "第3回の内容は大丈夫です。" : "間違えた問題は、第3回の復習ページで確かめておきましょう。") });
+    again.onclick = function () { msg.remove(); box.restart(); };
+    msg.appendChild(h("div", { class: "row", style: "margin-top:8px" }, again));
+    box.appendChild(msg);
+  } });
+
+  /* やること 3：ゲーム */
+  CA.gateGame($("game"), { onFinish: function () { CA.progress.mark("t3"); } });
+
+  todo();
+  CA.progress.render();
+})();
+</script>
+
+</body>
+</html>

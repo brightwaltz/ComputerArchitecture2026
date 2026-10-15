@@ -1,0 +1,1869 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>コンピュータアーキテクチャ 第3回 復習</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&family=BIZ+UDPGothic:wght@400;700&display=swap">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<style>
+/* レイアウト：1カラムの「実験ノート」。読む部分は 40em、手を動かす実験台は方眼のパネルで少し広く。
+   色：授業スライドの緑を濃くしたものを地の色、点いたビットは表示灯の琥珀色、操作できるものは配線の青。 */
+:root {
+  --paper: #f4f7f5;
+  --panel: #ffffff;
+  --ink: #1b2620;
+  --muted: #53635a;
+  --rule: #cdd8d1;
+  --grid: rgba(43, 125, 71, 0.08);
+  --accent: #2b7d47;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2f0e6;
+  --lamp: #e89a00;
+  --lamp-ink: #2a1c00;
+  --lamp-glow: rgba(232, 154, 0, 0.35);
+  --lamp-off: #dde4df;
+  --wire: #1d62a6;
+  --wire-soft: #e3edf8;
+  --ok: #1d7a3d;
+  --ok-soft: #e1f2e6;
+  --ng: #b5361f;
+  --ng-soft: #fbe8e3;
+  --s-bit: #1d62a6;
+  --e-bit: #b86e00;
+  --f-bit: #2b7d47;
+  --font-body: "BIZ UDPGothic", "BIZ UDPゴシック", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+  --font-mono: "BIZ UDGothic", "BIZ UDゴシック", "Osaka-Mono", Menlo, Consolas, monospace;
+  --fs-body: 20px;
+  --fs-small: 16px;
+  --fs-h1: 32px;
+  --fs-h2: 28px;
+  --fs-h3: 22px;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #111714; --panel: #18201c; --ink: #e3ebe6; --muted: #9db0a4; --rule: #2e3a34;
+    --grid: rgba(91, 193, 125, 0.07); --accent: #5bc17d; --accent-ink: #0d1a12; --accent-soft: #1c3226;
+    --lamp: #ffb833; --lamp-ink: #241700; --lamp-glow: rgba(255, 184, 51, 0.45); --lamp-off: #2a3530;
+    --wire: #74b3f2; --wire-soft: #1a2a3a; --ok: #63c986; --ok-soft: #1b3325; --ng: #ff7d69; --ng-soft: #3b211c;
+    --s-bit: #74b3f2; --e-bit: #ffb833; --f-bit: #5bc17d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #111714; --panel: #18201c; --ink: #e3ebe6; --muted: #9db0a4; --rule: #2e3a34;
+  --grid: rgba(91, 193, 125, 0.07); --accent: #5bc17d; --accent-ink: #0d1a12; --accent-soft: #1c3226;
+  --lamp: #ffb833; --lamp-ink: #241700; --lamp-glow: rgba(255, 184, 51, 0.45); --lamp-off: #2a3530;
+  --wire: #74b3f2; --wire-soft: #1a2a3a; --ok: #63c986; --ok-soft: #1b3325; --ng: #ff7d69; --ng-soft: #3b211c;
+  --s-bit: #74b3f2; --e-bit: #ffb833; --f-bit: #5bc17d;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.8;
+  padding-inline: 16px;
+  padding-block: 0 64px;
+}
+.page { max-width: 960px; margin-inline: auto; display: grid; gap: 40px; }
+.prose { max-width: 40em; }
+h1, h2, h3 { line-height: 1.4; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--fs-h1); }
+h2 { font-size: var(--fs-h2); }
+h3 { font-size: var(--fs-h3); }
+p { margin: 0; }
+a { color: var(--wire); }
+.mono, code, kbd { font-family: var(--font-mono); }
+.small { font-size: var(--fs-small); color: var(--muted); }
+sub { font-size: 0.7em; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.stack { display: grid; gap: 16px; }
+.page > *, .item > *, .stack > *, .lab > *, .intro > *, .quiz > *, .stepper > * { min-width: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+:focus-visible { outline: 3px solid var(--wire); outline-offset: 2px; }
+
+/* 見出しまわり */
+.mast {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+  padding-block: 12px;
+  margin-inline: -16px; padding-inline: 16px;
+}
+.mast-inner { max-width: 960px; margin-inline: auto; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; justify-content: space-between; }
+.mast .course { font-size: var(--fs-small); color: var(--muted); }
+.mast .title { font-size: var(--fs-h3); font-weight: 700; line-height: 1.4; }
+.badge {
+  display: inline-block; font-size: var(--fs-small); line-height: 1.4; padding: 2px 10px; border-radius: 999px;
+  border: 1px solid var(--lamp); color: var(--ink); background: transparent; vertical-align: middle; margin-left: 8px;
+}
+.lamps { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lamps .label { font-size: var(--fs-small); color: var(--muted); margin-right: 4px; }
+.lamp {
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  font: 700 var(--fs-small)/1 var(--font-mono); color: var(--muted);
+  background: var(--lamp-off); border: 1px solid var(--rule); text-decoration: none;
+}
+.lamp.on { background: var(--lamp); color: var(--lamp-ink); border-color: var(--lamp); box-shadow: 0 0 0 4px var(--lamp-glow); }
+
+.intro { display: grid; gap: 16px; padding-top: 24px; }
+.intro h1 .sub { display: block; font-size: var(--fs-h3); font-weight: 400; color: var(--muted); }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: var(--fs-small); color: var(--muted); }
+
+/* 抽象レベルの地図 */
+.levels { border: 1px solid var(--rule); border-radius: var(--radius); background: var(--panel); padding: 12px 16px; }
+.levels summary { cursor: pointer; font-size: var(--fs-small); color: var(--muted); }
+.levels ol { list-style: none; margin: 12px 0 4px; padding: 0; display: grid; gap: 4px; }
+.levels li { display: grid; grid-template-columns: 15em 1fr; gap: 12px; align-items: baseline; padding: 4px 10px; border-radius: 6px; font-size: var(--fs-small); }
+.levels li .ex { color: var(--muted); }
+.levels li.here { background: var(--accent-soft); outline: 2px solid var(--accent); }
+.levels li.here .ex { color: var(--ink); }
+@media (max-width: 520px) { .levels li { grid-template-columns: 1fr; gap: 0; } }
+
+/* 目次 */
+.toc { display: flex; flex-wrap: wrap; gap: 8px; }
+.toc a {
+  font-size: var(--fs-small); text-decoration: none; color: var(--ink);
+  border: 1px solid var(--rule); background: var(--panel); border-radius: 999px; padding: 4px 14px;
+}
+.toc a .n { font-family: var(--font-mono); color: var(--accent); margin-right: 6px; }
+
+/* 実験台（方眼のパネル） */
+.lab {
+  background-color: var(--panel);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 20px 20px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: grid; gap: 16px;
+  min-width: 0;
+}
+.lab > h3 { font-size: var(--fs-h3); }
+.lab .hint { font-size: var(--fs-small); color: var(--muted); }
+
+/* 項目 */
+.item { display: grid; gap: 20px; scroll-margin-top: 120px; }
+.item-head { display: grid; gap: 6px; border-top: 3px solid var(--accent); padding-top: 16px; }
+.item-head .no { font: 700 var(--fs-small)/1 var(--font-mono); color: var(--accent); letter-spacing: 0.08em; }
+.item-head .rule { font-size: var(--fs-body); }
+.item-head .slides { font-size: var(--fs-small); color: var(--muted); }
+.keyline {
+  font-weight: 700; background: var(--accent-soft); border-radius: 6px; padding: 10px 14px; max-width: 40em;
+}
+
+/* ステップ再生 */
+.stepper { display: grid; gap: 12px; min-width: 0; }
+.stepper .stage { min-height: 160px; overflow-x: auto; display: grid; align-content: center; padding: 8px 0; }
+.stepper .caption { min-height: 3.6em; max-width: 40em; }
+.stepper .ctrl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.stepper input[type="range"] { flex: 1 1 140px; accent-color: var(--accent); min-width: 0; }
+.stepper .count { font: var(--fs-small) var(--font-mono); color: var(--muted); min-width: 3.5em; text-align: right; }
+
+/* ボタンと入力 */
+button, .btn {
+  font: inherit; font-size: var(--fs-small); line-height: 1.4;
+  padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--rule); background: var(--panel); color: var(--ink);
+}
+button:hover { border-color: var(--wire); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+button:disabled { opacity: 0.45; cursor: default; }
+input[type="text"], textarea {
+  font: 24px/1.4 var(--font-mono); padding: 8px 12px; border-radius: 8px;
+  border: 2px solid var(--rule); background: var(--panel); color: var(--ink); width: 100%; max-width: 16em;
+}
+textarea { font: var(--fs-body)/1.7 var(--font-body); max-width: 100%; min-height: 4.5em; resize: vertical; }
+input[type="text"]:focus, textarea:focus { border-color: var(--wire); outline: none; }
+
+/* ドリル・確認問題 */
+.quiz { display: grid; gap: 12px; padding: 16px 20px; border-radius: var(--radius); border: 1px solid var(--rule); background: var(--panel); min-width: 0; }
+.quiz .kind { font-size: var(--fs-small); color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+.quiz .kind b { color: var(--ink); }
+.quiz .prompt { font-size: var(--fs-body); }
+.quiz .answer-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.quiz .answer-row label { font-size: var(--fs-small); color: var(--muted); }
+.quiz .choices { display: grid; gap: 8px; }
+.quiz .choices button { text-align: left; font-size: var(--fs-body); padding: 10px 16px; }
+.quiz .choices button.picked-ok { border-color: var(--ok); background: var(--ok-soft); }
+.quiz .choices button.picked-ng { border-color: var(--ng); background: var(--ng-soft); }
+.feedback { border-radius: 8px; padding: 10px 14px; display: none; }
+.feedback.ok { display: block; background: var(--ok-soft); border-left: 6px solid var(--ok); }
+.feedback.ng { display: block; background: var(--ng-soft); border-left: 6px solid var(--ng); }
+.feedback .head { font-weight: 700; }
+.solution { border-top: 1px dashed var(--rule); padding-top: 10px; }
+.solution summary { cursor: pointer; font-size: var(--fs-small); color: var(--wire); }
+.check-quiz { border: 2px solid var(--lamp); }
+.check-quiz.done { border-color: var(--ok); }
+.score { font: var(--fs-small) var(--font-mono); color: var(--muted); }
+
+/* ビット */
+.bits { display: inline-flex; gap: 6px; flex-wrap: nowrap; }
+.bit {
+  width: 44px; height: 52px; border-radius: 8px; display: grid; place-items: center;
+  font: 700 26px/1 var(--font-mono); border: 2px solid var(--rule); background: var(--lamp-off); color: var(--muted);
+}
+.bit.on { background: var(--lamp); color: var(--lamp-ink); border-color: var(--lamp); box-shadow: 0 0 0 3px var(--lamp-glow); }
+button.bit { padding: 0; }
+.bitcol { display: grid; gap: 4px; justify-items: center; }
+.bitcol .w { font: var(--fs-small)/1 var(--font-mono); color: var(--muted); }
+.bitcol.dim .w { opacity: 0.5; }
+.gap4 { width: 10px; }
+.readout { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; align-items: baseline; }
+.readout dt { font-size: var(--fs-small); color: var(--muted); }
+.readout dd { margin: 0; font: 700 24px/1.4 var(--font-mono); overflow-wrap: anywhere; }
+.readout dd .expr { font-weight: 400; font-size: var(--fs-small); color: var(--muted); display: block; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+
+/* 計算の表（筆算） */
+.calc { border-collapse: collapse; font: 26px/1.3 var(--font-mono); margin: 0 auto; }
+.calc td { width: 1.25em; text-align: center; padding: 2px 0; }
+.calc td.rl { width: auto; text-align: right; padding-right: 12px; font: var(--fs-small) var(--font-body); color: var(--muted); white-space: nowrap; }
+.calc tr.carry td { font-size: var(--fs-small); color: var(--wire); height: 1.4em; }
+.calc tr.sum td { border-top: 2px solid var(--ink); }
+.calc td.hl { background: var(--wire-soft); border-radius: 4px; }
+.calc td.drop { color: var(--ng); text-decoration: line-through; }
+.calc td.ghost { color: transparent; }
+.calc td.flip { color: var(--wire); }
+
+.divtable { border-collapse: collapse; font: 24px/1.5 var(--font-mono); margin: 0 auto; }
+.divtable td { padding: 2px 10px; text-align: right; }
+.divtable td.r { color: var(--lamp-ink); background: var(--lamp); border-radius: 6px; text-align: center; min-width: 1.6em; }
+.divtable td.r.off { background: transparent; color: var(--muted); }
+.divtable td.note { font: var(--fs-small) var(--font-body); color: var(--muted); text-align: left; }
+.divwrap { display: flex; gap: 16px; align-items: stretch; justify-content: center; flex-wrap: wrap; }
+.uparrow { display: grid; align-content: stretch; justify-items: center; color: var(--wire); font: 700 var(--fs-small)/1.3 var(--font-body); }
+.uparrow .bar { width: 6px; background: var(--wire); border-radius: 3px; flex: 1; min-height: 60px; position: relative; }
+.uparrow .bar::before { content: ""; position: absolute; top: -10px; left: -7px; border: 10px solid transparent; border-bottom-color: var(--wire); border-top: 0; }
+
+.result { text-align: center; font: 700 28px/1.4 var(--font-mono); }
+.result .small { font-family: var(--font-body); }
+
+/* 一覧の表 */
+.tbl-wrap { overflow-x: auto; }
+table.ref { border-collapse: collapse; font-size: var(--fs-small); }
+table.ref th, table.ref td { border: 1px solid var(--rule); padding: 4px 10px; text-align: center; }
+table.ref th { background: var(--accent-soft); font-weight: 700; }
+table.ref td.mono { font-family: var(--font-mono); }
+
+/* 4ビットの時計 */
+.clock-wrap { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 20px; align-items: center; }
+@media (max-width: 720px) { .clock-wrap { grid-template-columns: 1fr; } }
+.clock svg { width: 100%; height: auto; display: block; }
+.clock .t-bits { font: 700 24px var(--font-mono); fill: var(--ink); }
+.clock .t-dec { font: 24px var(--font-mono); fill: var(--muted); }
+.clock .t-sdec { font: 700 24px var(--font-mono); fill: var(--wire); }
+.clock .dot { fill: var(--lamp-off); stroke: var(--rule); }
+.clock .dot.cur { fill: var(--lamp); stroke: var(--lamp); }
+.clock .boundary-s { stroke: var(--ng); stroke-width: 4; stroke-dasharray: 6 5; }
+.clock .boundary-u { stroke: var(--wire); stroke-width: 4; stroke-dasharray: 2 5; }
+.clock .hand { stroke: var(--ink); stroke-width: 4; stroke-linecap: round; }
+.clock .hub { fill: var(--ink); }
+.clock .ring { fill: none; stroke: var(--rule); stroke-width: 2; }
+select { font: 18px/1.4 var(--font-mono); padding: 6px 8px; border-radius: 8px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); }
+
+.log { font-size: var(--fs-small); min-height: 3em; }
+.log .warn { color: var(--ng); font-weight: 700; }
+.log .warnu { color: var(--wire); font-weight: 700; }
+
+/* 浮動小数点 */
+.fbits { display: flex; flex-wrap: wrap; gap: 3px; align-items: flex-end; }
+.fgroup { display: grid; gap: 4px; }
+.fgroup .glab { font-size: var(--fs-small); font-weight: 700; }
+.fgroup .gbits { display: flex; flex-wrap: wrap; gap: 3px; }
+.fbit { width: 26px; height: 36px; padding: 0; border-radius: 5px; font: 700 18px/1 var(--font-mono); border: 2px solid var(--rule); background: var(--panel); color: var(--muted); }
+.fbit.on { color: var(--panel); }
+.g-s .glab { color: var(--s-bit); } .g-s .fbit.on { background: var(--s-bit); border-color: var(--s-bit); }
+.g-e .glab { color: var(--e-bit); } .g-e .fbit.on { background: var(--e-bit); border-color: var(--e-bit); }
+.g-f .glab { color: var(--f-bit); } .g-f .fbit.on { background: var(--f-bit); border-color: var(--f-bit); }
+.formula { font: 22px/1.6 var(--font-mono); overflow-wrap: anywhere; }
+.formula .s { color: var(--s-bit); } .formula .e { color: var(--e-bit); } .formula .f { color: var(--f-bit); }
+
+/* つまずき・仕上げ */
+.pitfalls { display: grid; gap: 12px; }
+.pitfalls ul { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 40em; }
+.final .quiz { border-width: 2px; }
+.done-banner { display: none; padding: 16px 20px; border-radius: var(--radius); background: var(--ok-soft); border: 2px solid var(--ok); font-weight: 700; }
+.done-banner.show { display: block; }
+footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid var(--rule); padding-top: 16px; display: grid; gap: 6px; }
+
+/* 予習ページ */
+.research { display: grid; gap: 16px; }
+.task { display: grid; gap: 10px; padding: 16px 20px; border-radius: var(--radius); background: var(--panel); border: 1px solid var(--rule); min-width: 0; }
+.task h3 { font-size: var(--fs-h3); }
+.task dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: var(--fs-small); }
+.task dt { color: var(--muted); }
+.task dd { margin: 0; }
+.task .saved { font-size: var(--fs-small); color: var(--ok); min-height: 1.4em; }
+@media (max-width: 520px) { .task dl { grid-template-columns: 1fr; } .task dt { margin-top: 6px; } }
+.checklist { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.checklist li { display: flex; gap: 10px; align-items: baseline; }
+.checklist .box { width: 22px; height: 22px; border-radius: 5px; border: 2px solid var(--rule); flex: none; display: inline-grid; place-items: center; font-size: 16px; }
+.checklist li.done .box { background: var(--ok); border-color: var(--ok); color: var(--panel); }
+
+/* 回路図（SVG） */
+.circuit svg { width: 100%; max-width: 620px; height: auto; display: block; margin: 0 auto; }
+.circuit .wire { stroke: var(--muted); stroke-width: 4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.circuit .wire.live { stroke: var(--lamp); }
+.circuit .t { font: 24px var(--font-body); fill: var(--ink); }
+.circuit .tm { font: 700 24px var(--font-mono); fill: var(--ink); }
+.circuit .bulb { fill: var(--lamp-off); stroke: var(--muted); stroke-width: 3; }
+.circuit .bulb.lit { fill: var(--lamp); stroke: var(--lamp); filter: drop-shadow(0 0 10px var(--lamp-glow)); }
+.circuit .batt { stroke: var(--ink); stroke-width: 4; }
+.circuit .sw { stroke: var(--ink); stroke-width: 5; stroke-linecap: round; transition: transform 0.2s; }
+.circuit .swpost { fill: var(--ink); }
+.circuit .box { fill: var(--panel); stroke: var(--ink); stroke-width: 3; }
+.circuit .boxq { font: 700 44px var(--font-mono); fill: var(--muted); }
+.swbtns { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.swbtns button { font-size: var(--fs-body); min-width: 7em; }
+.swbtns button[aria-pressed="true"] { background: var(--lamp); color: var(--lamp-ink); border-color: var(--lamp); font-weight: 700; }
+.ttable { border-collapse: collapse; font: 20px/1.4 var(--font-mono); }
+.ttable th, .ttable td { border: 1px solid var(--rule); padding: 4px 14px; text-align: center; }
+.ttable th { font-family: var(--font-body); font-size: var(--fs-small); background: var(--accent-soft); }
+.ttable td.unk { color: var(--muted); }
+.ttable tr.cur td { background: var(--wire-soft); }
+.cands { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 8px; }
+.cands button { text-align: left; display: grid; gap: 2px; padding: 10px 14px; }
+.cands button b { font-size: var(--fs-body); font-family: var(--font-mono); }
+.cands button span { font-size: var(--fs-small); color: var(--muted); }
+.cands button.right { border-color: var(--ok); background: var(--ok-soft); }
+.cands button.wrong { border-color: var(--ng); background: var(--ng-soft); }
+.stars { font-size: 26px; letter-spacing: 4px; color: var(--lamp); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+@media (max-width: 520px) {
+  .bit { width: 34px; height: 44px; font-size: 22px; }
+  .bits { gap: 4px; }
+  .lab { padding: 14px; }
+  .calc { font-size: 22px; }
+  .mast .title { font-size: 18px; }
+  .readout { grid-template-columns: 1fr; gap: 0; }
+  .readout dd { margin-bottom: 10px; }
+}
+.circuits { display: grid; grid-template-columns: 1fr; gap: 24px; }
+@media (min-width: 860px) { .circuits { grid-template-columns: 1fr 1fr; } }
+.circuits h3 { font-size: var(--fs-h3); }
+.checklist a { color: var(--ink); }
+
+</style>
+<header class="mast">
+  <div class="mast-inner">
+    <div>
+      <div class="course"><a href="./">コンピュータアーキテクチャ 2026 予習・復習ページ一覧</a></div>
+      <div class="title">第3回 復習　デジタルデータの表現と演算</div>
+    </div>
+    <div class="lamps" data-lamps></div>
+  </div>
+</header>
+
+<main class="page">
+  <section class="intro">
+    <h1>第3回 復習<span class="sub">デジタルデータの表現と演算（10/15 の授業）</span></h1>
+    <p class="prose">0 と 1 の並びを、数としてどう読むか。今日の授業の「最低限これだけ」7項目を、自分の手で計算できるようにするページです。各項目の<b>確認問題</b>に正解すると、上のランプが点きます。</p>
+    <div class="meta"><span>目安 35〜40分</span><span>整数編（1〜6）と小数編（7）</span><span>記録はこのブラウザの中だけに残ります</span></div>
+    <div id="levels"></div>
+    <nav class="toc" aria-label="項目">
+      <a href="#i1"><span class="n">1</span>2進→10進</a>
+      <a href="#i2"><span class="n">2</span>10進→2進</a>
+      <a href="#i3"><span class="n">3</span>16進数</a>
+      <a href="#i4"><span class="n">4</span>2の補数</a>
+      <a href="#i5"><span class="n">5</span>引き算とオーバーフロー</a>
+      <a href="#i6"><span class="n">6</span>掛け算</a>
+      <a href="#i7"><span class="n">7</span>浮動小数点</a>
+      <a href="#pit">つまずき</a>
+      <a href="#final">仕上げ</a>
+    </nav>
+  </section>
+
+  <section class="lab" aria-labelledby="lab-title">
+    <h2 id="lab-title">まず触ってみよう：ビット電卓</h2>
+    <p class="hint">ランプを押すと 0 と 1 が切りかわります。同じビット列でも、符号なし・2の補数・16進数で読み方が変わることを確かめてください。</p>
+    <div id="panel"></div>
+  </section>
+
+  <!-- 1 -->
+  <section class="item" id="i1">
+    <div class="item-head">
+      <span class="no">最低限 1</span>
+      <h2>2進数 → 10進数：1 の桁の重みを足す</h2>
+      <span class="slides">授業スライド 4〜6</span>
+    </div>
+    <p class="keyline">右から1桁目の重みは 1、2桁目は 2、3桁目は 4……と2倍ずつ。1 が立っている桁の重みだけを足す。</p>
+    <p class="small prose">このページでは、演習課題と同じく「右から1桁目の重みが 2⁰ = 1」と数えます。スライド4の「第 n 桁は 2ⁿ の桁」は、右端を第0桁と数えた書き方で、指している重みは同じです。</p>
+    <div class="lab" id="s1"></div>
+    <div id="c1"></div>
+    <div id="d1"></div>
+  </section>
+
+  <!-- 2 -->
+  <section class="item" id="i2">
+    <div class="item-head">
+      <span class="no">最低限 2</span>
+      <h2>10進数 → 2進数：2で割り、余りを下から読む</h2>
+      <span class="slides">授業スライド 7</span>
+    </div>
+    <p class="keyline">商が 0 になるまで 2 で割り続け、余りを<u>下から上へ</u>読む。最後に出た余りがいちばん左の桁。</p>
+    <div class="lab" id="s2"></div>
+    <div id="c2"></div>
+    <div id="d2"></div>
+  </section>
+
+  <!-- 3 -->
+  <section class="item" id="i3">
+    <div class="item-head">
+      <span class="no">最低限 3</span>
+      <h2>16進数：4ビットずつ区切って1桁に</h2>
+      <span class="slides">授業スライド 8</span>
+    </div>
+    <p class="keyline">2進数を右から4ビットずつ区切ると、それぞれが16進数の1桁（0〜9、A〜F）になる。</p>
+    <div class="lab" id="s3"></div>
+    <div class="tbl-wrap" data-allow="hex-table">
+      <table class="ref" aria-label="4ビットと10進数・16進数の対応">
+        <tr><th>2進数</th><td class="mono">0000</td><td class="mono">0001</td><td class="mono">0010</td><td class="mono">0011</td><td class="mono">0100</td><td class="mono">0101</td><td class="mono">0110</td><td class="mono">0111</td><td class="mono">1000</td><td class="mono">1001</td><td class="mono">1010</td><td class="mono">1011</td><td class="mono">1100</td><td class="mono">1101</td><td class="mono">1110</td><td class="mono">1111</td></tr>
+        <tr><th>10進数</th><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td><td>12</td><td>13</td><td>14</td><td>15</td></tr>
+        <tr><th>16進数</th><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>A</td><td>B</td><td>C</td><td>D</td><td>E</td><td>F</td></tr>
+      </table>
+    </div>
+    <div id="c3"></div>
+    <div id="d3"></div>
+  </section>
+
+  <!-- 4 -->
+  <section class="item" id="i4">
+    <div class="item-head">
+      <span class="no">最低限 4</span>
+      <h2>負の数：2の補数は「反転して＋1」</h2>
+      <span class="slides">授業スライド 11〜14</span>
+    </div>
+    <p class="keyline">正の数の全ビットを反転して 1 を足すと、その負の数になる。最上位ビットが 1 なら負。n ビットで表せるのは −2<sup>n−1</sup> 〜 2<sup>n−1</sup>−1（4ビットなら −8〜+7）。</p>
+    <div class="lab" id="s4"></div>
+    <div class="stack">
+      <h3>符号/絶対値表現と比べると</h3>
+      <p class="prose">符号/絶対値表現は、最上位ビットを符号（0 が正、1 が負）にして、残りに大きさを書く方法です。分かりやすい反面、0 を表すビット列が 0000 と 1000 の2つあり、ふつうの足し算の回路でそのまま計算できません。2の補数ならどちらの問題も起きません。</p>
+      <div class="tbl-wrap">
+        <table class="ref" aria-label="4ビットでの表し方の比較">
+          <tr><th>10進数</th><th>符号/絶対値表現</th><th>2の補数</th></tr>
+          <tr><td>+7</td><td class="mono">0111</td><td class="mono">0111</td></tr>
+          <tr><td>+3</td><td class="mono">0011</td><td class="mono">0011</td></tr>
+          <tr><td>0</td><td class="mono">0000 と 1000（2つ）</td><td class="mono">0000 だけ</td></tr>
+          <tr><td>−3</td><td class="mono">1011</td><td class="mono">1101</td></tr>
+          <tr><td>−7</td><td class="mono">1111</td><td class="mono">1001</td></tr>
+          <tr><td>−8</td><td>表せない</td><td class="mono">1000</td></tr>
+        </table>
+      </div>
+    </div>
+    <div id="c4"></div>
+    <div id="d4a"></div>
+    <div id="d4b"></div>
+  </section>
+
+  <!-- 5 -->
+  <section class="item" id="i5">
+    <div class="item-head">
+      <span class="no">最低限 5</span>
+      <h2>引き算は補数を足す。あふれた桁は捨てる</h2>
+      <span class="slides">授業スライド 9〜10、13</span>
+    </div>
+    <p class="keyline">A − B は A ＋（B の2の補数）で計算する。最上位からあふれた桁上がりは捨てる。答えの最上位が 1 なら負の数で、2の補数のまま書く。</p>
+    <div class="lab" id="s5"></div>
+    <div class="lab">
+      <h3>オーバーフローを時計で見る</h3>
+      <p class="hint">4ビットの16通りを円に並べました。足し算は針を進めること。B が負なら針を戻します。計算の結果が使える桁数に入りきらないことを<b>オーバーフロー</b>といい、この時計では境目を越えることにあたります。</p>
+      <div id="clock"></div>
+    </div>
+    <div id="c5"></div>
+    <div id="d5a"></div>
+    <div id="d5b"></div>
+    <div id="d5c"></div>
+  </section>
+
+  <!-- 6 -->
+  <section class="item" id="i6">
+    <div class="item-head">
+      <span class="no">最低限 6</span>
+      <h2>掛け算：ずらして足す</h2>
+      <span class="slides">授業スライド 15</span>
+    </div>
+    <p class="keyline">かける数の各桁が 1 なら、かけられる数をその桁の分だけ左へずらして書く。0 なら何も書かない。最後に全部足す。</p>
+    <div class="lab" id="s6"></div>
+    <div id="c6"></div>
+    <div id="d6"></div>
+  </section>
+
+  <!-- 7 -->
+  <section class="item" id="i7">
+    <div class="item-head">
+      <span class="no">最低限 7（小数編）</span>
+      <h2>浮動小数点：符号部・指数部・仮数部</h2>
+      <span class="slides">授業スライド 16〜20</span>
+    </div>
+    <p class="keyline">IEEE754 単精度は 32ビット＝符号部 1・指数部 8・仮数部 23。値は (−1)<sup>S</sup> × 2<sup>E−127</sup> × (1 + F)。指数部は 127 を引き、仮数部には 1 を足して読む。</p>
+    <p class="prose">小数点の右側の重みは、左から 0.5、0.25、0.125……と半分ずつになります。たとえば 101.101<sub>2</sub> = 4 + 1 + 0.5 + 0.125 = 5.625 です（固定小数点、スライド16）。浮動小数点は、これを「1.□□ × 2<sup>n</sup>」の形にそろえて、符号・指数・仮数に分けて記録します。</p>
+    <div class="lab" id="s7"></div>
+    <div class="lab">
+      <h3>32ビットを触ってみよう</h3>
+      <p class="hint">ビットを押すと値が変わります。「0.1」を選ぶと、仮数部が 1001 1001… とくり返し、ぴったりの 0.1 にはならないことが分かります。プログラムで 0.1 + 0.2 が 0.30000000000000004 になるのは、このためです。</p>
+      <div id="float"></div>
+    </div>
+    <div id="c7"></div>
+    <div id="d7"></div>
+  </section>
+
+  <section class="pitfalls" id="pit">
+    <h2>つまずきやすいところ</h2>
+    <ul>
+      <li><b>余りを上から読む</b>：2で割る方法では、最後に出た余りが左端です。確かめとして、出した2進数を重みで足して元の数に戻るか見ましょう。</li>
+      <li><b>1001 は 9 か −7 か</b>：ビット列そのものには意味がなく、どう読むかで決まります。符号なしなら 9、4ビットの2の補数なら −7 です。問題文がどちらで読むかを指定しています。</li>
+      <li><b>符号/絶対値表現と2の補数を混ぜる</b>：−3 は符号/絶対値なら 1011、2の補数なら 1101。「反転して＋1」は2の補数のほうです。</li>
+      <li><b>桁上がりとオーバーフローは別のもの</b>：2の補数の引き算では、最上位から桁上がりが出ても捨てるだけで、答えは正しいことがあります（時計で −2 を足してみよう）。オーバーフローは、本当の答えが表せる範囲を越えたときです。</li>
+      <li><b>指数部の 127 と仮数部の「1.」</b>：指数部はそのまま使わずに 127 を引き、仮数部は先頭に「1.」を補って読みます。</li>
+      <li><b>Java の 037 は 31</b>：Java では先頭が 0 の数字は8進数として読まれます（0x は16進数、0b は2進数）。スライド22。</li>
+    </ul>
+  </section>
+
+  <section class="final stack" id="final">
+    <h2>仕上げの5問</h2>
+    <p class="prose">7項目から5問を出します。間違えたら、その項目に戻って確認問題と練習をもう一度。</p>
+    <div id="fin"></div>
+    <div class="done-banner" id="banner" role="status">7項目すべての確認問題に正解しました。次回（10/22）はブール代数と論理演算です。<a href="w04-preview.html">第4回 予習ページ</a>も見ておきましょう。</div>
+  </section>
+
+  <footer>
+    <span>コンピュータアーキテクチャ（2026年度 秋・木曜3・4限）第3回 復習ページ</span>
+    <span>問題は練習用に作ったもので、テストの問題そのものではありません。</span>
+  </footer>
+</main>
+
+<script>window.CA_PAGE = "w03r";</script>
+<script>
+/* 部品① ビットの計算（画面に依存しない関数と、ドリルの問題生成）。node のテストからも読む。 */
+(function (root) {
+  "use strict";
+
+  /* ---------- 基本の変換 ---------- */
+  function toBin(n, width) {
+    var s = (n >>> 0).toString(2);
+    if (width) {
+      s = s.slice(-width);
+      while (s.length < width) s = "0" + s;
+    }
+    return s;
+  }
+  function fromBin(s) { return parseInt(s, 2); }
+  function group4(s) {
+    var out = [];
+    for (var i = s.length; i > 0; i -= 4) out.unshift(s.slice(Math.max(0, i - 4), i));
+    return out.join(" ");
+  }
+  function toHex(n, digits) {
+    var s = (n >>> 0).toString(16).toUpperCase();
+    while (digits && s.length < digits) s = "0" + s;
+    return s;
+  }
+  function weights(width) {
+    var w = [];
+    for (var i = width - 1; i >= 0; i--) w.push(Math.pow(2, i));
+    return w;
+  }
+  /* 2の補数として読む（width ビット） */
+  function signedValue(n, width) {
+    var m = Math.pow(2, width);
+    n = ((n % m) + m) % m;
+    return n >= m / 2 ? n - m : n;
+  }
+  /* 値を width ビットの2の補数のビット列にする */
+  function encodeSigned(v, width) {
+    var m = Math.pow(2, width);
+    return ((v % m) + m) % m;
+  }
+  function invert(n, width) { return (~n) & (Math.pow(2, width) - 1); }
+  function twosComplement(n, width) { return (invert(n, width) + 1) & (Math.pow(2, width) - 1); }
+  /* 符号/絶対値表現 */
+  function signMagnitude(v, width) {
+    var mag = Math.abs(v);
+    return (v < 0 ? Math.pow(2, width - 1) : 0) + mag;
+  }
+  function onesComplementOf(v, width) { return v < 0 ? invert(-v, width) : v; }
+  function reverseBits(s) { return s.split("").reverse().join(""); }
+  /* 画面に出す負の数はマイナス記号（−）で書く */
+  function mn(v) { return v < 0 ? "−" + (-v) : String(v); }
+
+  /* ---------- 2で割る方法の手順 ---------- */
+  function divSteps(n) {
+    var rows = [];
+    if (n === 0) return [{ n: 0, q: 0, r: 0 }];
+    while (n > 0) {
+      rows.push({ n: n, q: Math.floor(n / 2), r: n % 2 });
+      n = Math.floor(n / 2);
+    }
+    return rows;
+  }
+
+  /* ---------- 足し算（桁上がりつき） ---------- */
+  function addBits(a, b, width) {
+    var carries = new Array(width + 1).fill(0); // carries[i] = i桁目（右から0）へ入る桁上がり
+    var sum = 0;
+    for (var i = 0; i < width; i++) {
+      var x = (a >> i) & 1, y = (b >> i) & 1, c = carries[i];
+      var s = x + y + c;
+      if (s & 1) sum |= (1 << i);
+      carries[i + 1] = s >> 1;
+    }
+    var carryOut = carries[width];
+    var sa = signedValue(a, width), sb = signedValue(b, width), ss = signedValue(sum, width);
+    var signedOverflow = (sa >= 0 && sb >= 0 && ss < 0) || (sa < 0 && sb < 0 && ss >= 0);
+    return { sum: sum, carries: carries, carryOut: carryOut, signedOverflow: signedOverflow };
+  }
+  /* 補数を足す引き算 a − b */
+  function subByComplement(a, b, width) {
+    var nb = twosComplement(b, width);
+    var r = addBits(a, nb, width);
+    return { negB: nb, sum: r.sum, carries: r.carries, carryOut: r.carryOut, value: signedValue(r.sum, width), signedOverflow: r.signedOverflow };
+  }
+
+  /* ---------- 掛け算（ずらして足す） ---------- */
+  function mulSteps(a, b, width) {
+    var partials = [];
+    for (var i = 0; i < width; i++) {
+      var bit = (b >> i) & 1;
+      partials.push({ shift: i, bit: bit, value: bit ? a * Math.pow(2, i) : 0 });
+    }
+    return { partials: partials, product: a * b };
+  }
+
+  /* ---------- 浮動小数点（IEEE754 単精度） ---------- */
+  function floatBits(x) {
+    var dv = new DataView(new ArrayBuffer(4));
+    dv.setFloat32(0, x);
+    return dv.getUint32(0);
+  }
+  function bitsToFloat(u) {
+    var dv = new DataView(new ArrayBuffer(4));
+    dv.setUint32(0, u >>> 0);
+    return dv.getFloat32(0);
+  }
+  function floatParts(u) {
+    u = u >>> 0;
+    var s = u >>> 31, e = (u >>> 23) & 0xff, f = u & 0x7fffff;
+    var kind = "normal";
+    if (e === 0 && f === 0) kind = "zero";
+    else if (e === 0) kind = "subnormal";
+    else if (e === 255 && f === 0) kind = "inf";
+    else if (e === 255) kind = "nan";
+    return { s: s, e: e, f: f, frac: f / Math.pow(2, 23), kind: kind, value: bitsToFloat(u) };
+  }
+
+  /* ---------- 入力の正規化（全角・空白・マイナス記号） ---------- */
+  function normalize(str) {
+    if (str == null) return "";
+    return String(str)
+      .replace(/[０-９Ａ-Ｚａ-ｚ]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xfee0); })
+      .replace(/[−－ー‐―–—]/g, "-")
+      .replace(/[＋]/g, "+")
+      .replace(/[．。]/g, ".")
+      .replace(/[\s_　,，]/g, "")
+      .replace(/[₀-₉]/g, "")
+      .trim();
+  }
+  function normBin(str) { return normalize(str).replace(/^0b/i, ""); }
+  function normHex(str) { return normalize(str).replace(/^0x/i, "").replace(/[hH]$/, "").toUpperCase(); }
+  function isBin(s) { return /^[01]+$/.test(s); }
+  function stripZeros(s) { var t = s.replace(/^0+/, ""); return t === "" ? "0" : t; }
+
+  /* ---------- 出してはいけない問題（テストと同じ問題）の照合 ---------- */
+  /* ページには問題の文字列を載せず、ハッシュだけを持つ。 */
+  function hash(key) {
+    var h = 0x811c9dc5, s = "ca2026|" + key;
+    for (var i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    return ("00000000" + h.toString(16)).slice(-8);
+  }
+  var BLOCK = { perm: [], temp: [] };
+  function setBlock(b) { BLOCK = b || { perm: [], temp: [] }; }
+  function isBlocked(key, now) {
+    var h = hash(key);
+    if (BLOCK.perm.indexOf(h) >= 0) return true;
+    var t = now || Date.now();
+    for (var i = 0; i < BLOCK.temp.length; i++) {
+      if (BLOCK.temp[i].h === h && t < Date.parse(BLOCK.temp[i].until)) return true;
+    }
+    return false;
+  }
+
+  /* ---------- 乱数 ---------- */
+  function mulberry32(seed) {
+    return function () {
+      seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+      var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function randInt(rng, lo, hi) { return lo + Math.floor(rng() * (hi - lo + 1)); }
+  function pick(rng, arr) { return arr[Math.floor(rng() * arr.length)]; }
+  /* 出してはいけない問題に当たったら引き直す */
+  function draw(rng, make, now) {
+    for (var k = 0; k < 200; k++) {
+      var p = make(rng);
+      if (!p) continue;
+      if (!isBlocked(p.key, now)) return p;
+    }
+    throw new Error("問題を作れませんでした");
+  }
+
+  /* ---------- 問題の生成 ----------
+     どれも { key, prompt, answer, check(input)->{ok, msg}, solution } を返す。
+     key はテストとの照合に使う正規形。 */
+  var G = {};
+
+  G.binToDec = function (rng, now) {
+    return draw(rng, function (r) {
+      var width = pick(r, [5, 6, 7, 8]);
+      var n = randInt(r, Math.pow(2, width - 1), Math.pow(2, width) - 1);
+      var s = toBin(n, width);
+      var rev = fromBin(reverseBits(s));
+      var allW = Math.pow(2, width) - 1;
+      var terms = [];
+      for (var i = 0; i < width; i++) if (s[i] === "1") terms.push(Math.pow(2, width - 1 - i));
+      return {
+        key: "b2d:" + stripZeros(s),
+        prompt: "2進数 <span class=\"num\">" + s + "<sub>2</sub></span> を10進数で表すと？",
+        inputLabel: "10進数",
+        answer: String(n),
+        check: function (input) {
+          var v = normalize(input);
+          if (v === String(n)) return { ok: true };
+          if (v === String(rev) && rev !== n) return { ok: false, msg: "左右を逆にして読んでいませんか。右端が 1 の桁です。" };
+          if (v === String(allW)) return { ok: false, msg: "0 の桁の重みまで足していませんか。足すのは 1 の桁だけです。" };
+          if (v === s) return { ok: false, msg: "10進数の数字で答えます。" };
+          return { ok: false };
+        },
+        solution: "1 の桁の重みを足す：" + terms.join(" + ") + " = " + n
+      };
+    }, now);
+  };
+
+  G.decToBin = function (rng, now) {
+    return draw(rng, function (r) {
+      var n = randInt(r, 9, 200);
+      var s = toBin(n);
+      var steps = divSteps(n).map(function (x) { return x.n + "÷2=" + x.q + " 余り" + x.r; });
+      return {
+        key: "d2b:" + n,
+        prompt: "10進数 <span class=\"num\">" + n + "</span> を2進数で表すと？",
+        inputLabel: "2進数",
+        answer: s,
+        check: function (input) {
+          var v = normBin(input);
+          if (!isBin(v)) return { ok: false, msg: "0 と 1 だけで答えます。" };
+          if (stripZeros(v) === s) return { ok: true };
+          if (stripZeros(reverseBits(v)) === s) return { ok: false, msg: "余りを上から読んでいませんか。余りは下から上へ読みます（最後に出た余りが左端の桁）。" };
+          return { ok: false };
+        },
+        solution: "2で割り続けて余りを下から読む：" + steps.join("、") + " → " + s
+      };
+    }, now);
+  };
+
+  G.binToHex = function (rng, now) {
+    return draw(rng, function (r) {
+      var n = randInt(r, 17, 255);
+      var s = toBin(n, 8);
+      var h = toHex(n, 2);
+      var hi = (n >> 4), lo = n & 15;
+      return {
+        key: "b2h:" + s,
+        prompt: "2進数 <span class=\"num\">" + group4(s) + "<sub>2</sub></span> を16進数で表すと？",
+        inputLabel: "16進数",
+        answer: h,
+        check: function (input) {
+          var v = normHex(input);
+          if (v === h || stripZeros(v) === stripZeros(h)) return { ok: true };
+          if (v === String(hi) + String(lo) && (hi > 9 || lo > 9)) return { ok: false, msg: "10〜15 は A〜F の1文字で書きます（10=A、11=B、…、15=F）。" };
+          if (v === String(n)) return { ok: false, msg: "それは10進数の値です。4ビットずつ区切って、それぞれを16進数の1桁にします。" };
+          if (v === toHex(lo, 1) + toHex(hi, 1)) return { ok: false, msg: "上位と下位の順が逆です。左の4ビットが上の桁です。" };
+          return { ok: false };
+        },
+        solution: group4(s) + " → " + toBin(hi, 4) + "=" + hi + "=" + toHex(hi, 1) + "、" + toBin(lo, 4) + "=" + lo + "=" + toHex(lo, 1) + " → " + h
+      };
+    }, now);
+  };
+
+  G.hexToBin = function (rng, now) {
+    return draw(rng, function (r) {
+      var n = randInt(r, 17, 255);
+      var h = toHex(n, 2), s = toBin(n, 8);
+      return {
+        key: "h2b:" + h,
+        prompt: "16進数 <span class=\"num\">" + h + "<sub>16</sub></span> を8ビットの2進数で表すと？",
+        inputLabel: "2進数（8ビット）",
+        answer: s,
+        check: function (input) {
+          var v = normBin(input);
+          if (!isBin(v)) return { ok: false, msg: "0 と 1 だけで答えます。" };
+          if (v === s) return { ok: true };
+          if (stripZeros(v) === stripZeros(s)) return { ok: false, msg: "値は合っています。8ビットになるよう、左に 0 を補って書きましょう。" };
+          return { ok: false };
+        },
+        solution: "1桁ずつ4ビットに：" + h[0] + "→" + toBin(parseInt(h[0], 16), 4) + "、" + h[1] + "→" + toBin(parseInt(h[1], 16), 4) + " → " + group4(s)
+      };
+    }, now);
+  };
+
+  /* 10進の負の数 → 2の補数 */
+  G.negToTwos = function (rng, now) {
+    return draw(rng, function (r) {
+      var width = pick(r, [4, 8, 8]);
+      var v = -randInt(r, 2, width === 4 ? 7 : 100);
+      var u = encodeSigned(v, width), s = toBin(u, width);
+      var sm = toBin(signMagnitude(v, width), width);
+      var oc = toBin(onesComplementOf(v, width), width);
+      var pos = toBin(-v, width);
+      return {
+        key: "n2t" + width + ":" + v,
+        prompt: "10進数 <span class=\"num\">" + mn(v) + "</span> を " + width + "ビットの2の補数で表すと？",
+        inputLabel: "2進数（" + width + "ビット）",
+        answer: s,
+        check: function (input) {
+          var x = normBin(input);
+          if (!isBin(x)) return { ok: false, msg: "0 と 1 だけで答えます。" };
+          if (x === s) return { ok: true };
+          if (x.length !== width && stripZeros(x) === stripZeros(s)) return { ok: false, msg: width + "ビットで書きます。" };
+          if (v !== -Math.pow(2, width - 1) && x === sm) return { ok: false, msg: "それは符号/絶対値表現です。2の補数は「反転して＋1」で作ります。" };
+          if (x === oc) return { ok: false, msg: "反転したあとの「＋1」を忘れていませんか。" };
+          if (x === pos) return { ok: false, msg: "それは +" + (-v) + " です。負にするには、反転して＋1します。" };
+          return { ok: false };
+        },
+        solution: "+" + (-v) + " = " + group4(pos) + " → 反転 " + group4(toBin(invert(-v, width), width)) + " → ＋1 → " + group4(s)
+      };
+    }, now);
+  };
+
+  /* 2の補数のビット列 → 10進 */
+  G.twosToDec = function (rng, now) {
+    return draw(rng, function (r) {
+      var width = pick(r, [4, 8, 8]);
+      var m = Math.pow(2, width);
+      var u = randInt(r, m / 2 + 1, m - 2); // 負の数
+      var s = toBin(u, width), v = signedValue(u, width);
+      var magBits = toBin(twosComplement(u, width), width);
+      var smv = -(u - m / 2);
+      var oc = -invert(u, width);
+      return {
+        key: "t2n" + width + ":" + s,
+        prompt: width + "ビットの2の補数 <span class=\"num\">" + group4(s) + "</span> は10進数でいくつ？",
+        inputLabel: "10進数",
+        answer: String(v),
+        check: function (input) {
+          var x = normalize(input);
+          if (x === String(v)) return { ok: true };
+          if (x === String(u)) return { ok: false, msg: "符号なしとして読んでいます。最上位ビットが 1 なので負の数です。" };
+          if (x === String(-v)) return { ok: false, msg: "大きさは合っています。最上位ビットが 1 なので負の数です。" };
+          if (x === String(smv)) return { ok: false, msg: "それは符号/絶対値表現として読んだ値です。2の補数は、もう一度「反転して＋1」して大きさを求めます。" };
+          if (x === String(oc)) return { ok: false, msg: "反転したあとの「＋1」を忘れていませんか。" };
+          return { ok: false };
+        },
+        solution: "最上位が 1 → 負。反転して＋1：" + group4(magBits) + " = " + (-v) + " → " + mn(v)
+      };
+    }, now);
+  };
+
+  /* 補数を足す引き算（4ビット） */
+  G.sub4 = function (rng, now) {
+    return draw(rng, function (r) {
+      var a = randInt(r, 1, 7), b = randInt(r, 1, 7);
+      var x = a - b;
+      if (x < -8 || x > 7) return null;
+      var sa = toBin(a, 4), sb = toBin(b, 4);
+      var res = subByComplement(a, b, 4);
+      var ans = toBin(res.sum, 4);
+      var noPlus1 = toBin((a + invert(b, 4)) & 15, 4);
+      var withCarry = "1" + ans;
+      return {
+        key: "sub4:" + sa + "-" + sb,
+        prompt: "4ビットの2の補数で <span class=\"num\">" + sa + " − " + sb + "</span> を、引く数の補数を足す方法で計算すると？（4ビットで答える）",
+        inputLabel: "2進数（4ビット）",
+        answer: ans,
+        value: x,
+        check: function (input) {
+          var v = normBin(input);
+          if (!isBin(v)) return { ok: false, msg: "0 と 1 だけで答えます。" };
+          if (v === ans) return { ok: true };
+          if (res.carryOut && v === withCarry) return { ok: false, msg: "5桁目にあふれた桁上がりは捨てます。答えは4ビットです。" };
+          if (v === noPlus1) return { ok: false, msg: sb + " の2の補数は、反転したあと＋1 します。" };
+          if (x < 0 && v === toBin(signMagnitude(x, 4), 4)) return { ok: false, msg: "それは符号/絶対値表現の " + x + " です。計算の結果はそのまま2の補数で書きます。" };
+          return { ok: false };
+        },
+        solution: sb + " の2の補数は " + toBin(res.negB, 4) + "。" + sa + " + " + toBin(res.negB, 4) + " = " + (res.carryOut ? "1 " : "") + ans + (res.carryOut ? "（5桁目の 1 は捨てる）" : "") + " → " + ans + "（10進で " + mn(x) + "）"
+      };
+    }, now);
+  };
+
+  /* 8ビットの足し算（2の補数、あふれない組） */
+  G.add8 = function (rng, now) {
+    return draw(rng, function (r) {
+      var a = randInt(r, 20, 100), b = randInt(r, 10, 127 - a);
+      if (b < 5) return null;
+      var sa = toBin(a, 8), sb = toBin(b, 8);
+      var res = addBits(a, b, 8);
+      var ans = toBin(res.sum, 8);
+      var noCarry = toBin(a ^ b, 8);
+      return {
+        key: "add8:" + sa + "+" + sb,
+        prompt: "8ビットの2の補数で <span class=\"num\">" + group4(sa) + " + " + group4(sb) + "</span> を計算すると？",
+        inputLabel: "2進数（8ビット）",
+        answer: ans,
+        check: function (input) {
+          var v = normBin(input);
+          if (!isBin(v)) return { ok: false, msg: "0 と 1 だけで答えます。" };
+          if (v === ans) return { ok: true };
+          if (v === noCarry) return { ok: false, msg: "桁上がりを足し忘れていませんか。1+1 は 0 で、左の桁へ 1 を上げます。" };
+          return { ok: false };
+        },
+        solution: group4(sa) + "（" + a + "）+ " + group4(sb) + "（" + b + "）= " + group4(ans) + "（" + (a + b) + "）"
+      };
+    }, now);
+  };
+
+  /* オーバーフローの判定（4ビット、2の補数） */
+  G.overflow4 = function (rng, now) {
+    return draw(rng, function (r) {
+      var a = randInt(r, -8, 7), b = randInt(r, -8, 7);
+      var res = addBits(encodeSigned(a, 4), encodeSigned(b, 4), 4);
+      var ov = res.signedOverflow;
+      var sa = toBin(encodeSigned(a, 4), 4), sb = toBin(encodeSigned(b, 4), 4);
+      return {
+        key: "ov4:" + sa + "+" + sb,
+        type: "choice",
+        prompt: "4ビットの2の補数で <span class=\"num\">" + sa + " + " + sb + "</span>（" + mn(a) + " + " + (b < 0 ? "(" + mn(b) + ")" : b) + "）を計算する。結果は4ビットに収まる？",
+        choices: ["収まる（オーバーフローしない）", "収まらない（オーバーフローする）"],
+        answer: ov ? 1 : 0,
+        check: function (i) {
+          if (i === (ov ? 1 : 0)) return { ok: true };
+          if (!ov && res.carryOut) return { ok: false, msg: "5桁目に桁上がりは出ますが、それは捨てます。" + mn(a + b) + " は −8〜+7 に収まります。" };
+          return { ok: false, msg: "答えは " + mn(a + b) + "。4ビットの2の補数で表せるのは −8〜+7 です。" };
+        },
+        solution: mn(a) + " + " + (b < 0 ? "(" + mn(b) + ")" : b) + " = " + mn(a + b) + "。4ビットの2の補数の範囲は −8〜+7 なので、" + (ov ? "収まらない（結果は " + toBin(res.sum, 4) + " = " + mn(signedValue(res.sum, 4)) + " と誤って読める）" : "収まる（" + toBin(res.sum, 4) + "）")
+      };
+    }, now);
+  };
+
+  /* 符号なしの掛け算（4ビット×4ビット） */
+  G.mul4 = function (rng, now) {
+    return draw(rng, function (r) {
+      var a = randInt(r, 5, 15), b = randInt(r, 3, 15);
+      var bits = toBin(b, 4);
+      var ones = bits.split("").filter(function (c) { return c === "1"; }).length;
+      if (ones < 2) return null;
+      var sa = toBin(a, 4), sb = toBin(b, 4);
+      var p = a * b, ans = toBin(p);
+      var steps = mulSteps(a, b, 4).partials.filter(function (x) { return x.bit; }).map(function (x) { return toBin(x.value); });
+      var noShift = toBin(mulSteps(a, b, 4).partials.filter(function (x) { return x.bit; }).length * a);
+      return {
+        key: "mul4:" + sa + "x" + sb,
+        prompt: "符号なし2進数で <span class=\"num\">" + sa + " × " + sb + "</span> を計算すると？",
+        inputLabel: "2進数",
+        answer: ans,
+        check: function (input) {
+          var v = normBin(input);
+          if (!isBin(v)) return { ok: false, msg: "0 と 1 だけで答えます。" };
+          if (stripZeros(v) === ans) return { ok: true };
+          if (stripZeros(v) === stripZeros(noShift)) return { ok: false, msg: "部分積を1桁ずつ左へずらしていますか。かける数の右から k 桁目の 1 は、k−1 桁ずらします。" };
+          if (stripZeros(v) === toBin(a + b)) return { ok: false, msg: "それは足し算の答えです。" };
+          return { ok: false };
+        },
+        solution: "かける数 " + sb + " の 1 の桁ごとに、" + sa + " をずらして並べる：" + steps.join(" + ") + " = " + ans + "（" + a + "×" + b + "=" + p + "）"
+      };
+    }, now);
+  };
+
+  /* 浮動小数点を読む（手で計算できる値だけ） */
+  var FLOAT_POOL = [0.75, 1.5, 2.5, 3, 3.5, 6, 7, 9, 10, 12, 13, 14, 20, 0.375, 0.625, 1.25, 1.75, 2.75, 4.5, 5.5, 7.5, 24, 40, 48];
+  G.floatRead = function (rng, now) {
+    return draw(rng, function (r) {
+      var x = pick(r, FLOAT_POOL) * (r() < 0.35 ? -1 : 1);
+      var u = floatBits(x), p = floatParts(u);
+      var full = toBin(u, 32);
+      var fShown = full.slice(9, 9 + 8);
+      var exp = p.e - 127;
+      var mant = 1 + p.frac;
+      return {
+        key: "fr:" + full,
+        prompt: "IEEE754 単精度で 符号部 <span class=\"num\">" + full[0] + "</span>、指数部 <span class=\"num\">" + group4(full.slice(1, 9)) + "</span>、仮数部 <span class=\"num\">" + group4(fShown) + "…</span>（残りはすべて 0）の値は？",
+        inputLabel: "10進数",
+        answer: String(x),
+        check: function (input) {
+          var v = parseFloat(normalize(input));
+          if (v === x) return { ok: true };
+          if (v === -x) return { ok: false, msg: "符号部が " + full[0] + " なので、" + (p.s ? "負" : "正") + "の数です。" };
+          if (v === Math.pow(2, exp) * p.frac * (p.s ? -1 : 1)) return { ok: false, msg: "仮数部には先頭の「1.」を足します（1 + F）。" };
+          if (v === Math.pow(2, p.e) * mant * (p.s ? -1 : 1)) return { ok: false, msg: "指数部から 127 を引きます（E − 127）。" };
+          return { ok: false };
+        },
+        solution: "E = " + p.e + " → 2<sup>" + p.e + "−127</sup> = 2<sup>" + exp + "</sup>、1 + F = " + mant + "、値 = " + (p.s ? "−" : "") + "2<sup>" + exp + "</sup> × " + mant + " = " + x
+      };
+    }, now);
+  };
+
+  var api = {
+    toBin: toBin, fromBin: fromBin, group4: group4, toHex: toHex, weights: weights,
+    signedValue: signedValue, encodeSigned: encodeSigned, invert: invert, twosComplement: twosComplement,
+    signMagnitude: signMagnitude, divSteps: divSteps, addBits: addBits, subByComplement: subByComplement,
+    mulSteps: mulSteps, floatBits: floatBits, bitsToFloat: bitsToFloat, floatParts: floatParts,
+    normalize: normalize, normBin: normBin, normHex: normHex, hash: hash, setBlock: setBlock, isBlocked: isBlocked,
+    mulberry32: mulberry32, mn: mn, randInt: randInt, pick: pick, gen: G, FLOAT_POOL: FLOAT_POOL
+  };
+  root.CA = root.CA || {};
+  root.CA.bits = api;
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>CA.bits.setBlock({"perm":["b937960f","3e9df3fe","9f325bba","83fdb36d","3f9df591"],"temp":[{"h":"e89a773c","until":"2026-10-22T11:00:00+09:00"},{"h":"6be83c2a","until":"2026-10-22T11:00:00+09:00"},{"h":"2247196f","until":"2026-10-22T11:00:00+09:00"},{"h":"c5accc69","until":"2026-10-22T11:00:00+09:00"},{"h":"d8aaabbb","until":"2026-10-22T11:00:00+09:00"}]});</script>
+<script>
+/* 共通の部品：保存、ステップ再生、ドリル・確認問題、進み具合のランプ、抽象レベルの地図 */
+(function (root) {
+  "use strict";
+  var CA = root.CA = root.CA || {};
+
+  /* ---------- 小さな道具 ---------- */
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      if (attrs[k] == null || attrs[k] === false) continue;
+      if (k === "html") el.innerHTML = attrs[k];
+      else if (k === "text") el.textContent = attrs[k];
+      else if (k === "class") el.className = attrs[k];
+      else if (k.slice(0, 2) === "on") el.addEventListener(k.slice(2), attrs[k]);
+      else el.setAttribute(k, attrs[k] === true ? "" : attrs[k]);
+    }
+    for (var i = 2; i < arguments.length; i++) {
+      var c = arguments[i];
+      if (c == null) continue;
+      if (Array.isArray(c)) c.forEach(function (x) { if (x != null) el.appendChild(typeof x === "string" ? document.createTextNode(x) : x); });
+      else el.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+    }
+    return el;
+  }
+  CA.h = h;
+  var uid = 0;
+  CA.uid = function (p) { uid += 1; return (p || "u") + uid; };
+
+  /* ---------- 保存（ブラウザの中だけ。使えなくても動く） ---------- */
+  var PAGE = root.CA_PAGE || "page";
+  var PREFIX = "ca2026." + PAGE + ".";
+  CA.store = {
+    get: function (k, d) {
+      try { var v = localStorage.getItem(PREFIX + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; }
+    },
+    set: function (k, v) {
+      try { localStorage.setItem(PREFIX + k, JSON.stringify(v)); } catch (e) { /* 保存できない環境 */ }
+    }
+  };
+
+  /* ---------- 進み具合（最低限の項目ごとのランプ） ---------- */
+  var progress = { items: [], done: {}, listeners: [] };
+  CA.progress = {
+    init: function (items) {
+      progress.items = items;
+      progress.done = CA.store.get("done", {}) || {};
+      this.render();
+    },
+    mark: function (id) {
+      if (progress.done[id]) return;
+      progress.done[id] = true;
+      CA.store.set("done", progress.done);
+      this.render();
+    },
+    isDone: function (id) { return !!progress.done[id]; },
+    count: function () { return progress.items.filter(function (it) { return progress.done[it.id]; }).length; },
+    onChange: function (fn) { progress.listeners.push(fn); },
+    render: function () {
+      var n = this.count(), total = progress.items.length;
+      document.querySelectorAll("[data-lamps]").forEach(function (box) {
+        box.innerHTML = "";
+        box.appendChild(h("span", { class: "label", text: "最低限 " + n + " / " + total }));
+        progress.items.forEach(function (it, i) {
+          box.appendChild(h("a", {
+            class: "lamp" + (progress.done[it.id] ? " on" : ""), href: "#" + it.id,
+            title: (i + 1) + ". " + it.title + (progress.done[it.id] ? "（確認問題に正解）" : "（まだ）"),
+            "aria-label": (i + 1) + "番 " + it.title + (progress.done[it.id] ? " 正解済み" : " まだ")
+          }, String(i + 1)));
+        });
+      });
+      document.querySelectorAll("[data-item-state]").forEach(function (el) {
+        var id = el.getAttribute("data-item-state");
+        el.textContent = progress.done[id] ? "確認問題に正解しました" : "";
+      });
+      progress.listeners.forEach(function (fn) { fn(n, total); });
+    }
+  };
+
+  /* ---------- ステップ再生 ----------
+     frames: [{ caption, render(stageEl) }] */
+  CA.stepper = function (mount, opts) {
+    var frames = opts.frames, i = 0, timer = null;
+    var stage = h("div", { class: "stage", "aria-hidden": "false" });
+    var cap = h("p", { class: "caption", "aria-live": "polite" });
+    var rid = CA.uid("rng");
+    var range = h("input", { type: "range", min: 0, max: frames.length - 1, value: 0, id: rid, "aria-label": "場面" });
+    var count = h("span", { class: "count" });
+    var bFirst = h("button", { type: "button", text: "最初から" });
+    var bPrev = h("button", { type: "button", text: "◀ 前へ" });
+    var bNext = h("button", { type: "button", class: "primary", text: "次へ ▶" });
+    var bPlay = h("button", { type: "button", text: "自動で再生" });
+    function stop() { if (timer) { clearInterval(timer); timer = null; bPlay.textContent = "自動で再生"; } }
+    function show(k) {
+      i = Math.max(0, Math.min(frames.length - 1, k));
+      stage.innerHTML = "";
+      frames[i].render(stage);
+      cap.innerHTML = frames[i].caption;
+      range.value = i;
+      count.textContent = (i + 1) + " / " + frames.length;
+      bPrev.disabled = i === 0; bFirst.disabled = i === 0;
+      bNext.disabled = i === frames.length - 1;
+      if (i === frames.length - 1 && opts.onEnd) opts.onEnd();
+    }
+    bFirst.onclick = function () { stop(); show(0); };
+    bPrev.onclick = function () { stop(); show(i - 1); };
+    bNext.onclick = function () { stop(); show(i + 1); };
+    range.oninput = function () { stop(); show(+range.value); };
+    bPlay.onclick = function () {
+      if (timer) { stop(); return; }
+      if (i === frames.length - 1) show(0);
+      bPlay.textContent = "止める";
+      timer = setInterval(function () {
+        if (i >= frames.length - 1) { stop(); return; }
+        show(i + 1);
+      }, opts.interval || 2600);
+    };
+    var box = h("div", { class: "stepper" }, stage, cap,
+      h("div", { class: "ctrl" }, bFirst, bPrev, bNext, range, count, bPlay));
+    box.addEventListener("keydown", function (e) {
+      if (e.target === range) return;
+      if (e.key === "ArrowRight") { stop(); show(i + 1); }
+      if (e.key === "ArrowLeft") { stop(); show(i - 1); }
+    });
+    mount.appendChild(box);
+    show(0);
+    return { show: show };
+  };
+
+  /* ---------- ドリル・確認問題 ----------
+     opts.mode: "drill"（何問でも） / "check"（1問、正解で項目のランプが点く） / "seq"（決まった問題を順に）
+     opts.make(): 問題を返す。問題は { prompt, inputLabel, check(x)->{ok,msg}, solution, type, choices } */
+  CA.quiz = function (mount, opts) {
+    var mode = opts.mode || "drill";
+    var stats = CA.store.get("q." + opts.id, { ok: 0, tried: 0 }) || { ok: 0, tried: 0 };
+    var p = null, answered = false, wrongs = 0, seqIndex = 0, seqOk = 0;
+    var kind = h("div", { class: "kind" });
+    var prompt = h("div", { class: "prompt" });
+    var area = h("div");
+    var fb = h("div", { class: "feedback", role: "status", "aria-live": "polite" });
+    var sol = h("details", { class: "solution" }, h("summary", { text: "解き方を見る" }), h("div"));
+    var bNext = h("button", { type: "button", text: mode === "seq" ? "次の問題へ" : "別の問題を出す" });
+    var foot = h("div", { class: "row" });
+    if (mode !== "check") foot.appendChild(bNext);
+    var box = h("div", { class: "quiz" + (mode === "check" ? " check-quiz" : "") }, kind, prompt, area, fb, sol, foot);
+    if (mode === "check" && opts.itemId && CA.progress.isDone(opts.itemId)) box.classList.add("done");
+
+    function label() {
+      kind.innerHTML = "";
+      var title = mode === "check" ? "確認問題" : mode === "seq" ? (opts.title || "仕上げ") + "　" + (seqIndex + 1) + " / " + opts.seq.length : (opts.title || "練習");
+      kind.appendChild(h("b", { text: title }));
+      if (mode === "drill") kind.appendChild(h("span", { class: "score", text: "正解 " + stats.ok + " / " + stats.tried }));
+      if (mode === "check") kind.appendChild(h("span", { class: "score", "data-item-state": opts.itemId }));
+      if (mode === "seq") kind.appendChild(h("span", { class: "score", text: "正解 " + seqOk }));
+    }
+    function judge(res, picked) {
+      if (answered && mode !== "check") return;
+      if (mode !== "check" || !answered) { stats.tried += 1; }
+      if (res.ok) {
+        answered = true;
+        stats.ok += 1;
+        if (mode === "seq") seqOk += 1;
+        fb.className = "feedback ok";
+        fb.innerHTML = "<span class=\"head\">正解</span>" + (opts.okNote ? "　" + opts.okNote : "");
+        if (mode === "check") { box.classList.add("done"); if (opts.itemId) CA.progress.mark(opts.itemId); }
+        sol.open = false;
+        if (opts.onCorrect) opts.onCorrect();
+      } else {
+        wrongs += 1;
+        if (mode === "seq") answered = true;
+        fb.className = "feedback ng";
+        fb.innerHTML = "<span class=\"head\">" + (mode === "seq" ? "ちがいます" : "もう一度") + "</span>　" + (res.msg || (wrongs >= 2 || mode === "seq" ? "「解き方を見る」で手順を確かめましょう。" : "手順を一つずつ確かめてみましょう。"));
+        if (wrongs >= 2 || mode === "seq") sol.open = true;
+      }
+      CA.store.set("q." + opts.id, stats);
+      label();
+      if (mode === "seq") { bNext.disabled = false; if (seqIndex === opts.seq.length - 1) bNext.textContent = "結果を見る"; }
+    }
+    function load() {
+      answered = false; wrongs = 0;
+      p = mode === "seq" ? opts.seq[seqIndex]() : opts.make();
+      prompt.innerHTML = p.prompt;
+      sol.lastChild.innerHTML = p.solution;
+      sol.open = false;
+      fb.className = "feedback"; fb.innerHTML = "";
+      area.innerHTML = "";
+      if (p.type === "choice") {
+        var list = h("div", { class: "choices" });
+        p.choices.forEach(function (c, k) {
+          var b = h("button", { type: "button", html: c });
+          b.onclick = function () {
+            if (answered) return;
+            var res = p.check(k);
+            list.querySelectorAll("button").forEach(function (x) { x.classList.remove("picked-ng"); });
+            b.classList.add(res.ok ? "picked-ok" : "picked-ng");
+            judge(res, k);
+          };
+          list.appendChild(b);
+        });
+        area.appendChild(list);
+      } else {
+        var iid = CA.uid("ans");
+        var inp = h("input", { type: "text", id: iid, autocomplete: "off", autocapitalize: "off", spellcheck: "false", inputmode: p.inputMode || "text" });
+        var go = h("button", { type: "button", class: "primary", text: "答え合わせ" });
+        go.onclick = function () {
+          if (!inp.value.trim()) { fb.className = "feedback ng"; fb.innerHTML = "答えを入力してください。"; return; }
+          judge(p.check(inp.value));
+        };
+        inp.addEventListener("keydown", function (e) { if (e.key === "Enter") go.onclick(); });
+        area.appendChild(h("div", { class: "answer-row" }, h("label", { for: iid, text: p.inputLabel || "答え" }), inp, go));
+      }
+      if (mode === "seq") bNext.disabled = true;
+      label();
+      CA.progress.render();
+    }
+    bNext.onclick = function () {
+      if (mode === "seq") {
+        if (seqIndex === opts.seq.length - 1) { if (opts.onFinish) opts.onFinish(seqOk, opts.seq.length, box); return; }
+        seqIndex += 1;
+      }
+      load();
+    };
+    box.restart = function () { seqIndex = 0; seqOk = 0; bNext.textContent = "次の問題へ"; load(); };
+    mount.appendChild(box);
+    load();
+    return box;
+  };
+
+  /* ---------- 抽象レベルの地図（第3回スライド2の9層） ---------- */
+  var LEVELS = [
+    ["アプリケーションソフトウェア", "プログラム"],
+    ["OS", "デバイスドライバ"],
+    ["アーキテクチャ", "命令とレジスタ"],
+    ["マイクロアーキテクチャ", "データパス、コントローラ"],
+    ["論理", "加算器、メモリ"],
+    ["ディジタル回路", "ANDゲート、NOTゲート"],
+    ["アナログ回路", "増幅器、フィルタ"],
+    ["デバイス（素子）", "トランジスタ、ダイオード"],
+    ["物理", "電子"]
+  ];
+  CA.levels = function (mount, here, note) {
+    var ol = h("ol");
+    LEVELS.forEach(function (lv, k) {
+      var mark = here[k];
+      ol.appendChild(h("li", { class: mark ? "here" : "" }, h("span", { text: lv[0] }), h("span", { class: "ex", text: mark ? mark : lv[1] })));
+    });
+    var d = h("details", { class: "levels" }, h("summary", { text: note }), ol);
+    mount.appendChild(d);
+  };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+/* 部品① の画面：ビット電卓、4ビットの時計、浮動小数点のビット、各項目のステップ再生 */
+(function (root) {
+  "use strict";
+  var CA = root.CA, h = CA.h, B = CA.bits;
+  var SUP = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", "-": "⁻" };
+  function sup(n) { return String(n).split("").map(function (c) { return SUP[c] || c; }).join(""); }
+  CA.sup = sup;
+
+  /* ビットの列を描く。opts: { weights, hl(i)->bool, dim(i)->bool, flip(i)->bool, gap4 } */
+  function bitRow(s, opts) {
+    opts = opts || {};
+    var row = h("div", { class: "bits", role: "img", "aria-label": "ビット列 " + s });
+    var w = s.length;
+    for (var i = 0; i < w; i++) {
+      if (opts.gap4 && i > 0 && (w - i) % 4 === 0) row.appendChild(h("span", { class: "gap4" }));
+      var col = h("div", { class: "bitcol" + (opts.dim && opts.dim(i) ? " dim" : "") });
+      if (opts.weights) col.appendChild(h("span", { class: "w", text: opts.weights === "hide" ? " " : String(Math.pow(2, w - 1 - i)) }));
+      var on = s[i] === "1";
+      var b = h("span", { class: "bit" + (on ? " on" : ""), text: s[i] });
+      if (opts.dim && opts.dim(i)) b.style.opacity = "0.35";
+      if (opts.flip && opts.flip(i)) b.style.outline = "3px solid var(--wire)";
+      col.appendChild(b);
+      row.appendChild(col);
+    }
+    return row;
+  }
+  CA.bitRow = bitRow;
+
+  /* 筆算の表。rows: [{label, bits, cls}]、carries: 桁上がりの文字列（右から） */
+  function calcTable(rows, opts) {
+    opts = opts || {};
+    var width = 0;
+    rows.forEach(function (r) { width = Math.max(width, r.bits.length + (r.op ? 1 : 0)); });
+    if (opts.carry) width = Math.max(width, opts.carry.length);
+    var t = h("table", { class: "calc", role: "img", "aria-label": opts.aria || "筆算" });
+    function line(label, str, cls, cellCls) {
+      var tr = h("tr", { class: cls || "" });
+      tr.appendChild(h("td", { class: "rl", text: label || "" }));
+      var pad = width - str.length;
+      for (var k = 0; k < pad; k++) tr.appendChild(h("td", { text: "" }));
+      for (var j = 0; j < str.length; j++) {
+        var c = cellCls ? cellCls(j, str.length) : "";
+        tr.appendChild(h("td", { class: c, text: str[j] === " " ? "" : str[j] }));
+      }
+      return tr;
+    }
+    if (opts.carry) t.appendChild(line("桁上がり", opts.carry, "carry"));
+    rows.forEach(function (r) {
+      t.appendChild(line(r.label, (r.op || "") + r.bits, r.cls, r.cell));
+    });
+    return t;
+  }
+  CA.calcTable = calcTable;
+  function carryString(res, width, upto) {
+    /* res.carries[i] は右から i 桁目へ入る桁上がり。表示は「上の桁へ渡す桁上がり」を、その桁の上に置く */
+    var s = "";
+    for (var i = width; i >= 1; i--) {
+      var c = res.carries[i];
+      s += (upto != null && i > upto) ? " " : (c ? "1" : " ");
+    }
+    return s + " "; /* 右端の桁には桁上がりが入らない */
+  }
+
+  /* ---------- ビット電卓（ページの先頭の実験台） ---------- */
+  CA.bitPanel = function (mount, opts) {
+    var width = opts.width || 8;
+    var value = opts.value != null ? opts.value : 0;
+    var seg = h("div", { class: "seg", role: "group", "aria-label": "ビット数" });
+    var b4 = h("button", { type: "button", "aria-pressed": "false", text: "4ビット" });
+    var b8 = h("button", { type: "button", "aria-pressed": "true", text: "8ビット" });
+    seg.appendChild(b4); seg.appendChild(b8);
+    var bitsBox = h("div", { class: "bits", role: "group", "aria-label": "ビットのスイッチ" });
+    var dl = h("dl", { class: "readout" });
+    var shiftL = h("button", { type: "button", text: "左へ1つずらす" });
+    var shiftR = h("button", { type: "button", text: "右へ1つずらす" });
+    var clear = h("button", { type: "button", text: "すべて 0" });
+    var note = h("p", { class: "hint" });
+    function setWidth(w) {
+      width = w; value = value & (Math.pow(2, w) - 1);
+      b4.setAttribute("aria-pressed", w === 4 ? "true" : "false");
+      b8.setAttribute("aria-pressed", w === 8 ? "true" : "false");
+      render();
+    }
+    b4.onclick = function () { setWidth(4); };
+    b8.onclick = function () { setWidth(8); };
+    shiftL.onclick = function () {
+      var lost = (value >> (width - 1)) & 1;
+      value = (value << 1) & (Math.pow(2, width) - 1);
+      note.textContent = "左へずらすと値は2倍になります" + (lost ? "（ただし左端からはみ出した 1 は消えます）" : "") + "。";
+      render();
+    };
+    shiftR.onclick = function () {
+      var lost = value & 1;
+      value = value >> 1;
+      note.textContent = "右へずらすと値は2で割った商になります" + (lost ? "（右端の 1 ＝余りは消えます）" : "") + "。";
+      render();
+    };
+    clear.onclick = function () { value = 0; note.textContent = ""; render(); };
+    function render() {
+      bitsBox.innerHTML = "";
+      var s = B.toBin(value, width);
+      for (var i = 0; i < width; i++) {
+        (function (i) {
+          if (i > 0 && (width - i) % 4 === 0) bitsBox.appendChild(h("span", { class: "gap4" }));
+          var wgt = Math.pow(2, width - 1 - i);
+          var on = s[i] === "1";
+          var btn = h("button", { type: "button", class: "bit" + (on ? " on" : ""), "aria-pressed": on ? "true" : "false", "aria-label": "重み " + wgt + " の桁", text: s[i] });
+          btn.onclick = function () { value ^= wgt; note.textContent = ""; render(); };
+          bitsBox.appendChild(h("div", { class: "bitcol" }, h("span", { class: "w", text: String(wgt) }), btn));
+        })(i);
+      }
+      var terms = [];
+      for (var k = 0; k < width; k++) if (s[k] === "1") terms.push(Math.pow(2, width - 1 - k));
+      var sv = B.signedValue(value, width);
+      dl.innerHTML = "";
+      function row(dt, dd, expr) {
+        dl.appendChild(h("dt", { text: dt }));
+        dl.appendChild(h("dd", null, dd, expr ? h("span", { class: "expr", html: expr }) : null));
+      }
+      row("2進数", B.group4(s));
+      row("10進数（符号なし）", String(value), terms.length ? terms.join(" + ") + " = " + value : "すべて 0");
+      var sExpr;
+      if (s[0] === "1") {
+        var mag = B.twosComplement(value, width);
+        sExpr = "最上位が 1 → 負。反転して＋1 すると " + B.group4(B.toBin(mag, width)) + " = " + mag + " → " + B.mn(sv);
+      } else sExpr = "最上位が 0 → 0 以上。符号なしと同じ値";
+      row("10進数（2の補数として読む）", (sv > 0 ? "+" : "") + B.mn(sv), sExpr);
+      row("16進数", B.toHex(value, width / 4), B.group4(s).split(" ").map(function (g) { return g + "→" + B.toHex(B.fromBin(g), 1); }).join("、"));
+    }
+    var box = h("div", { class: "stack" },
+      h("div", { class: "row" }, seg, shiftL, shiftR, clear),
+      h("div", { style: "overflow-x:auto" }, bitsBox),
+      note, dl);
+    mount.appendChild(box);
+    render();
+  };
+
+  /* ---------- 4ビットの時計 ---------- */
+  CA.clock4 = function (mount) {
+    var NS = "http://www.w3.org/2000/svg";
+    function s(tag, attrs, text) {
+      var el = document.createElementNS(NS, tag);
+      for (var k in attrs) el.setAttribute(k, attrs[k]);
+      if (text != null) el.textContent = text;
+      return el;
+    }
+    var mode = "signed", cur = 0, busy = false;
+    var svg = s("svg", { viewBox: "0 0 480 480", role: "img", "aria-label": "4ビットの16通りを円に並べた時計" });
+    var cx = 240, cy = 240;
+    function pos(k, r) {
+      var a = (-90 + k * 22.5) * Math.PI / 180;
+      return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+    }
+    svg.appendChild(s("circle", { cx: cx, cy: cy, r: 150, class: "ring" }));
+    /* 境目：0111|1000（2の補数）と 1111|0000（符号なし） */
+    function boundary(k, cls) {
+      var a1 = pos(k + 0.5, 126), a2 = pos(k + 0.5, 176);
+      svg.appendChild(s("line", { x1: a1[0], y1: a1[1], x2: a2[0], y2: a2[1], class: cls }));
+    }
+    boundary(7, "boundary-s");
+    boundary(15, "boundary-u");
+    var dots = [], decs = [];
+    for (var k = 0; k < 16; k++) {
+      var p = pos(k, 150), q = pos(k, 200), r2 = pos(k, 110);
+      var dot = s("circle", { cx: p[0], cy: p[1], r: 11, class: "dot" });
+      svg.appendChild(dot); dots.push(dot);
+      svg.appendChild(s("text", { x: q[0], y: q[1] + 8, "text-anchor": "middle", class: "t-bits" }, B.toBin(k, 4)));
+      var t = s("text", { x: r2[0], y: r2[1] + 8, "text-anchor": "middle", class: "t-sdec" }, "");
+      svg.appendChild(t); decs.push(t);
+    }
+    var hand = s("line", { x1: cx, y1: cy, x2: cx, y2: cy - 88, class: "hand" });
+    svg.appendChild(hand);
+    svg.appendChild(s("circle", { cx: cx, cy: cy, r: 7, class: "hub" }));
+    function labels() {
+      for (var k = 0; k < 16; k++) {
+        var v = mode === "signed" ? B.signedValue(k, 4) : k;
+        decs[k].textContent = mode === "signed" ? (v > 0 ? "+" + v : B.mn(v)) : String(v);
+        decs[k].setAttribute("class", mode === "signed" ? "t-sdec" : "t-dec");
+      }
+    }
+    function point(k) {
+      cur = ((k % 16) + 16) % 16;
+      var p = pos(cur, 88);
+      hand.setAttribute("x2", p[0]); hand.setAttribute("y2", p[1]);
+      dots.forEach(function (d, i) { d.setAttribute("class", "dot" + (i === cur ? " cur" : "")); });
+    }
+    var log = h("div", { class: "log", "aria-live": "polite" });
+    var seg = h("div", { class: "seg", role: "group", "aria-label": "読み方" });
+    var bs = h("button", { type: "button", "aria-pressed": "true", text: "2の補数として読む" });
+    var bu = h("button", { type: "button", "aria-pressed": "false", text: "符号なしとして読む" });
+    seg.appendChild(bs); seg.appendChild(bu);
+    var selA = h("select", { "aria-label": "A" }), selB = h("select", { "aria-label": "B" });
+    function fillSelects() {
+      [selA, selB].forEach(function (sel, idx) {
+        var keep = sel.value;
+        sel.innerHTML = "";
+        var lo = mode === "signed" ? -8 : 0, hi = mode === "signed" ? 7 : 15;
+        for (var v = lo; v <= hi; v++) {
+          var u = B.encodeSigned(v, 4);
+          sel.appendChild(h("option", { value: v, text: B.toBin(u, 4) + "（" + (mode === "signed" && v > 0 ? "+" : "") + B.mn(v) + "）" }));
+        }
+        sel.value = keep !== "" && +keep >= lo && +keep <= hi ? keep : (idx === 0 ? (mode === "signed" ? 5 : 12) : (mode === "signed" ? 4 : 6));
+      });
+    }
+    function setMode(m) {
+      mode = m;
+      bs.setAttribute("aria-pressed", m === "signed" ? "true" : "false");
+      bu.setAttribute("aria-pressed", m === "unsigned" ? "true" : "false");
+      labels(); fillSelects(); log.innerHTML = "";
+    }
+    bs.onclick = function () { if (!busy) setMode("signed"); };
+    bu.onclick = function () { if (!busy) setMode("unsigned"); };
+    var go = h("button", { type: "button", class: "primary", text: "A + B を時計で数える" });
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    go.onclick = function () {
+      if (busy) return;
+      var a = +selA.value, b = +selB.value;
+      var start = B.encodeSigned(a, 4);
+      var dir = b >= 0 ? 1 : -1, n = Math.abs(b), done = 0;
+      var crossedS = false, crossedU = false;
+      point(start);
+      log.innerHTML = "";
+      function stepOnce() {
+        var prev = cur;
+        point(cur + dir);
+        if ((dir === 1 && prev === 7) || (dir === -1 && prev === 8)) crossedS = true;
+        if ((dir === 1 && prev === 15) || (dir === -1 && prev === 0)) crossedU = true;
+        done += 1;
+      }
+      function finish() {
+        busy = false; go.disabled = false;
+        var resBits = B.toBin(cur, 4);
+        var msg;
+        if (mode === "signed") {
+          var tru = a + b;
+          msg = (a > 0 ? "+" : "") + a + " + (" + (b > 0 ? "+" : "") + b + ") の針は " + resBits + "（" + B.signedValue(cur, 4) + "）で止まりました。";
+          if (crossedS) msg += "<br><span class=\"warn\">赤い境目（0111 と 1000 の間）を越えました。本当の答え " + tru + " は −8〜+7 に収まらず、オーバーフローです。</span>";
+          else msg += "<br>赤い境目は越えていないので、正しい答え " + tru + " が得られています。";
+          if (b < 0) msg += "<br>ビットの上では " + B.toBin(B.encodeSigned(b, 4), 4) + " を足すので、時計回りに " + B.encodeSigned(b, 4) + " 進むのと同じです（あふれた桁上がりは捨てる）。";
+        } else {
+          msg = a + " + " + b + " の針は " + resBits + "（" + cur + "）で止まりました。";
+          if (crossedU) msg += "<br><span class=\"warnu\">青い境目（1111 と 0000 の間）を越えました。5桁目に桁上がりが出て、本当の答え " + (a + b) + " は4ビットに収まりません（オーバーフロー）。</span>";
+          else msg += "<br>青い境目は越えていないので、4ビットに収まっています。";
+        }
+        log.innerHTML = msg.replace(/(^|[^0-9A-Za-z#])-(\d)/g, "$1−$2");
+      }
+      if (reduce || n === 0) { for (var i = 0; i < n; i++) stepOnce(); finish(); return; }
+      busy = true; go.disabled = true;
+      var t = setInterval(function () {
+        stepOnce();
+        if (done >= n) { clearInterval(t); finish(); }
+      }, 380);
+    };
+    labels(); fillSelects(); point(B.encodeSigned(5, 4));
+    var legend = h("p", { class: "hint", html: "<span style=\"color:var(--ng)\">赤い破線</span>：2の補数で +7 と −8 の境目。<span style=\"color:var(--wire)\">青い点線</span>：符号なしで 15 と 0 の境目。" });
+    var side = h("div", { class: "stack" },
+      seg,
+      h("div", { class: "row" }, h("label", { text: "A" }), selA, h("label", { text: "B" }), selB),
+      go, log, legend);
+    var wrap = h("div", { class: "clock-wrap" }, h("div", { class: "clock" }, svg), side);
+    mount.appendChild(wrap);
+  };
+
+  /* ---------- 浮動小数点のビット ---------- */
+  CA.floatEditor = function (mount) {
+    var u = B.floatBits(6.5);
+    var groups = h("div", { class: "fbits", role: "group", "aria-label": "32ビット" });
+    var formula = h("div", { class: "formula", "aria-live": "polite" });
+    var dl = h("dl", { class: "readout" });
+    var inp = h("input", { type: "text", id: CA.uid("fl"), value: "6.5", "aria-label": "10進数", inputmode: "decimal" });
+    var conv = h("button", { type: "button", text: "このビットにする" });
+    conv.onclick = function () {
+      var v = parseFloat(B.normalize(inp.value));
+      if (isNaN(v)) return;
+      u = B.floatBits(v); render();
+    };
+    inp.addEventListener("keydown", function (e) { if (e.key === "Enter") conv.onclick(); });
+    var presets = h("div", { class: "row" });
+    [["6.5", 6.5], ["−5", -5], ["0.1", 0.1], ["1", 1], ["0", 0], ["∞", Infinity], ["NaN", NaN]].forEach(function (p) {
+      presets.appendChild(h("button", { type: "button", text: p[0], onclick: function () { u = B.floatBits(p[1]); inp.value = p[0].replace("−", "-"); render(); } }));
+    });
+    function render() {
+      groups.innerHTML = "";
+      var s = B.toBin(u, 32);
+      var defs = [["g-s", "符号部 S（1）", 0, 1], ["g-e", "指数部 E（8）", 1, 9], ["g-f", "仮数部 F（23）", 9, 32]];
+      defs.forEach(function (d) {
+        var gb = h("div", { class: "gbits" });
+        for (var i = d[2]; i < d[3]; i++) {
+          (function (i) {
+            var on = s[i] === "1";
+            gb.appendChild(h("button", { type: "button", class: "fbit" + (on ? " on" : ""), "aria-pressed": on ? "true" : "false", "aria-label": d[1] + " " + (i - d[2] + 1) + "ビット目", text: s[i], onclick: function () { u = (u ^ (1 << (31 - i))) >>> 0; render(); } }));
+          })(i);
+        }
+        groups.appendChild(h("div", { class: "fgroup " + d[0] }, h("span", { class: "glab", text: d[1] }), gb));
+      });
+      var p = B.floatParts(u);
+      var sign = p.s ? "−" : "+";
+      var html;
+      if (p.kind === "normal") {
+        html = "(−1)<sup class=\"s\">" + p.s + "</sup> × 2<sup class=\"e\">" + p.e + "−127</sup> × (<span class=\"f\">1 + " + fmt(p.frac) + "</span>)<br>= " + sign + " 2" + sup(p.e - 127) + " × " + fmt(1 + p.frac) + " = " + fmt(p.value);
+      } else if (p.kind === "zero") html = "指数部も仮数部もすべて 0 → " + (p.s ? "−0" : "0") + "（特別な値）";
+      else if (p.kind === "inf") html = "指数部がすべて 1、仮数部がすべて 0 → " + sign + "∞（特別な値）";
+      else if (p.kind === "nan") html = "指数部がすべて 1、仮数部が 0 以外 → NaN（数ではない、という特別な値）";
+      else html = "指数部がすべて 0、仮数部が 0 以外 → 非正規化数（このページでは扱いません）。値は " + fmt(p.value);
+      formula.innerHTML = html;
+      dl.innerHTML = "";
+      dl.appendChild(h("dt", { text: "指数部 E" })); dl.appendChild(h("dd", { text: s.slice(1, 9) + " = " + p.e }));
+      dl.appendChild(h("dt", { text: "格納されている値" })); dl.appendChild(h("dd", { text: isNaN(p.value) ? "NaN" : String(p.value) }));
+    }
+    function fmt(x) {
+      if (!isFinite(x)) return String(x);
+      var t = Number(x.toPrecision(9));
+      return String(t);
+    }
+    mount.appendChild(h("div", { class: "stack" },
+      h("div", { style: "overflow-x:auto" }, groups),
+      formula, dl,
+      h("div", { class: "row" }, h("label", { text: "10進数" }), inp, conv),
+      h("div", { class: "row" }, h("span", { class: "hint", text: "例：" }), presets)));
+    render();
+  };
+
+  /* ---------- 各項目のステップ再生 ---------- */
+  function center() { var d = h("div", { class: "stack", style: "justify-items:center" }); for (var i = 0; i < arguments.length; i++) if (arguments[i]) d.appendChild(arguments[i]); return d; }
+  function res(html) { return h("div", { class: "result", html: html }); }
+
+  CA.steps = {};
+  CA.steps.binToDec = function (mount, s) {
+    var w = s.length, n = B.fromBin(s);
+    var terms = []; for (var i = 0; i < w; i++) if (s[i] === "1") terms.push(Math.pow(2, w - 1 - i));
+    CA.stepper(mount, { frames: [
+      { caption: "2進数 " + s + "<sub>2</sub> を10進数にします。", render: function (st) { st.appendChild(center(bitRow(s, { weights: "hide" }))); } },
+      { caption: "各桁に重みを書きます。右から1桁目の重みは 2⁰ = 1、2桁目は 2¹ = 2、3桁目は 2² = 4。左へ行くごとに2倍です。", render: function (st) { st.appendChild(center(bitRow(s, { weights: true }))); } },
+      { caption: "1 が立っている桁だけを拾います。0 の桁は足しません。", render: function (st) { st.appendChild(center(bitRow(s, { weights: true, dim: function (i) { return s[i] === "0"; } }))); } },
+      { caption: "拾った重みを足すと " + n + "。" + s + "<sub>2</sub> = " + n + "<sub>10</sub> です。", render: function (st) { st.appendChild(center(bitRow(s, { weights: true, dim: function (i) { return s[i] === "0"; } }), res(terms.join(" + ") + " = " + n))); } }
+    ] });
+  };
+
+  CA.steps.decToBin = function (mount, n) {
+    var rows = B.divSteps(n), ans = B.toBin(n);
+    function table(k, arrow) {
+      var t = h("table", { class: "divtable", role: "img", "aria-label": "2で割る表" });
+      rows.forEach(function (r, i) {
+        if (i > k) return;
+        t.appendChild(h("tr", null, h("td", { text: r.n + " ÷ 2 =" }), h("td", { text: String(r.q) }), h("td", { class: "note", text: "余り" }), h("td", { class: "r" + (arrow ? "" : ""), text: String(r.r) })));
+      });
+      if (!arrow) return t;
+      return h("div", { class: "divwrap" }, t, h("div", { class: "uparrow" }, h("span", { text: "読む" }), h("div", { class: "bar" }), h("span", { text: "↑下から" })));
+    }
+    var last = rows.length - 1;
+    var mid = Math.min(3, last - 1);
+    CA.stepper(mount, { frames: [
+      { caption: n + " を 2 で割ります。商を次の行へ送り、余りを右に書きます。", render: function (st) { st.appendChild(center(table(0))); } },
+      { caption: "商の " + rows[0].q + " をまた 2 で割ります。これをくり返します。", render: function (st) { st.appendChild(center(table(1))); } },
+      { caption: "まだ商が 0 ではないので続けます。", render: function (st) { st.appendChild(center(table(mid))); } },
+      { caption: "商が 0 になったら終わりです。", render: function (st) { st.appendChild(center(table(last))); } },
+      { caption: "余りを<b>下から上へ</b>読みます。最後に出た余りが、いちばん左の桁です。", render: function (st) { st.appendChild(center(table(last, true), res(ans + "<sub>2</sub>"))); } },
+      { caption: "確かめ：" + ans + "<sub>2</sub> を重みで足すと " + n + " に戻ります。", render: function (st) {
+        var terms = []; for (var i = 0; i < ans.length; i++) if (ans[i] === "1") terms.push(Math.pow(2, ans.length - 1 - i));
+        st.appendChild(center(bitRow(ans, { weights: true, dim: function (i) { return ans[i] === "0"; } }), res(terms.join(" + ") + " = " + n)));
+      } }
+    ] });
+  };
+
+  CA.steps.hex = function (mount, s, back) {
+    var n = B.fromBin(s), hi = n >> 4, lo = n & 15, hx = B.toHex(n, 2);
+    var bn = parseInt(back, 16), bs = B.toBin(bn, 8);
+    CA.stepper(mount, { frames: [
+      { caption: s + "<sub>2</sub> を16進数にします。", render: function (st) { st.appendChild(center(bitRow(s))); } },
+      { caption: "右から4ビットずつ区切ります。4ビットで 0〜15 の16通りなので、ちょうど16進数の1桁になります。", render: function (st) { st.appendChild(center(bitRow(s, { gap4: true }))); } },
+      { caption: "それぞれの4ビットを、重み 8・4・2・1 で10進数にします：" + B.toBin(hi, 4) + " = " + hi + "、" + B.toBin(lo, 4) + " = " + lo + "。", render: function (st) {
+        st.appendChild(center(h("div", { class: "row", style: "justify-content:center;gap:28px" },
+          center(bitRow(B.toBin(hi, 4), { weights: true }), res(String(hi))),
+          center(bitRow(B.toBin(lo, 4), { weights: true }), res(String(lo))))));
+      } },
+      { caption: "10〜15 は A〜F の1文字で書きます。" + (hi > 9 ? hi + " は " + B.toHex(hi, 1) + "。" : "") + (lo > 9 ? lo + " は " + B.toHex(lo, 1) + "。" : "") + "答えは " + hx + "<sub>16</sub>。", render: function (st) {
+        st.appendChild(center(h("div", { class: "row", style: "justify-content:center;gap:28px" },
+          center(bitRow(B.toBin(hi, 4)), res(B.toHex(hi, 1))),
+          center(bitRow(B.toBin(lo, 4)), res(B.toHex(lo, 1)))), res(s + "<sub>2</sub> = " + hx + "<sub>16</sub>")));
+      } },
+      { caption: "逆に16進数から2進数へは、1桁ずつ4ビットに戻します。" + back + "<sub>16</sub> → " + B.group4(bs) + "<sub>2</sub>。", render: function (st) {
+        st.appendChild(center(res(back[0] + "　" + back[1]), bitRow(bs, { gap4: true })));
+      } }
+    ] });
+  };
+
+  CA.steps.twos = function (mount, v, width) {
+    var pos = B.toBin(v, width), inv = B.toBin(B.invert(v, width), width), neg = B.toBin(B.twosComplement(v, width), width);
+    var plus1 = B.addBits(B.invert(v, width), 1, width);
+    var check = B.addBits(B.twosComplement(v, width), v, width);
+    CA.stepper(mount, { frames: [
+      { caption: "+" + v + " を " + width + "ビットで書くと " + B.group4(pos) + "。これを −" + v + " にします。", render: function (st) { st.appendChild(center(bitRow(pos, { gap4: true }))); } },
+      { caption: "全ビットを<b>反転</b>します（0 と 1 を入れかえる）。", render: function (st) { st.appendChild(center(bitRow(inv, { gap4: true, flip: function () { return true; } }))); } },
+      { caption: "<b>1 を足します</b>。右端から桁上がりが伝わるところに注意します。", render: function (st) {
+        st.appendChild(center(calcTable([
+          { bits: inv }, { op: "+", bits: B.toBin(1, width) }, { bits: neg, cls: "sum" }
+        ], { carry: carryString(plus1, width) })));
+      } },
+      { caption: B.group4(neg) + " が −" + v + " です。最上位ビットが 1 なので、負の数だと分かります。", render: function (st) { st.appendChild(center(bitRow(neg, { gap4: true }), res("−" + v))); } },
+      { caption: "確かめ：−" + v + " と +" + v + " を足すと、" + width + "ビットからあふれた桁を捨てて 0 になります。", render: function (st) {
+        st.appendChild(center(calcTable([
+          { bits: neg }, { op: "+", bits: pos }, { bits: "1" + B.toBin(check.sum, width), cls: "sum", cell: function (j) { return j === 0 ? "drop" : ""; } }
+        ], { carry: carryString(check, width) })));
+      } },
+      { caption: "逆に、負の数の大きさを知るには、もう一度「反転して＋1」します：" + B.group4(neg) + " → " + B.group4(B.toBin(B.invert(B.fromBin(neg), width), width)) + " → " + B.group4(pos) + " = " + v + "。だから −" + v + "。", render: function (st) {
+        st.appendChild(center(bitRow(neg, { gap4: true }), res("↓ 反転して＋1"), bitRow(pos, { gap4: true })));
+      } }
+    ] });
+  };
+
+  CA.steps.sub = function (mount, a, b, a2, b2) {
+    var W = 4;
+    function blk(x, y) {
+      var r = B.subByComplement(x, y, W);
+      return { r: r, sx: B.toBin(x, W), sy: B.toBin(y, W), ny: B.toBin(r.negB, W), inv: B.toBin(B.invert(y, W), W), out: B.toBin(r.sum, W) };
+    }
+    var p = blk(a, b), q = blk(a2, b2);
+    var qv = B.signedValue(q.r.sum, W);
+    CA.stepper(mount, { frames: [
+      { caption: p.sx + " − " + p.sy + "（" + a + " − " + b + "）を計算します。引き算の回路は使わず、<b>引く数の2の補数を足します</b>。", render: function (st) { st.appendChild(center(res(p.sx + " − " + p.sy))); } },
+      { caption: "引く数 " + p.sy + " の2の補数：反転 " + p.inv + " → ＋1 → " + p.ny + "（−" + b + "）。", render: function (st) { st.appendChild(center(bitRow(p.sy), res("↓ 反転して＋1"), bitRow(p.ny))); } },
+      { caption: p.sx + " + " + p.ny + " を、右の桁から桁上がりをつけて足します。", render: function (st) {
+        st.appendChild(center(calcTable([{ bits: p.sx }, { op: "+", bits: p.ny }, { bits: (p.r.carryOut ? "1" : "") + p.out, cls: "sum" }], { carry: carryString(p.r, W) })));
+      } },
+      { caption: "5桁目にあふれた 1 は<b>捨てます</b>（4ビットに入らないため）。答えは " + p.out + " = " + (a - b) + "。", render: function (st) {
+        st.appendChild(center(calcTable([{ bits: p.sx }, { op: "+", bits: p.ny }, { bits: (p.r.carryOut ? "1" : "") + p.out, cls: "sum", cell: function (j) { return p.r.carryOut && j === 0 ? "drop" : ""; } }], { carry: carryString(p.r, W) }), res(p.out + " = " + (a - b))));
+      } },
+      { caption: "答えが負になる例：" + q.sx + " − " + q.sy + "（" + a2 + " − " + b2 + "）。" + q.sy + " の2の補数は " + q.ny + "。足すと " + q.out + "。", render: function (st) {
+        st.appendChild(center(calcTable([{ bits: q.sx }, { op: "+", bits: q.ny }, { bits: (q.r.carryOut ? "1" : "") + q.out, cls: "sum" }], { carry: carryString(q.r, W) })));
+      } },
+      { caption: "最上位が 1 なので負の数。答えは2の補数のまま " + q.out + " と書きます。10進数にするなら、反転して＋1 で " + B.toBin(B.twosComplement(q.r.sum, W), W) + " = " + (-qv) + " → " + qv + "。", render: function (st) {
+        st.appendChild(center(bitRow(q.out), res(q.out + " = " + qv)));
+      } }
+    ] });
+  };
+
+  CA.steps.mul = function (mount, a, b) {
+    var W = 4, sa = B.toBin(a, W), sb = B.toBin(b, W), m = B.mulSteps(a, b, W);
+    var width = B.toBin(a * b).length + 1;
+    function pad(str, shift) { var t = str; for (var i = 0; i < shift; i++) t += " "; return t; }
+    function rowsUpTo(k) {
+      var rows = [{ label: "かけられる数", bits: sa }, { label: "かける数", op: "×", bits: sb, cls: "" }];
+      for (var i = 0; i <= k && i < W; i++) {
+        var pp = m.partials[i];
+        rows.push({ label: "右から" + (i + 1) + "桁目が " + pp.bit, bits: pad(pp.bit ? sa : "0000", i), cls: i === 0 ? "sum" : "" });
+      }
+      return rows;
+    }
+    var frames = [{ caption: sa + " × " + sb + "（" + a + " × " + b + "）を筆算します。10進数の筆算と同じで、かける数の1桁ずつ部分積を作ります。", render: function (st) { st.appendChild(center(calcTable(rowsUpTo(-1)))); } }];
+    for (var i = 0; i < W; i++) {
+      (function (i) {
+        var pp = m.partials[i];
+        frames.push({
+          caption: "かける数の右から" + (i + 1) + "桁目は " + pp.bit + "。" + (pp.bit ? sa + " をそのまま、" + i + "桁左へずらして書きます。" : "0 なので部分積は 0 です。"),
+          render: function (st) { st.appendChild(center(calcTable(rowsUpTo(i)))); }
+        });
+      })(i);
+    }
+    frames.push({ caption: "部分積を足して " + B.toBin(a * b) + "<sub>2</sub>。10進数で " + a + " × " + b + " = " + (a * b) + " と合います。", render: function (st) {
+      var rows = rowsUpTo(W - 1);
+      rows.push({ label: "足す", bits: B.toBin(a * b), cls: "sum" });
+      st.appendChild(center(calcTable(rows), res(B.toBin(a * b) + "<sub>2</sub> = " + (a * b))));
+    } });
+    CA.stepper(mount, { frames: frames });
+  };
+
+  CA.steps.float = function (mount, x) {
+    var u = B.floatBits(x), s = B.toBin(u, 32), p = B.floatParts(u);
+    var ip = Math.floor(Math.abs(x)), fp = Math.abs(x) - ip;
+    var ib = B.toBin(ip), fb = fp ? (fp === 0.5 ? "1" : fp === 0.25 ? "01" : fp === 0.75 ? "11" : "") : "";
+    var exp = p.e - 127;
+    var mant = s.slice(9).replace(/0+$/, "");
+    function fpart(cls, txt) { return "<span class=\"" + cls + "\">" + txt + "</span>"; }
+    CA.stepper(mount, { frames: [
+      { caption: x + " を2進数にします。整数部 " + ip + " = " + ib + "、小数部 " + fp + " = 0." + fb + "（小数点の右の重みは 0.5、0.25、0.125…）。", render: function (st) { st.appendChild(center(res(x + "<sub>10</sub> = " + ib + "." + fb + "<sub>2</sub>"))); } },
+      { caption: "「1.□□ × 2<sup>n</sup>」の形にそろえます。小数点を " + exp + " 桁左へ動かすので、× 2<sup>" + exp + "</sup>。", render: function (st) { st.appendChild(center(res(ib + "." + fb + " = 1." + mant + " × 2" + sup(exp)))); } },
+      { caption: "符号部 S は、正なら 0、負なら 1。" + x + " は" + (p.s ? "負" : "正") + "なので " + p.s + "。", render: function (st) { st.appendChild(center(h("div", { class: "formula", html: "S = " + fpart("s", String(p.s)) }))); } },
+      { caption: "指数部 E には、指数に <b>127 を足した値</b>を8ビットで入れます：" + exp + " + 127 = " + p.e + " = " + s.slice(1, 9) + "。", render: function (st) { st.appendChild(center(h("div", { class: "formula", html: "E = " + exp + " + 127 = " + p.e + " = " + fpart("e", s.slice(1, 9)) }))); } },
+      { caption: "仮数部 F には、1." + mant + " の<b>「1.」を除いた残り</b>を左から詰め、残りは 0 で埋めます。", render: function (st) { st.appendChild(center(h("div", { class: "formula", html: "F = " + fpart("f", s.slice(9, 17) + " " + s.slice(17, 25) + " " + s.slice(25)) }))); } },
+      { caption: "並べると32ビット。読むときは逆に (−1)<sup>S</sup> × 2<sup>E−127</sup> × (1 + F) で、" + x + " に戻ります。", render: function (st) {
+        st.appendChild(center(h("div", { class: "formula", html: fpart("s", s[0]) + " | " + fpart("e", s.slice(1, 9)) + " | " + fpart("f", s.slice(9)) }),
+          h("div", { class: "formula", html: "(−1)<sup>" + p.s + "</sup> × 2<sup>" + p.e + "−127</sup> × (1 + " + p.frac + ") = " + x })));
+      } }
+    ] });
+  };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+(function () {
+  var B = CA.bits;
+  var ITEMS = [
+    { id: "i1", title: "2進→10進" }, { id: "i2", title: "10進→2進" }, { id: "i3", title: "16進数" },
+    { id: "i4", title: "2の補数" }, { id: "i5", title: "引き算とオーバーフロー" }, { id: "i6", title: "掛け算" }, { id: "i7", title: "浮動小数点" }
+  ];
+  CA.progress.init(ITEMS);
+  function $(id) { return document.getElementById(id); }
+  CA.levels($("levels"), { 2: "数の表し方（ビット列をどう読むか）", 5: "0 と 1 の2つの状態" }, "全体の中での位置：今日は「アーキテクチャ」と「ディジタル回路」の層（開くと9層の図）");
+  CA.bitPanel($("panel"), { width: 8, value: 0x2D });
+
+  function rng() { return Math.random; }
+  function fixed(p) { return function () { return p; }; }
+  /* 確認問題（各項目1問。数値は授業・練習の例と重ならないもの） */
+  function inputQ(prompt, label, answer, solution, extra) {
+    return {
+      prompt: prompt, inputLabel: label, solution: solution,
+      check: function (x) {
+        var v = extra && extra.bin ? B.normBin(x).replace(/^0+(?=.)/, "") : (extra && extra.hex ? B.normHex(x).replace(/^0+(?=.)/, "") : B.normalize(x));
+        if (v === answer) return { ok: true };
+        if (extra && extra.diag) { var m = extra.diag(v); if (m) return { ok: false, msg: m }; }
+        return { ok: false };
+      }
+    };
+  }
+
+  /* 1 */
+  CA.steps.binToDec($("s1"), "101101");
+  CA.quiz($("c1"), { mode: "check", id: "c1", itemId: "i1", make: fixed(inputQ("2進数 <span class=\"num\">110110<sub>2</sub></span> を10進数で表すと？", "10進数", "54", "32 + 16 + 4 + 2 = 54", { diag: function (v) { return v === "27" ? "左右を逆に読んでいませんか。" : null; } })) });
+  CA.quiz($("d1"), { mode: "drill", id: "d1", title: "練習（何問でも）", make: function () { return B.gen.binToDec(Math.random); } });
+
+  /* 2 */
+  CA.steps.decToBin($("s2"), 37);
+  CA.quiz($("c2"), { mode: "check", id: "c2", itemId: "i2", make: fixed(inputQ("10進数 <span class=\"num\">22</span> を2進数で表すと？", "2進数", "10110", "22÷2=11 余り0、11÷2=5 余り1、5÷2=2 余り1、2÷2=1 余り0、1÷2=0 余り1 → 下から読んで 10110", { bin: true, diag: function (v) { return v === "1101" || v === "01101" ? "余りを上から読んでいませんか。" : null; } })) });
+  CA.quiz($("d2"), { mode: "drill", id: "d2", title: "練習（何問でも）", make: function () { return B.gen.decToBin(Math.random); } });
+
+  /* 3 */
+  CA.steps.hex($("s3"), "11010110", "3F");
+  CA.quiz($("c3"), { mode: "check", id: "c3", itemId: "i3", make: fixed(inputQ("2進数 <span class=\"num\">0111 1100<sub>2</sub></span> を16進数で表すと？", "16進数", "7C", "0111 = 7、1100 = 12 = C → 7C", { hex: true, diag: function (v) { return v === "712" ? "10〜15 は A〜F の1文字で書きます。" : (v === "124" ? "それは10進数の値です。" : null); } })) });
+  CA.quiz($("d3"), { mode: "drill", id: "d3", title: "練習（何問でも）", make: function () { return Math.random() < 0.5 ? B.gen.binToHex(Math.random) : B.gen.hexToBin(Math.random); } });
+
+  /* 4 */
+  CA.steps.twos($("s4"), 20, 8);
+  CA.quiz($("c4"), { mode: "check", id: "c4", itemId: "i4", make: fixed(inputQ("8ビットの2の補数 <span class=\"num\">1111 0110</span> は10進数でいくつ？", "10進数", "-10", "最上位が 1 → 負。反転 0000 1001 → ＋1 → 0000 1010 = 10 → −10", { diag: function (v) { return v === "246" ? "符号なしとして読んでいます。最上位ビットが 1 なので負の数です。" : v === "10" ? "大きさは合っています。符号は？" : v === "-9" ? "反転したあとの「＋1」を忘れていませんか。" : v === "-118" ? "それは符号/絶対値表現として読んだ値です。" : null; } })) });
+  CA.quiz($("d4a"), { mode: "drill", id: "d4a", title: "練習 A：10進数 → 2の補数", make: function () { return B.gen.negToTwos(Math.random); } });
+  CA.quiz($("d4b"), { mode: "drill", id: "d4b", title: "練習 B：2の補数 → 10進数", make: function () { return B.gen.twosToDec(Math.random); } });
+
+  /* 5 */
+  CA.steps.sub($("s5"), 5, 3, 2, 6);
+  CA.clock4($("clock"));
+  CA.quiz($("c5"), { mode: "check", id: "c5", itemId: "i5", make: fixed(inputQ("4ビットの2の補数で <span class=\"num\">0110 − 0111</span> を、引く数の補数を足す方法で計算すると？（4ビットで答える）", "2進数（4ビット）", "1111", "0111 の2の補数は 1001。0110 + 1001 = 1111。最上位が 1 なので負の数で、10進数では −1。", { bin: true, diag: function (v) { return v === "1110" ? "0111 の2の補数は、反転したあと＋1 します。" : v === "1001" ? "それは符号/絶対値表現の −1 です。" : null; } })) });
+  CA.quiz($("d5a"), { mode: "drill", id: "d5a", title: "練習 A：補数を足す引き算（4ビット）", make: function () { return B.gen.sub4(Math.random); } });
+  CA.quiz($("d5b"), { mode: "drill", id: "d5b", title: "練習 B：8ビットの足し算", make: function () { return B.gen.add8(Math.random); } });
+  CA.quiz($("d5c"), { mode: "drill", id: "d5c", title: "練習 C：オーバーフローするか", make: function () { return B.gen.overflow4(Math.random); } });
+
+  /* 6 */
+  CA.steps.mul($("s6"), 13, 6);
+  CA.quiz($("c6"), { mode: "check", id: "c6", itemId: "i6", make: fixed(inputQ("符号なし2進数で <span class=\"num\">0111 × 0011</span> を計算すると？", "2進数", "10101", "0111 + 01110 = 10101（7 × 3 = 21）", { bin: true, diag: function (v) { return v === "1010" ? "それは足し算の答えです。" : v === "1110" ? "部分積を1桁ずらしていますか。" : null; } })) });
+  CA.quiz($("d6"), { mode: "drill", id: "d6", title: "練習（何問でも）", make: function () { return B.gen.mul4(Math.random); } });
+
+  /* 7 */
+  CA.steps.float($("s7"), 6.5);
+  CA.floatEditor($("float"));
+  CA.quiz($("c7"), { mode: "check", id: "c7", itemId: "i7", make: fixed(inputQ("IEEE754 単精度で 符号部 <span class=\"num\">0</span>、指数部 <span class=\"num\">1000 0010</span>、仮数部 <span class=\"num\">0100 0000…</span>（残りはすべて 0）の値は？", "10進数", "10", "E = 130 → 2<sup>130−127</sup> = 2<sup>3</sup> = 8。1 + F = 1.25。8 × 1.25 = 10", { diag: function (v) { return v === "2" ? "仮数部には先頭の「1.」を足します（1 + F）。" : v === "-10" ? "符号部が 0 なので正の数です。" : null; } })) });
+  CA.quiz($("d7"), { mode: "drill", id: "d7", title: "練習（何問でも）", make: function () { return B.gen.floatRead(Math.random); } });
+
+  /* 仕上げ */
+  var seq = [
+    function () { return B.gen.decToBin(Math.random); },
+    function () { return B.gen.negToTwos(Math.random); },
+    function () { return B.gen.sub4(Math.random); },
+    function () { return B.gen.mul4(Math.random); },
+    function () { return B.gen.floatRead(Math.random); }
+  ];
+  CA.quiz($("fin"), { mode: "seq", id: "fin", title: "仕上げ", seq: seq, onFinish: function (ok, n, box) {
+    var again = CA.h("button", { type: "button", class: "primary", text: "もう一度（別の数で）" });
+    again.onclick = function () { msg.remove(); box.restart(); };
+    var msg = CA.h("div", { class: "feedback " + (ok === n ? "ok" : "ng") , html: "<span class=\"head\">" + n + " 問中 " + ok + " 問正解</span>　" + (ok === n ? "よくできました。" : "間違えた項目の確認問題と練習に戻ってから、もう一度挑戦しましょう。") });
+    msg.appendChild(CA.h("div", { class: "row", style: "margin-top:8px" }, again));
+    box.appendChild(msg);
+  } });
+
+  CA.progress.onChange(function (n, total) { $("banner").classList.toggle("show", n === total); });
+  CA.progress.render();
+})();
+</script>
+
+</body>
+</html>
