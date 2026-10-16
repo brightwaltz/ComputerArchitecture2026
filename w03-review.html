@@ -489,6 +489,36 @@ a.side-home:hover { color: var(--wire); text-decoration: underline; }
 }
 @media print { .side, .menu-btn, .side-backdrop { display: none !important; } body.has-side { padding-left: 16px; } }
 
+/* 課題の答え（先生の回答例の画像）。画像は白地なので、ダークでも白い台に載せる */
+.ans-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 20px; }
+figure.ans { margin: 0; display: grid; gap: 10px; align-content: start; padding: 16px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--panel); min-width: 0; }
+figure.ans.wide { grid-column: 1 / -1; }
+figure.ans figcaption { font-weight: 700; font-size: var(--fs-h3); line-height: 1.4; }
+.ans-img { background: #fff; border-radius: 8px; padding: 8px; overflow-x: auto; }
+.ans-img img { display: block; max-width: 100%; height: auto; margin-inline: auto; }
+figure.ans.wide .ans-img img { max-width: min(100%, 720px); }
+figure.ans ul { margin: 0; padding-left: 1.4em; }
+
+/* 第6回：順序回路の模型・NAND 型ラッチのパズル（seq-lab.js） */
+.seq-chart { overflow-x: auto; width: 100%; }
+.seq-model { display: grid; gap: 14px; }
+.seq-lamps { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: center; font: 700 var(--fs-body)/1.4 var(--font-mono); }
+.seq-lamps .lamp { width: 44px; height: 44px; font-size: var(--fs-body); }
+.seq-lamps .dec { font-size: 28px; }
+.seq-note { font-size: var(--fs-small); color: var(--muted); max-width: 40em; }
+.seq-warn { border-left: 6px solid var(--ng); background: var(--ng-soft); border-radius: 8px; padding: 8px 12px; }
+.nlp-table td, .nlp-table th { vertical-align: middle; }
+.nlp-table td.res { min-width: 3em; }
+.nlp-table .seg button { font-size: var(--fs-small); padding: 6px 10px; }
+@media (max-width: 520px) { .nlp-table .seg { display: grid; grid-template-columns: 1fr 1fr; } }
+
+/* 第6回：タイミングチャートを描く問題（seq-ui.js の CA.timingDraw） */
+.td-wrap { overflow-x: auto; }
+.td-svg { display: block; touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; }
+.td-svg:focus { outline: none; }
+.td-svg:focus-visible { outline: 3px solid var(--wire); outline-offset: 2px; border-radius: 6px; }
+.td-keys { font-size: var(--fs-small); color: var(--muted); }
+
 </style>
 <header class="mast">
   <div class="mast-inner">
@@ -682,7 +712,7 @@ a.side-home:hover { color: var(--wire); text-decoration: underline; }
     <h2>仕上げの5問</h2>
     <p class="prose">7項目から5問を出します。間違えたら、その項目に戻って確認問題と練習をもう一度。</p>
     <div id="fin"></div>
-    <div class="done-banner" id="banner" role="status">7項目すべての確認問題に正解しました。次回（10/22）はブール代数と論理演算です。<a href="w04-preview.html?v=202610152352">第4回 予習ページ</a>も見ておきましょう。</div>
+    <div class="done-banner" id="banner" role="status">7項目すべての確認問題に正解しました。次回（10/22）はブール代数と論理演算です。<a href="w04-preview.html?v=202610161838">第4回 予習ページ</a>も見ておきましょう。</div>
   </section>
 
   <footer>
@@ -691,7 +721,7 @@ a.side-home:hover { color: var(--wire); text-decoration: underline; }
   </footer>
 </main>
 
-<script>window.CA_PAGE = "w03r"; window.CA_SITE = {"home":"./","sessions":[{"no":3,"title":"デジタルデータの表現と演算","pages":[{"label":"復習","current":true}]},{"no":4,"title":"ブール代数と論理演算","pages":[{"label":"予習","href":"w04-preview.html?v=202610152352"},{"label":"復習（10/22）"}]},{"no":5,"title":"論理回路と組み合わせ回路","pages":[{"label":"予習（10/22）"},{"label":"復習（10/29）"}]},{"no":6,"title":"順序回路","pages":[{"label":"予習（11/12）"}]}]};</script>
+<script>window.CA_PAGE = "w03r"; window.CA_SITE = {"home":"./","sessions":[{"no":3,"title":"デジタルデータの表現と演算","pages":[{"label":"復習","current":true}]},{"no":4,"title":"ブール代数と論理演算","pages":[{"label":"予習","href":"w04-preview.html?v=202610161838"},{"label":"復習（10/22）"}]},{"no":5,"title":"論理回路と組み合わせ回路","pages":[{"label":"予習（10/22）"},{"label":"復習（10/29）"}]},{"no":6,"title":"順序回路","pages":[{"label":"予習（11/12）"},{"label":"復習（11/19）"}]},{"no":7,"title":"中間テスト","pages":[{"label":"対策（11/19）"}]}]};</script>
 <script>
 /* 部品① ビットの計算（画面に依存しない関数と、ドリルの問題生成）。node のテストからも読む。 */
 (function (root) {
@@ -1305,7 +1335,8 @@ a.side-home:hover { color: var(--wire); text-decoration: underline; }
       var hd = sec.querySelector("h2, h1");
       if (!hd) return;
       var no = sec.querySelector(".item-head .no");
-      var t = hd.textContent.replace(/\s+/g, " ").trim();
+      /* 見出しに上線（span.ov）などがあるときは、data-label をメニューの名前にする */
+      var t = (hd.getAttribute("data-label") || hd.textContent).replace(/\s+/g, " ").trim();
       if (sec.id === "movie") t = "動画：" + t.replace(/^動画：/, "").replace(/^今日の問い：/, "");
       secs.push({ id: sec.id, label: (no ? no.textContent.replace("最低限 ", "").replace("やること ", "") + "　" : "") + t });
     });
@@ -1370,8 +1401,10 @@ a.side-home:hover { color: var(--wire); text-decoration: underline; }
   /* ---------- 進み具合（最低限の項目ごとのランプ） ---------- */
   var progress = { items: [], done: {}, listeners: [] };
   CA.progress = {
-    init: function (items) {
+    /* opts.label：ランプの見出し（既定は「最低限」） */
+    init: function (items, opts) {
       progress.items = items;
+      progress.label = (opts && opts.label) || "最低限";
       progress.done = CA.store.get("done", {}) || {};
       this.render();
     },
@@ -1388,7 +1421,7 @@ a.side-home:hover { color: var(--wire); text-decoration: underline; }
       var n = this.count(), total = progress.items.length;
       document.querySelectorAll("[data-lamps]").forEach(function (box) {
         box.innerHTML = "";
-        box.appendChild(h("span", { class: "label", text: "最低限 " + n + " / " + total }));
+        box.appendChild(h("span", { class: "label", text: progress.label + " " + n + " / " + total }));
         progress.items.forEach(function (it, i) {
           box.appendChild(h("a", {
             class: "lamp" + (progress.done[it.id] ? " on" : ""), href: "#" + it.id,
@@ -1521,8 +1554,13 @@ a.side-home:hover { color: var(--wire); text-decoration: underline; }
       area.innerHTML = "";
       if (p.type === "choice") {
         var list = h("div", { class: "choices" });
-        p.choices.forEach(function (c, k) {
-          var b = h("button", { type: "button", html: c });
+        /* 選択肢は毎回並べかえて出す（正解がいつも同じ位置にならないように）。数だけの選択肢と keepOrder は並びのまま */
+        var order = p.choices.map(function (c, k) { return k; });
+        var numeric = p.choices.every(function (c) { return /^\s*-?\d+\s*$/.test(String(c)); });
+        if (!p.keepOrder && !numeric) for (var oi = order.length - 1; oi > 0; oi--) { var oj = Math.floor(Math.random() * (oi + 1)); var ot = order[oi]; order[oi] = order[oj]; order[oj] = ot; }
+        order.forEach(function (k) {
+          var c = p.choices[k];
+          var b = h("button", { type: "button", html: c, "data-k": k });
           b.onclick = function () {
             if (answered) return;
             var res = p.check(k);
