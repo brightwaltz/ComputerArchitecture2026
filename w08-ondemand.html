@@ -1,0 +1,2767 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>コンピュータアーキテクチャ 第8回 チューリングマシン</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&family=BIZ+UDPGothic:wght@400;700&display=swap">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<style>
+/* レイアウト：1カラムの「実験ノート」。読む部分は 40em、手を動かす実験台は方眼のパネルで少し広く。
+   色：授業スライドの緑を濃くしたものを地の色、点いたビットは表示灯の琥珀色、操作できるものは配線の青。 */
+:root {
+  --paper: #f4f7f5;
+  --panel: #ffffff;
+  --ink: #1b2620;
+  --muted: #53635a;
+  --rule: #cdd8d1;
+  --grid: rgba(43, 125, 71, 0.08);
+  --accent: #2b7d47;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2f0e6;
+  --lamp: #e89a00;
+  --lamp-ink: #2a1c00;
+  --lamp-glow: rgba(232, 154, 0, 0.35);
+  --lamp-off: #dde4df;
+  --wire: #1d62a6;
+  --wire-soft: #e3edf8;
+  --ok: #1d7a3d;
+  --ok-soft: #e1f2e6;
+  --ng: #b5361f;
+  --ng-soft: #fbe8e3;
+  --s-bit: #1d62a6;
+  --e-bit: #b86e00;
+  --f-bit: #2b7d47;
+  --font-body: "BIZ UDPGothic", "BIZ UDPゴシック", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+  --font-mono: "BIZ UDGothic", "BIZ UDゴシック", "Osaka-Mono", Menlo, Consolas, monospace;
+  --fs-body: 20px;
+  --fs-small: 16px;
+  --fs-h1: 32px;
+  --fs-h2: 28px;
+  --fs-h3: 22px;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #111714; --panel: #18201c; --ink: #e3ebe6; --muted: #9db0a4; --rule: #2e3a34;
+    --grid: rgba(91, 193, 125, 0.07); --accent: #5bc17d; --accent-ink: #0d1a12; --accent-soft: #1c3226;
+    --lamp: #ffb833; --lamp-ink: #241700; --lamp-glow: rgba(255, 184, 51, 0.45); --lamp-off: #2a3530;
+    --wire: #74b3f2; --wire-soft: #1a2a3a; --ok: #63c986; --ok-soft: #1b3325; --ng: #ff7d69; --ng-soft: #3b211c;
+    --s-bit: #74b3f2; --e-bit: #ffb833; --f-bit: #5bc17d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #111714; --panel: #18201c; --ink: #e3ebe6; --muted: #9db0a4; --rule: #2e3a34;
+  --grid: rgba(91, 193, 125, 0.07); --accent: #5bc17d; --accent-ink: #0d1a12; --accent-soft: #1c3226;
+  --lamp: #ffb833; --lamp-ink: #241700; --lamp-glow: rgba(255, 184, 51, 0.45); --lamp-off: #2a3530;
+  --wire: #74b3f2; --wire-soft: #1a2a3a; --ok: #63c986; --ok-soft: #1b3325; --ng: #ff7d69; --ng-soft: #3b211c;
+  --s-bit: #74b3f2; --e-bit: #ffb833; --f-bit: #5bc17d;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.8;
+  padding-inline: 16px;
+  padding-block: 0 64px;
+}
+.page { max-width: 960px; margin-inline: auto; display: grid; gap: 40px; }
+.prose { max-width: 40em; }
+h1, h2, h3 { line-height: 1.4; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--fs-h1); }
+h2 { font-size: var(--fs-h2); }
+h3 { font-size: var(--fs-h3); }
+p { margin: 0; }
+a { color: var(--wire); }
+.mono, code, kbd { font-family: var(--font-mono); }
+.small { font-size: var(--fs-small); color: var(--muted); }
+sub { font-size: 0.7em; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.stack { display: grid; gap: 16px; }
+.page > *, .item > *, .stack > *, .lab > *, .intro > *, .quiz > *, .stepper > * { min-width: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+:focus-visible { outline: 3px solid var(--wire); outline-offset: 2px; }
+
+/* 見出しまわり */
+.mast {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+  padding-block: 12px;
+  margin-inline: -16px; padding-inline: 16px;
+}
+.mast-inner { max-width: 960px; margin-inline: auto; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; justify-content: space-between; }
+.mast .course { font-size: var(--fs-small); color: var(--muted); }
+.mast .title { font-size: var(--fs-h3); font-weight: 700; line-height: 1.4; }
+.badge {
+  display: inline-block; font-size: var(--fs-small); line-height: 1.4; padding: 2px 10px; border-radius: 999px;
+  border: 1px solid var(--lamp); color: var(--ink); background: transparent; vertical-align: middle; margin-left: 8px;
+}
+.lamps { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lamps .label { font-size: var(--fs-small); color: var(--muted); margin-right: 4px; }
+.lamp {
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  font: 700 var(--fs-small)/1 var(--font-mono); color: var(--muted);
+  background: var(--lamp-off); border: 1px solid var(--rule); text-decoration: none;
+}
+.lamp.on { background: var(--lamp); color: var(--lamp-ink); border-color: var(--lamp); box-shadow: 0 0 0 4px var(--lamp-glow); }
+
+.intro { display: grid; gap: 16px; padding-top: 24px; }
+.intro h1 .sub { display: block; font-size: var(--fs-h3); font-weight: 400; color: var(--muted); }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: var(--fs-small); color: var(--muted); }
+
+/* 抽象レベルの地図 */
+.levels { border: 1px solid var(--rule); border-radius: var(--radius); background: var(--panel); padding: 12px 16px; }
+.levels summary { cursor: pointer; font-size: var(--fs-small); color: var(--muted); }
+.levels ol { list-style: none; margin: 12px 0 4px; padding: 0; display: grid; gap: 4px; }
+.levels li { display: grid; grid-template-columns: 15em 1fr; gap: 12px; align-items: baseline; padding: 4px 10px; border-radius: 6px; font-size: var(--fs-small); }
+.levels li .ex { color: var(--muted); }
+.levels li.here { background: var(--accent-soft); outline: 2px solid var(--accent); }
+.levels li.here .ex { color: var(--ink); }
+@media (max-width: 520px) { .levels li { grid-template-columns: 1fr; gap: 0; } }
+
+/* 目次 */
+.toc { display: flex; flex-wrap: wrap; gap: 8px; }
+.toc a {
+  font-size: var(--fs-small); text-decoration: none; color: var(--ink);
+  border: 1px solid var(--rule); background: var(--panel); border-radius: 999px; padding: 4px 14px;
+}
+.toc a .n { font-family: var(--font-mono); color: var(--accent); margin-right: 6px; }
+
+/* 実験台（方眼のパネル） */
+.lab {
+  background-color: var(--panel);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 20px 20px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: grid; gap: 16px;
+  min-width: 0;
+}
+.lab > h3 { font-size: var(--fs-h3); }
+.lab .hint { font-size: var(--fs-small); color: var(--muted); }
+
+/* 項目 */
+.item { display: grid; gap: 20px; scroll-margin-top: 120px; }
+.item-head { display: grid; gap: 6px; border-top: 3px solid var(--accent); padding-top: 16px; }
+.item-head .no { font: 700 var(--fs-small)/1 var(--font-mono); color: var(--accent); letter-spacing: 0.08em; }
+.item-head .rule { font-size: var(--fs-body); }
+.item-head .slides { font-size: var(--fs-small); color: var(--muted); }
+.keyline {
+  font-weight: 700; background: var(--accent-soft); border-radius: 6px; padding: 10px 14px; max-width: 40em;
+}
+
+/* ステップ再生 */
+.stepper { display: grid; gap: 12px; min-width: 0; }
+.stepper .stage { min-height: 160px; overflow-x: auto; display: grid; align-content: center; padding: 8px 0; }
+.stepper .caption { min-height: 3.6em; max-width: 40em; }
+.stepper .ctrl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.stepper input[type="range"] { flex: 1 1 140px; accent-color: var(--accent); min-width: 0; }
+.stepper .count { font: var(--fs-small) var(--font-mono); color: var(--muted); min-width: 3.5em; text-align: right; }
+
+/* ボタンと入力 */
+button, .btn {
+  font: inherit; font-size: var(--fs-small); line-height: 1.4;
+  padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--rule); background: var(--panel); color: var(--ink);
+}
+button:hover { border-color: var(--wire); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+button:disabled { opacity: 0.45; cursor: default; }
+input[type="text"], textarea {
+  font: 24px/1.4 var(--font-mono); padding: 8px 12px; border-radius: 8px;
+  border: 2px solid var(--rule); background: var(--panel); color: var(--ink); width: 100%; max-width: 16em;
+}
+textarea { font: var(--fs-body)/1.7 var(--font-body); max-width: 100%; min-height: 4.5em; resize: vertical; }
+input[type="text"]:focus, textarea:focus { border-color: var(--wire); outline: none; }
+
+/* ドリル・確認問題 */
+.quiz { display: grid; gap: 12px; padding: 16px 20px; border-radius: var(--radius); border: 1px solid var(--rule); background: var(--panel); min-width: 0; }
+.quiz .kind { font-size: var(--fs-small); color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+.quiz .kind b { color: var(--ink); }
+.quiz .prompt { font-size: var(--fs-body); }
+.quiz .answer-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.quiz .answer-row label { font-size: var(--fs-small); color: var(--muted); }
+.quiz .choices { display: grid; gap: 8px; }
+.quiz .choices button { text-align: left; font-size: var(--fs-body); padding: 10px 16px; }
+.quiz .choices button.picked-ok { border-color: var(--ok); background: var(--ok-soft); }
+.quiz .choices button.picked-ng { border-color: var(--ng); background: var(--ng-soft); }
+.feedback { border-radius: 8px; padding: 10px 14px; display: none; }
+.feedback.ok { display: block; background: var(--ok-soft); border-left: 6px solid var(--ok); }
+.feedback.ng { display: block; background: var(--ng-soft); border-left: 6px solid var(--ng); }
+.feedback .head { font-weight: 700; }
+.solution { border-top: 1px dashed var(--rule); padding-top: 10px; }
+.solution summary { cursor: pointer; font-size: var(--fs-small); color: var(--wire); }
+.check-quiz { border: 2px solid var(--lamp); }
+.check-quiz.done { border-color: var(--ok); }
+.score { font: var(--fs-small) var(--font-mono); color: var(--muted); }
+
+/* ビット */
+.bits { display: inline-flex; gap: 6px; flex-wrap: nowrap; }
+.bit {
+  width: 44px; height: 52px; border-radius: 8px; display: grid; place-items: center;
+  font: 700 26px/1 var(--font-mono); border: 2px solid var(--rule); background: var(--lamp-off); color: var(--muted);
+}
+.bit.on { background: var(--lamp); color: var(--lamp-ink); border-color: var(--lamp); box-shadow: 0 0 0 3px var(--lamp-glow); }
+button.bit { padding: 0; }
+.bitcol { display: grid; gap: 4px; justify-items: center; }
+.bitcol .w { font: var(--fs-small)/1 var(--font-mono); color: var(--muted); }
+.bitcol.dim .w { opacity: 0.5; }
+.gap4 { width: 10px; }
+.readout { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; align-items: baseline; }
+.readout dt { font-size: var(--fs-small); color: var(--muted); }
+.readout dd { margin: 0; font: 700 24px/1.4 var(--font-mono); overflow-wrap: anywhere; }
+.readout dd .expr { font-weight: 400; font-size: var(--fs-small); color: var(--muted); display: block; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+
+/* 計算の表（筆算） */
+.calc { border-collapse: collapse; font: 26px/1.3 var(--font-mono); margin: 0 auto; }
+.calc td { width: 1.25em; text-align: center; padding: 2px 0; }
+.calc td.rl { width: auto; text-align: right; padding-right: 12px; font: var(--fs-small) var(--font-body); color: var(--muted); white-space: nowrap; }
+.calc tr.carry td { font-size: var(--fs-small); color: var(--wire); height: 1.4em; }
+.calc tr.sum td { border-top: 2px solid var(--ink); }
+.calc td.hl { background: var(--wire-soft); border-radius: 4px; }
+.calc td.drop { color: var(--ng); text-decoration: line-through; }
+.calc td.ghost { color: transparent; }
+.calc td.flip { color: var(--wire); }
+
+.divtable { border-collapse: collapse; font: 24px/1.5 var(--font-mono); margin: 0 auto; }
+.divtable td { padding: 2px 10px; text-align: right; }
+.divtable td.r { color: var(--lamp-ink); background: var(--lamp); border-radius: 6px; text-align: center; min-width: 1.6em; }
+.divtable td.r.off { background: transparent; color: var(--muted); }
+.divtable td.note { font: var(--fs-small) var(--font-body); color: var(--muted); text-align: left; }
+.divwrap { display: flex; gap: 16px; align-items: stretch; justify-content: center; flex-wrap: wrap; }
+.uparrow { display: grid; align-content: stretch; justify-items: center; color: var(--wire); font: 700 var(--fs-small)/1.3 var(--font-body); }
+.uparrow .bar { width: 6px; background: var(--wire); border-radius: 3px; flex: 1; min-height: 60px; position: relative; }
+.uparrow .bar::before { content: ""; position: absolute; top: -10px; left: -7px; border: 10px solid transparent; border-bottom-color: var(--wire); border-top: 0; }
+
+.result { text-align: center; font: 700 28px/1.4 var(--font-mono); }
+.result .small { font-family: var(--font-body); }
+
+/* 一覧の表 */
+.tbl-wrap { overflow-x: auto; }
+table.ref { border-collapse: collapse; font-size: var(--fs-small); }
+table.ref th, table.ref td { border: 1px solid var(--rule); padding: 4px 10px; text-align: center; }
+table.ref th { background: var(--accent-soft); font-weight: 700; }
+table.ref td.mono { font-family: var(--font-mono); }
+
+/* 4ビットの時計 */
+.clock-wrap { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 20px; align-items: center; }
+@media (max-width: 720px) { .clock-wrap { grid-template-columns: 1fr; } }
+.clock svg { width: 100%; height: auto; display: block; }
+.clock .t-bits { font: 700 24px var(--font-mono); fill: var(--ink); }
+.clock .t-dec { font: 24px var(--font-mono); fill: var(--muted); }
+.clock .t-sdec { font: 700 24px var(--font-mono); fill: var(--wire); }
+.clock .dot { fill: var(--lamp-off); stroke: var(--rule); }
+.clock .dot.cur { fill: var(--lamp); stroke: var(--lamp); }
+.clock .boundary-s { stroke: var(--ng); stroke-width: 4; stroke-dasharray: 6 5; }
+.clock .boundary-u { stroke: var(--wire); stroke-width: 4; stroke-dasharray: 2 5; }
+.clock .hand { stroke: var(--ink); stroke-width: 4; stroke-linecap: round; }
+.clock .hub { fill: var(--ink); }
+.clock .ring { fill: none; stroke: var(--rule); stroke-width: 2; }
+select { font: 18px/1.4 var(--font-mono); padding: 6px 8px; border-radius: 8px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); }
+
+.log { font-size: var(--fs-small); min-height: 3em; }
+.log .warn { color: var(--ng); font-weight: 700; }
+.log .warnu { color: var(--wire); font-weight: 700; }
+
+/* 浮動小数点 */
+.fbits { display: flex; flex-wrap: wrap; gap: 3px; align-items: flex-end; }
+.fgroup { display: grid; gap: 4px; }
+.fgroup .glab { font-size: var(--fs-small); font-weight: 700; }
+.fgroup .gbits { display: flex; flex-wrap: wrap; gap: 3px; }
+.fbit { width: 26px; height: 36px; padding: 0; border-radius: 5px; font: 700 18px/1 var(--font-mono); border: 2px solid var(--rule); background: var(--panel); color: var(--muted); }
+.fbit.on { color: var(--panel); }
+.g-s .glab { color: var(--s-bit); } .g-s .fbit.on { background: var(--s-bit); border-color: var(--s-bit); }
+.g-e .glab { color: var(--e-bit); } .g-e .fbit.on { background: var(--e-bit); border-color: var(--e-bit); }
+.g-f .glab { color: var(--f-bit); } .g-f .fbit.on { background: var(--f-bit); border-color: var(--f-bit); }
+.formula { font: 22px/1.6 var(--font-mono); overflow-wrap: anywhere; }
+.formula .s { color: var(--s-bit); } .formula .e { color: var(--e-bit); } .formula .f { color: var(--f-bit); }
+
+/* つまずき・仕上げ */
+.pitfalls { display: grid; gap: 12px; }
+.pitfalls ul { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 40em; }
+.final .quiz { border-width: 2px; }
+.done-banner { display: none; padding: 16px 20px; border-radius: var(--radius); background: var(--ok-soft); border: 2px solid var(--ok); font-weight: 700; }
+.done-banner.show { display: block; }
+footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid var(--rule); padding-top: 16px; display: grid; gap: 6px; }
+
+/* 予習ページ */
+.research { display: grid; gap: 16px; }
+.task { display: grid; gap: 10px; padding: 16px 20px; border-radius: var(--radius); background: var(--panel); border: 1px solid var(--rule); min-width: 0; }
+.task h3 { font-size: var(--fs-h3); }
+.task dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: var(--fs-small); }
+.task dt { color: var(--muted); }
+.task dd { margin: 0; }
+.task .saved { font-size: var(--fs-small); color: var(--ok); min-height: 1.4em; }
+@media (max-width: 520px) { .task dl { grid-template-columns: 1fr; } .task dt { margin-top: 6px; } }
+.checklist { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.checklist li { display: flex; gap: 10px; align-items: baseline; }
+.checklist .box { width: 22px; height: 22px; border-radius: 5px; border: 2px solid var(--rule); flex: none; display: inline-grid; place-items: center; font-size: 16px; }
+.checklist li.done .box { background: var(--ok); border-color: var(--ok); color: var(--panel); }
+
+/* 回路図（SVG） */
+.circuit svg { width: 100%; max-width: 620px; height: auto; display: block; margin: 0 auto; }
+.circuit .wire { stroke: var(--muted); stroke-width: 4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.circuit .wire.live { stroke: var(--lamp); }
+.circuit .t { font: 24px var(--font-body); fill: var(--ink); }
+.circuit .tm { font: 700 24px var(--font-mono); fill: var(--ink); }
+.circuit .bulb { fill: var(--lamp-off); stroke: var(--muted); stroke-width: 3; }
+.circuit .bulb.lit { fill: var(--lamp); stroke: var(--lamp); filter: drop-shadow(0 0 10px var(--lamp-glow)); }
+.circuit .batt { stroke: var(--ink); stroke-width: 4; }
+.circuit .sw { stroke: var(--ink); stroke-width: 5; stroke-linecap: round; transition: transform 0.2s; }
+.circuit .swpost { fill: var(--ink); }
+.circuit .box { fill: var(--panel); stroke: var(--ink); stroke-width: 3; }
+.circuit .boxq { font: 700 44px var(--font-mono); fill: var(--muted); }
+.swbtns { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.swbtns button { font-size: var(--fs-body); min-width: 7em; }
+.swbtns button[aria-pressed="true"] { background: var(--lamp); color: var(--lamp-ink); border-color: var(--lamp); font-weight: 700; }
+.ttable { border-collapse: collapse; font: 20px/1.4 var(--font-mono); }
+.ttable th, .ttable td { border: 1px solid var(--rule); padding: 4px 14px; text-align: center; }
+.ttable th { font-family: var(--font-body); font-size: var(--fs-small); background: var(--accent-soft); }
+.ttable td.unk { color: var(--muted); }
+.ttable tr.cur td { background: var(--wire-soft); }
+.cands { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 8px; }
+.cands button { text-align: left; display: grid; gap: 2px; padding: 10px 14px; }
+.cands button b { font-size: var(--fs-body); font-family: var(--font-mono); }
+.cands button span { font-size: var(--fs-small); color: var(--muted); }
+.cands button.right { border-color: var(--ok); background: var(--ok-soft); }
+.cands button.wrong { border-color: var(--ng); background: var(--ng-soft); }
+.stars { font-size: 26px; letter-spacing: 4px; color: var(--lamp); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+@media (max-width: 520px) {
+  .bit { width: 34px; height: 44px; font-size: 22px; }
+  .bits { gap: 4px; }
+  .lab { padding: 14px; }
+  .calc { font-size: 22px; }
+  .mast .title { font-size: 18px; }
+  .readout { grid-template-columns: 1fr; gap: 0; }
+  .readout dd { margin-bottom: 10px; }
+}
+.circuits { display: grid; grid-template-columns: 1fr; gap: 24px; }
+@media (min-width: 860px) { .circuits { grid-template-columns: 1fr 1fr; } }
+.circuits h3 { font-size: var(--fs-h3); }
+.checklist a { color: var(--ink); }
+
+/* 動画プレイヤー */
+.film { display: grid; gap: 10px; background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); padding: 16px; min-width: 0; }
+.film > * { min-width: 0; }
+.film-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; align-items: baseline; }
+.film-title { font-weight: 700; }
+.film-scene { font-size: var(--fs-small); color: var(--muted); }
+.film-stage { position: relative; aspect-ratio: 16 / 9; max-width: 100%; background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.film-stage:fullscreen { border: 0; border-radius: 0; display: grid; place-items: center; }
+.film-stage svg { width: 100%; height: 100%; display: block; }
+.film-big { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; gap: 12px; align-items: center;
+  font-size: var(--fs-body); font-weight: 700; background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 999px; padding: 12px 26px; }
+.film-big .tri { width: 0; height: 0; border-left: 18px solid currentColor; border-top: 11px solid transparent; border-bottom: 11px solid transparent; }
+.film-pause { display: grid; gap: 10px; padding: 14px 16px; border-radius: 8px; border: 2px solid var(--wire); background: var(--wire-soft); }
+.film-pause .q { font-weight: 700; }
+.film-pause .choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.film-pause .choices button { font-size: var(--fs-body); }
+.film-pause .skip { justify-self: start; border: 0; background: transparent; color: var(--wire); text-decoration: underline; padding: 2px 0; }
+.film-cap { min-height: 3.6em; }
+.film-pred { font-size: var(--fs-small); min-height: 1.4em; }
+.film-pred.ok { color: var(--ok); font-weight: 700; }
+.film-pred.ng { color: var(--ng); font-weight: 700; }
+.film-ctrl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.film-ctrl input[type="range"] { flex: 1 1 160px; accent-color: var(--accent); min-width: 0; }
+.film-time { font: var(--fs-small) var(--font-mono); color: var(--muted); }
+.film-chaps { display: flex; flex-wrap: wrap; gap: 6px; }
+.film-chaps button { padding: 4px 12px; border-radius: 999px; }
+.film-chaps button[aria-current="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.film-chaps b { font-family: var(--font-mono); color: var(--accent); }
+.film-script summary { cursor: pointer; font-size: var(--fs-small); color: var(--wire); }
+.film-script ol { font-size: var(--fs-small); display: grid; gap: 6px; padding-left: 1.4em; margin: 8px 0 0; }
+.film svg .ft { font-family: var(--font-body); }
+.film svg .fm { font-family: var(--font-mono); }
+.film svg .k-ink { fill: var(--ink); } .film svg .k-mut { fill: var(--muted); } .film svg .k-acc { fill: var(--accent); } .film svg .k-accink { fill: var(--accent-ink); }
+.film svg .k-lamp { fill: var(--lamp); } .film svg .k-lampink { fill: var(--lamp-ink); } .film svg .k-wire { fill: var(--wire); } .film svg .k-wiresoft { fill: var(--wire-soft); }
+.film svg .k-ng { fill: var(--ng); } .film svg .k-panel { fill: var(--panel); } .film svg .k-off { fill: var(--lamp-off); } .film svg .k-none { fill: none; }
+.film svg .s-ink { stroke: var(--ink); } .film svg .s-mut { stroke: var(--muted); } .film svg .s-acc { stroke: var(--accent); } .film svg .s-lamp { stroke: var(--lamp); }
+.film svg .s-wire { stroke: var(--wire); } .film svg .s-ng { stroke: var(--ng); } .film svg .s-rule { stroke: var(--rule); } .film svg .s-none { stroke: none; }
+.film-big { white-space: nowrap; }
+@media (max-width: 520px) { .film { padding: 10px; } .film-big { padding: 6px 14px; font-size: var(--fs-small); gap: 8px; } .film-big .tri { border-left-width: 12px; border-top-width: 8px; border-bottom-width: 8px; } }
+
+.movie-link { display: flex; gap: 14px; align-items: center; max-width: 40em; padding: 12px 18px; border-radius: var(--radius);
+  border: 2px solid var(--accent); background: var(--panel); color: var(--ink); text-decoration: none; }
+.movie-link:hover { background: var(--accent-soft); }
+.movie-link .tri { flex: none; width: 0; height: 0; border-left: 16px solid var(--accent); border-top: 10px solid transparent; border-bottom: 10px solid transparent; }
+#movie { scroll-margin-top: 120px; }
+
+.film-hint { display: none; font-size: var(--fs-small); color: var(--muted); }
+@media (max-width: 520px) { .film-hint { display: block; } }
+/* SVG の色（動画以外の図でも使う） */
+svg .k-ink { fill: var(--ink); } svg .k-mut { fill: var(--muted); } svg .k-acc { fill: var(--accent); } svg .k-accink { fill: var(--accent-ink); }
+svg .k-lamp { fill: var(--lamp); } svg .k-lampink { fill: var(--lamp-ink); } svg .k-wire { fill: var(--wire); } svg .k-wiresoft { fill: var(--wire-soft); }
+svg .k-ng { fill: var(--ng); } svg .k-panel { fill: var(--panel); } svg .k-off { fill: var(--lamp-off); } svg .k-none { fill: none; }
+svg .s-ink { stroke: var(--ink); } svg .s-mut { stroke: var(--muted); } svg .s-acc { stroke: var(--accent); } svg .s-lamp { stroke: var(--lamp); }
+svg .s-wire { stroke: var(--wire); } svg .s-ng { stroke: var(--ng); } svg .s-rule { stroke: var(--rule); } svg .s-none { stroke: none; }
+svg .ft { font-family: var(--font-body); } svg .fm { font-family: var(--font-mono); }
+.ov { text-decoration: overline; text-decoration-thickness: 2px; }
+
+.gate-pick button { font-family: var(--font-mono); }
+.gate-pick button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+
+/* 解説（簡単・通常・詳細・発展）。左のメニューで選んだレベルが既定で、その場で切りかえられる */
+.lv-box { display: grid; gap: 10px; min-width: 0; }
+.lv-title { font: 700 var(--fs-small)/1.4 var(--font-mono); color: var(--accent); letter-spacing: 0.08em; }
+.lv-tabs { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; justify-self: start; max-width: 100%; }
+.lv-tabs button { border: 0; border-radius: 0; border-right: 1px solid var(--rule); font-size: var(--fs-small); padding: 6px 16px; background: var(--panel); color: var(--ink); }
+.lv-tabs button:last-child { border-right: 0; }
+.lv-tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.lv-panel { font-size: var(--fs-body); line-height: 1.8; max-width: 40em; min-width: 0; overflow-wrap: anywhere; }
+.lv-panel > * + * { margin-top: 10px; }
+.lv-panel ul, .lv-panel ol { margin: 0; padding-left: 1.4em; }
+.lv-panel table { border-collapse: collapse; font-size: var(--fs-small); }
+.lv-panel th, .lv-panel td { border: 1px solid var(--rule); padding: 2px 10px; text-align: center; }
+.item-explain { border: 1px solid var(--rule); border-left: 6px solid var(--accent); border-radius: var(--radius); background: var(--panel); padding: 14px 18px; }
+.explain-q summary { color: var(--accent); }
+.explain-q > div { padding-top: 10px; }
+
+/* 左のメニュー。広い画面では常に出し、狭い画面では「メニュー」ボタンで引き出す */
+.side {
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: 30; width: 272px;
+  overflow-y: auto; overscroll-behavior: contain;
+  background: var(--panel); border-right: 1px solid var(--rule);
+  padding: 16px 14px 32px; display: grid; align-content: start; gap: 20px;
+  font-size: var(--fs-small); line-height: 1.5;
+}
+.side-head { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.side-home { font-weight: 700; color: var(--ink); text-decoration: none; }
+a.side-home:hover { color: var(--wire); text-decoration: underline; }
+.side-close { display: none; font-size: var(--fs-small); padding: 4px 12px; white-space: nowrap; flex: none; }
+.side-group { display: grid; gap: 8px; }
+.side-label { font: 700 var(--fs-small)/1.4 var(--font-mono); color: var(--accent); letter-spacing: 0.06em; border-bottom: 1px solid var(--rule); padding-bottom: 4px; }
+.side-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.side-list a { display: block; padding: 5px 8px; border-radius: 6px; color: var(--ink); text-decoration: none; }
+.side-list a:hover { background: var(--wire-soft); }
+.side-list a.here { background: var(--accent-soft); box-shadow: inset 4px 0 0 var(--accent); font-weight: 700; }
+.side-levels { display: grid; gap: 4px; }
+.side-levels label { display: grid; grid-template-columns: auto auto 1fr; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; cursor: pointer; }
+.side-levels label:hover { background: var(--wire-soft); }
+.side-levels input { margin: 0; width: 18px; height: 18px; accent-color: var(--accent); }
+.side-levels label span { color: var(--muted); }
+.side-levels label:has(input:checked) { background: var(--accent-soft); }
+.side-pages li { display: grid; grid-template-columns: 4em minmax(0, 1fr); gap: 0 8px; padding: 6px 4px; border-bottom: 1px solid var(--rule); }
+.side-pages .s-no { font: 700 var(--fs-small)/1.5 var(--font-mono); color: var(--accent); }
+.side-pages .s-ttl { color: var(--ink); }
+.side-pages .s-links { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.side-pages .s-links a, .side-pages .s-links span { display: inline-block; padding: 2px 10px; border-radius: 999px; }
+.side-pages .s-links a { border: 1px solid var(--wire); color: var(--wire); }
+.side-pages .s-links a:hover { background: var(--wire-soft); }
+.side-pages .s-links .cur { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.side-pages .s-links .off { border: 1px dashed var(--rule); color: var(--muted); }
+.menu-btn { display: none; font-size: var(--fs-small); padding: 6px 14px; }
+.side-backdrop { position: fixed; inset: 0; z-index: 29; background: rgba(0, 0, 0, 0.35); }
+@media (min-width: 1180px) {
+  body.has-side { padding-left: 296px; }
+  .side-backdrop { display: none !important; }
+}
+@media (max-width: 1179px) {
+  .side { width: min(320px, 88vw); transform: translateX(-102%); transition: transform 0.2s ease, visibility 0s linear 0.2s; box-shadow: 0 0 24px rgba(0, 0, 0, 0.2); visibility: hidden; }
+  body.side-open .side { transform: none; visibility: visible; transition: transform 0.2s ease; }
+  .side-close { display: inline-block; }
+  .menu-btn { display: inline-block; }
+  body.has-side .mast-inner { justify-content: flex-start; }
+  body.has-side .mast-inner > .lamps { margin-left: auto; }
+}
+@media (max-width: 640px) {
+  body.has-side .mast-inner { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; align-items: center; }
+  body.has-side .mast-inner > .lamps { grid-column: 1 / -1; margin-left: 0; }
+  .menu-btn { padding: 6px 10px; }
+}
+@media print { .side, .menu-btn, .side-backdrop { display: none !important; } body.has-side { padding-left: 16px; } }
+
+/* 課題の答え（先生の回答例の画像）。画像は白地なので、ダークでも白い台に載せる */
+.ans-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 20px; }
+figure.ans { margin: 0; display: grid; gap: 10px; align-content: start; padding: 16px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--panel); min-width: 0; }
+figure.ans.wide { grid-column: 1 / -1; }
+figure.ans figcaption { font-weight: 700; font-size: var(--fs-h3); line-height: 1.4; }
+.ans-img { background: #fff; border-radius: 8px; padding: 8px; overflow-x: auto; }
+.ans-img img { display: block; max-width: 100%; height: auto; margin-inline: auto; }
+figure.ans.wide .ans-img img { max-width: min(100%, 720px); }
+figure.ans ul { margin: 0; padding-left: 1.4em; }
+
+/* 第6回：順序回路の模型・NAND 型ラッチのパズル（seq-lab.js） */
+.seq-chart { overflow-x: auto; width: 100%; }
+.seq-model { display: grid; gap: 14px; }
+.seq-lamps { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: center; font: 700 var(--fs-body)/1.4 var(--font-mono); }
+.seq-lamps .lamp { width: 44px; height: 44px; font-size: var(--fs-body); }
+.seq-lamps .dec { font-size: 28px; }
+.seq-note { font-size: var(--fs-small); color: var(--muted); max-width: 40em; }
+.seq-warn { border-left: 6px solid var(--ng); background: var(--ng-soft); border-radius: 8px; padding: 8px 12px; }
+.nlp-table td, .nlp-table th { vertical-align: middle; }
+.nlp-table td.res { min-width: 3em; }
+.nlp-table .seg button { font-size: var(--fs-small); padding: 6px 10px; }
+@media (max-width: 520px) { .nlp-table .seg { display: grid; grid-template-columns: 1fr 1fr; } }
+
+/* 第6回：タイミングチャートを描く問題（seq-ui.js の CA.timingDraw） */
+.td-wrap { overflow-x: auto; }
+.td-svg { display: block; touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; }
+.td-svg:focus { outline: none; }
+.td-svg:focus-visible { outline: 3px solid var(--wire); outline-offset: 2px; border-radius: 6px; }
+.td-keys { font-size: var(--fs-small); color: var(--muted); }
+
+</style>
+<style>
+.tm-sim, .tm-editor { display: grid; gap: 12px; min-width: 0; }
+.tm-lab { font-size: var(--fs-small); color: var(--muted); }
+.tm-stage { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; padding: 14px 12px; border-radius: 10px; background: var(--paper); border: 1px solid var(--rule); overflow-x: auto; }
+.tm-view { min-width: 0; }
+.tm-count { font: 700 var(--fs-small)/1.4 var(--font-mono); color: var(--muted); }
+.tm-tape { display: inline-flex; gap: 0; vertical-align: middle; }
+.tm-cell { display: inline-grid; place-items: center; width: 44px; height: 48px; border: 2px solid var(--rule); margin-left: -2px; background: var(--panel); font: 700 24px/1 var(--font-mono); color: var(--ink); position: relative; }
+.tm-cell.blank { color: var(--muted); font-weight: 400; }
+.tm-cell.at { border-color: var(--wire); background: var(--wire-soft); z-index: 1; }
+.tm-cell.at::after { content: "▲"; position: absolute; bottom: -26px; left: 50%; transform: translateX(-50%); font-size: 18px; color: var(--wire); }
+.tm-tape { padding-bottom: 26px; }
+.tm-tape.small .tm-cell { width: 36px; height: 40px; font-size: 20px; }
+.tm-st { display: inline-block; font: 700 var(--fs-small)/1.4 var(--font-body); color: var(--wire); padding: 2px 10px; border: 2px solid var(--wire); border-radius: 999px; vertical-align: middle; margin-left: 6px; }
+table.tm-rules { border-collapse: collapse; font: 18px/1.4 var(--font-body); }
+table.tm-rules th, table.tm-rules td { border: 1px solid var(--rule); padding: 4px 12px; text-align: center; }
+table.tm-rules th { font-size: var(--fs-small); color: var(--muted); font-weight: 400; }
+table.tm-rules tr.hl td { background: var(--wire-soft); font-weight: 700; }
+table.tm-edit tr.first td { border-top: 3px solid var(--rule); }
+table.tm-edit select { font: 18px var(--font-body); padding: 4px 6px; }
+.quiz .choices button .tm-tape { padding-bottom: 22px; }
+.step-list { display: grid; gap: 6px; }
+.ondemand-steps { display: grid; gap: 8px; padding-left: 1.4em; max-width: 40em; }
+.ondemand-steps li { padding-left: 4px; }
+.ondemand-steps .t { color: var(--muted); font-size: var(--fs-small); }
+.fixnote { font-size: var(--fs-small); color: var(--muted); border-left: 4px solid var(--rule); padding: 4px 12px; max-width: 40em; }
+fieldset.mq { border: 1px solid var(--rule); border-radius: 10px; padding: 12px 16px; margin: 0; display: grid; gap: 6px; background: var(--panel); min-width: 0; }
+fieldset.mq legend { font-weight: 700; padding: 0 6px; }
+fieldset.mq label { display: flex; gap: 10px; align-items: baseline; padding: 6px 4px; border-radius: 6px; cursor: pointer; }
+fieldset.mq label:hover { background: var(--accent-soft); }
+fieldset.mq input { flex: none; width: 20px; height: 20px; accent-color: var(--accent); }
+.ansgrid { display: grid; grid-template-columns: auto minmax(0, 12em); gap: 10px 16px; align-items: center; max-width: 40em; }
+.ansgrid input { width: 100%; }
+.counter { font-size: var(--fs-small); color: var(--muted); }
+.export-box textarea { width: 100%; min-height: 14em; font: 16px/1.6 var(--font-mono); }
+.miss { font-size: var(--fs-small); }
+.miss li.done { color: var(--ok); }
+.miss li.todo { color: var(--ng); }
+@media (max-width: 520px) { .ansgrid { grid-template-columns: 1fr; } .tm-cell { width: 38px; height: 44px; } }
+</style>
+<header class="mast">
+  <div class="mast-inner">
+    <div>
+      <div class="course"><a href="./">コンピュータアーキテクチャ 2026 予習・復習ページ一覧</a></div>
+      <div class="title">第8回　チューリングマシン（動画と課題）</div>
+    </div>
+    <div class="lamps" data-lamps></div>
+  </div>
+</header>
+
+<main class="page">
+  <section class="intro">
+    <h1>第8回 チューリングマシン<span class="sub">11/28（土）補講：動画と課題で学ぶ回</span></h1>
+    <p class="prose">この回は教室での授業のかわりに、このページで学びます。<b>動画と資料</b>で内容をつかみ、<b>模擬器</b>でチューリングマシンを動かして<b>問題</b>を解き、<b>クイズ</b>と<b>必須課題</b>に答えます。<b>発展課題</b>は任意です。最後に回答を書き出して、<b>WebClass に提出</b>します。</p>
+    <div class="meta"><span>目安 約1時間30分（動画 約8分を含む）</span><span>締切 12/10（木）11:00</span><span>入力した回答はこのブラウザの中だけに残ります</span></div>
+    <a class="movie-link" href="#movie"><span class="tri" aria-hidden="true"></span><span><b>まず動画を見る</b>：4本、合計約8分（音声なし・字幕つき）</span></a>
+    <nav class="toc" aria-label="項目">
+      <a href="#guide"><span class="n">0</span>進め方</a>
+      <a href="#movie"><span class="n">1</span>動画と資料</a>
+      <a href="#sim"><span class="n">2</span>模擬器</a>
+      <a href="#p1"><span class="n">3</span>問題</a>
+      <a href="#quiz"><span class="n">4</span>クイズ</a>
+      <a href="#req"><span class="n">5</span>必須課題</a>
+      <a href="#adv"><span class="n">6</span>発展課題</a>
+      <a href="#submit"><span class="n">7</span>書き出して提出</a>
+      <a href="#ans">答え</a>
+    </nav>
+  </section>
+
+  <section class="stack" id="guide">
+    <h2>0　進め方</h2>
+    <ol class="ondemand-steps">
+      <li><b>動画と資料</b>：動画4本を見て、資料（第8回のスライド PDF、WebClass に添付）を読む。<span class="t">約25分</span></li>
+      <li><b>模擬器と問題</b>：模擬器を動かし、問題1〜4を解く。正解するとページ上のランプが点きます（提出する必要はありません）。<span class="t">約20分</span></li>
+      <li><b>クイズ</b>：10問。答えを選ぶだけで、正解はその場では出ません。<span class="t">約10分</span></li>
+      <li><b>必須課題</b>：模擬器を動かして答える問題と、中国語の部屋についての記述。<span class="t">約30分</span></li>
+      <li><b>発展課題（任意）</b>：2の補数を作る規則表、または記述。</li>
+      <li><b>書き出して提出</b>：ページの最後で回答を書き出し、WebClass の第8回の課題に提出する。<span class="t">約5分</span></li>
+    </ol>
+    <p class="keyline">締切は 12/10（木）11:00 です。入力した回答はこのブラウザに保存されるので、途中で閉じても同じブラウザで開けば続きから書けます。別のパソコンやスマホには引き継がれません。</p>
+  </section>
+
+  <section class="stack" id="movie" aria-labelledby="movie-title">
+    <h2 id="movie-title">1　動画と資料</h2>
+    <p class="prose">動画は音声なしで、字幕が下に出ます。途中で止まったら、予想を選んでから続きを見てください。資料（第8回のスライド PDF）は WebClass に添付してあります。動画のあとに読むと、スライドの図と動画の説明が結びつきます。</p>
+    <h3>動画1　1台で何でもできる機械（スライド3〜4）</h3>
+    <div id="film1"></div>
+    <h3>動画2　チューリングテストと中国語の部屋（スライド5〜6）</h3>
+    <div id="film2"></div>
+    <p class="fixnote">スライド5の「30% 以上の試験官が人間だと判断した AI は『知能がある』と判断される」は、引用元の図の書き方です。チューリング（1950）は合格の決まりを定めたのではなく、50年後の見込みとして書きました（動画2の場面2）。</p>
+    <h3>動画3　チューリングマシンの1ステップ（スライド7〜8）</h3>
+    <div id="film3"></div>
+    <h3>動画4　止まらない機械と、今のコンピュータ（スライド7・9）</h3>
+    <div id="film4"></div>
+    <p class="fixnote">スライド7の「出力不可能 → アルゴリズムは存在しない」は短くした言い方です。正確には「どんな入力に対しても、必ず止まって正しく答える手順が作れない問題がある（停止性問題）」です（動画4の場面2）。</p>
+  </section>
+
+  <section class="stack" id="sim">
+    <h2>2　模擬器：チューリングマシンを動かす</h2>
+    <p class="prose">機械を選び、入力を入れて「1 ステップ」を押すと、規則表の光っている行のとおりに、<b>書く → 動く → 状態を変える</b>が1回起こります。「最後まで」で止まるまで動かせます。必須課題1でも使います。</p>
+    <div class="lab" id="simbox"></div>
+  </section>
+
+  <section class="item" id="p1">
+    <div class="item-head"><span class="no">問題 1</span><h2>1ステップを読む</h2><span class="slides">スライド8・動画3</span></div>
+    <p class="keyline">1ステップでは、今の状態と読んだ記号の組で規則表の行を1つ選び、その行のとおりに「書く記号・動く向き・次の状態」を当てはめる。</p>
+    <div data-explain="p1"></div>
+    <div id="c1"></div>
+    <div id="d1"></div>
+  </section>
+
+  <section class="item" id="p2">
+    <div class="item-head"><span class="no">問題 2</span><h2>数ステップ追う</h2><span class="slides">スライド8・動画3</span></div>
+    <p class="keyline">1ステップずつ、ヘッドの位置と状態を書きとめながら進める。ヘッドが読むのは毎回1マスだけ。</p>
+    <div data-explain="p2"></div>
+    <div id="c2"></div>
+    <div id="d2"></div>
+  </section>
+
+  <section class="item" id="p3">
+    <div class="item-head"><span class="no">問題 3</span><h2>止まる？止まらない？</h2><span class="slides">スライド7・動画4</span></div>
+    <p class="keyline">「停止」に入れば止まる。同じ動きをくり返して「停止」に入れない表は、いつまでも止まらない。止まらなければ答えは出ない。</p>
+    <div data-explain="p3"></div>
+    <div id="c3"></div>
+    <div id="d3"></div>
+  </section>
+
+  <section class="item" id="p4">
+    <div class="item-head"><span class="no">問題 4</span><h2>テープは無限に長い</h2><span class="slides">スライド8・第3回</span></div>
+    <p class="keyline">チューリングマシンのテープは無限に長いので、桁があふれない。決まったビット数のレジスタでは、はみ出した桁は消える（第3回のオーバーフロー）。</p>
+    <div data-explain="p4"></div>
+    <div id="c4"></div>
+    <div id="d4"></div>
+  </section>
+
+  <section class="stack" id="quiz">
+    <h2>4　クイズ（10問）</h2>
+    <p class="prose">動画と資料の内容から出します。答えを選ぶとこのブラウザに保存されます。正解はその場では出ません。締切（12/10 11:00）のあと、このページの最後に正解と解説を載せます。</p>
+    <div id="quizbox" class="stack"></div>
+  </section>
+
+  <section class="stack" id="req">
+    <h2>5　必須課題</h2>
+    <h3>必須課題1　「＋1」の機械を動かす</h3>
+    <p class="prose"><a href="#sim">模擬器</a>で「＋1」を選びます。ヘッドは右端の数字から始まります。入力を入れて「最後まで」を押し、止まったときのテープ（□ を除いた 0 と 1 の並び）と、止まるまでのステップ数を答えてください。</p>
+    <div class="ansgrid" id="req1"></div>
+    <h3>必須課題2　中国語の部屋（200字程度）</h3>
+    <p class="prose">スライド6の問い「みなさんはどう思いますか？」に答えてください。部屋の中の男性は、中国語を理解していると言えるでしょうか。「言える」「言えない」のどちらかの立場を選び、理由を書いてください。理由の中で、チューリングマシン（規則表どおりに記号を書き換える機械）と男性の似ている点を1つ挙げてください。</p>
+    <div id="req2"></div>
+  </section>
+
+  <section class="stack" id="adv">
+    <h2>6　発展課題（任意）</h2>
+    <p class="prose">A と B のどちらか1つ以上に取り組んでください。取り組まなくても提出できます。</p>
+    <h3>発展課題A　2の補数を作る機械</h3>
+    <p class="prose">4ビットの2進数を、その<b>2の補数</b>（符号を反転した数。例：0011 → 1101）に書き換える規則表を、下の表で作ってください。ヘッドは<b>左端</b>の数字から、<b>状態 A</b> から始まります。「判定」を押すと、0000〜1111 の16通りで確かめます（4桁の外に書いた数字は見ません）。作った表は、書き出しに自動で入ります。</p>
+    <details class="solution"><summary>ヒント1</summary><div><p>第3回で学んだ「反転して＋1」をそのまま2段に分けます。まず左から右へビットを反転し、右端の先の空白に着いたら、向きを変えて「＋1」をします。</p></div></details>
+    <details class="solution"><summary>ヒント2</summary><div><p>模擬器の「ビット反転」と「＋1」の規則表を見比べましょう。「反転」を状態 A、「＋1」を状態 B にして、A で空白を読んだときに B へ移る行を作ると、2つの表がつながります。</p></div></details>
+    <div id="editor"></div>
+    <div class="row"><button type="button" class="primary" id="judge">判定（16通り）</button><button type="button" id="trycustom">この表を模擬器で動かす</button></div>
+    <div id="judgeout"></div>
+    <h3>発展課題B　記述（400字程度）</h3>
+    <p class="prose">次の (a) か (b) のどちらかを選んで書いてください。</p>
+    <ul class="prose">
+      <li>(a) 生成AI（対話型AI）は、チューリングテストに合格したと言えるでしょうか。動画2とスライド5の「やり方」と比べて、合格と言える点と言えない点を書いてください。</li>
+      <li>(b) 「どんな規則表と入力についても、そのチューリングマシンが止まるかどうかを必ず言い当てる機械は作れない」ことが知られています（停止性問題）。問題3で止まらない表を1つ選び、なぜ「止まらない」と言えたのか、また、それがいつでもできるとは限らないのはなぜかを、自分の言葉で書いてください。</li>
+    </ul>
+    <div id="advb"></div>
+  </section>
+
+  <section class="stack" id="submit">
+    <h2>7　書き出して提出</h2>
+    <p class="prose">「回答を書き出す」を押すと、クイズ・必須課題・発展課題の回答が1つの文にまとまります。「.txt で保存」を押して保存したファイル（CA第8回_回答.txt）を、WebClass の「第8回」の課題に添付して提出してください。ファイル名は変えなくてかまいません。</p>
+    <p class="prose">保存できないときは、「コピー」を押して（コピーできないときは、下の欄の文をすべて選んでコピーして）、メモ帳などに貼り付け、.txt のファイルとして保存してから提出してください。Mac のテキストエディットでは、先に「フォーマット」→「標準テキストにする」を選んでから保存します。</p>
+    <p class="prose">書き出した文に名前や学籍番号を書く必要はありません。締切までは、直してから書き出し直して、提出し直せます。</p>
+    <div class="row"><button type="button" class="primary" id="doexport">回答を書き出す</button></div>
+    <div id="exportbox" class="export-box stack"></div>
+  </section>
+
+  <section class="stack" id="ans">
+    <h2>答え</h2>
+    
+    <p class="prose">クイズの正解と解説、必須課題1の答え、発展課題Aの表の例は、締切（12/10（木）11:00）のあとにここに載せます。</p>
+    
+    
+  </section>
+
+  <footer>
+    <span>コンピュータアーキテクチャ（2026年度 秋・木曜3・4限）第8回（11/28 補講）のページ</span>
+    <span>問題は練習用に作ったもので、テストの問題そのものではありません。</span>
+  </footer>
+</main>
+
+<script>window.CA_PAGE = "w08"; window.CA_SITE = {"home":"./","sessions":[{"no":3,"title":"デジタルデータの表現と演算","pages":[{"label":"復習","href":"w03-review.html?v=202611222354"}]},{"no":4,"title":"ブール代数と論理演算","pages":[{"label":"予習","href":"w04-preview.html?v=202611222354"},{"label":"復習","href":"w04-review.html?v=202611222354"}]},{"no":5,"title":"論理回路と組み合わせ回路","pages":[{"label":"予習","href":"w05-preview.html?v=202611222354"},{"label":"復習","href":"w05-review.html?v=202611222354"}]},{"no":6,"title":"順序回路","pages":[{"label":"予習","href":"w06-preview.html?v=202611222354"},{"label":"復習","href":"w06-review.html?v=202611222354"}]},{"no":7,"title":"中間テスト","pages":[{"label":"対策","href":"midterm-prep.html?v=202611222354"}]},{"no":8,"title":"チューリングマシン","pages":[{"label":"動画と課題","current":true}]}]};</script>
+<script>
+/* 共通の部品：保存、ステップ再生、ドリル・確認問題、進み具合のランプ、抽象レベルの地図 */
+(function (root) {
+  "use strict";
+  var CA = root.CA = root.CA || {};
+
+  /* ---------- 小さな道具 ---------- */
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      if (attrs[k] == null || attrs[k] === false) continue;
+      if (k === "html") el.innerHTML = attrs[k];
+      else if (k === "text") el.textContent = attrs[k];
+      else if (k === "class") el.className = attrs[k];
+      else if (k.slice(0, 2) === "on") el.addEventListener(k.slice(2), attrs[k]);
+      else el.setAttribute(k, attrs[k] === true ? "" : attrs[k]);
+    }
+    for (var i = 2; i < arguments.length; i++) {
+      var c = arguments[i];
+      if (c == null) continue;
+      if (Array.isArray(c)) c.forEach(function (x) { if (x != null) el.appendChild(typeof x === "string" ? document.createTextNode(x) : x); });
+      else el.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+    }
+    return el;
+  }
+  CA.h = h;
+  var uid = 0;
+  CA.uid = function (p) { uid += 1; return (p || "u") + uid; };
+
+  /* ---------- 保存（ブラウザの中だけ。使えなくても動く） ---------- */
+  var PAGE = root.CA_PAGE || "page";
+  var PREFIX = "ca2026." + PAGE + ".";
+  CA.store = {
+    get: function (k, d) {
+      try { var v = localStorage.getItem(PREFIX + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; }
+    },
+    set: function (k, v) {
+      try { localStorage.setItem(PREFIX + k, JSON.stringify(v)); } catch (e) { /* 保存できない環境 */ }
+    }
+  };
+
+  /* ---------- サイト全体で共有する設定（解説のレベルなど） ---------- */
+  CA.gstore = {
+    get: function (k, d) { try { var v = localStorage.getItem("ca2026.global." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem("ca2026.global." + k, JSON.stringify(v)); } catch (e) { /* 保存できない環境 */ } }
+  };
+  var LV = [["easy", "簡単", "要点だけ"], ["normal", "通常", "ふつうの説明"], ["detail", "詳細", "手順をくわしく"], ["adv", "発展", "一歩先の話"]];
+  var levelListeners = [];
+  CA.level = {
+    LIST: LV,
+    get: function () { var v = CA.gstore.get("level", "normal"); return LV.some(function (x) { return x[0] === v; }) ? v : "normal"; },
+    set: function (v) { CA.gstore.set("level", v); levelListeners.slice().forEach(function (fn) { fn(v); }); },
+    /* 登録をやめる関数を返す */
+    count: function () { return levelListeners.length; },
+    on: function (fn) { levelListeners.push(fn); return function () { var i = levelListeners.indexOf(fn); if (i >= 0) levelListeners.splice(i, 1); }; }
+  };
+
+  /* ---------- 解説（4段）。問題の key から作るハンドラは explain-*.js が CA.EXP.handlers に足す ---------- */
+  CA.EXP = CA.EXP || { handlers: [] };
+  CA.EXP.fromKey = function (key) {
+    if (!key) return null;
+    for (var i = 0; i < CA.EXP.handlers.length; i++) {
+      var m = key.match(CA.EXP.handlers[i][0]);
+      if (m) { try { return CA.EXP.handlers[i][1](key, m); } catch (e) { return null; } }
+    }
+    return null;
+  };
+  /* 問題の解説を探す順：問題に付いた解説 → ページの手書き解説（CA.EXP_Q[ページ][問題id]）→ 固定問題の key（CA.EXP_KEYS）→ 問題の key */
+  CA.EXP.forQuestion = function (p, qid) {
+    if (p.explain) return p.explain;
+    var q = (CA.EXP_Q || {})[root.CA_PAGE];
+    if (q && q[qid]) return q[qid];
+    var k = (CA.EXP_KEYS || {})[qid];
+    return CA.EXP.fromKey(k || p.exKey || p.key);
+  };
+  /* 4段の切りかえ。levels: { easy, normal, detail, adv }。左メニューのレベルが既定で、その場で切りかえもできる */
+  CA.levelTabs = function (mount, levels, opts) {
+    opts = opts || {};
+    var cur = CA.level.get();
+    var tabs = h("div", { class: "lv-tabs", role: "tablist", "aria-label": "解説のレベル" });
+    var panel = h("div", { class: "lv-panel", role: "tabpanel" });
+    function show(v) {
+      cur = v;
+      tabs.querySelectorAll("button").forEach(function (b) { var on = b.getAttribute("data-lv") === v; b.setAttribute("aria-selected", on ? "true" : "false"); b.tabIndex = on ? 0 : -1; });
+      panel.innerHTML = levels[v] || levels.normal || "";
+    }
+    LV.forEach(function (x) {
+      tabs.appendChild(h("button", { type: "button", role: "tab", "data-lv": x[0], title: x[2], text: x[1], onclick: function () { show(x[0]); } }));
+    });
+    tabs.addEventListener("keydown", function (e) {
+      var i = LV.map(function (x) { return x[0]; }).indexOf(cur);
+      if (e.key === "ArrowRight") { e.preventDefault(); show(LV[(i + 1) % 4][0]); tabs.querySelector("[aria-selected=true]").focus(); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); show(LV[(i + 3) % 4][0]); tabs.querySelector("[aria-selected=true]").focus(); }
+    });
+    var box = h("div", { class: "lv-box" + (opts.cls ? " " + opts.cls : "") }, opts.title ? h("div", { class: "lv-title", text: opts.title }) : null, tabs, panel);
+    /* 問題を出し直すと箱を作り直すので、古い箱の登録は dispose で外す */
+    box.dispose = CA.level.on(function (v) { show(v); });
+    mount.appendChild(box);
+    show(cur);
+    return box;
+  };
+  /* 項目ごとの解説：ページの <div data-explain="i1"> に置く */
+  CA.explainItems = function (map) {
+    if (!map) return;
+    document.querySelectorAll("[data-explain]").forEach(function (el) {
+      var lv = map[el.getAttribute("data-explain")];
+      if (lv) CA.levelTabs(el, lv, { title: "解説", cls: "item-explain" });
+    });
+  };
+
+  /* ---------- 左のメニュー：サイトのページ一覧・このページの中・解説のレベル ---------- */
+  CA.sidebar = function () {
+    var site = root.CA_SITE || { sessions: [] };
+    var nav = h("nav", { class: "side", id: "side", "aria-label": "メニュー" });
+    var close = h("button", { type: "button", class: "side-close", "aria-label": "メニューを閉じる", text: "閉じる" });
+    nav.appendChild(h("div", { class: "side-head" }, site.home ? h("a", { href: site.home, class: "side-home", text: "コンピュータアーキテクチャ 2026" }) : h("span", { class: "side-home", text: "コンピュータアーキテクチャ 2026" }), close));
+    /* このページの中 */
+    var secs = [];
+    document.querySelectorAll("main section[id]").forEach(function (sec) {
+      var hd = sec.querySelector("h2, h1");
+      if (!hd) return;
+      var no = sec.querySelector(".item-head .no");
+      /* 見出しに上線（span.ov）などがあるときは、data-label をメニューの名前にする */
+      var t = (hd.getAttribute("data-label") || hd.textContent).replace(/\s+/g, " ").trim();
+      if (sec.id === "movie") t = "動画：" + t.replace(/^動画：/, "").replace(/^今日の問い：/, "");
+      secs.push({ id: sec.id, label: (no ? no.textContent.replace("最低限 ", "").replace("やること ", "") + "　" : "") + t });
+    });
+    if (secs.length) {
+      var ul = h("ul", { class: "side-list" });
+      ul.appendChild(h("li", null, h("a", { href: "#", "data-sec": "", text: "ページの先頭" })));
+      secs.forEach(function (x) { ul.appendChild(h("li", null, h("a", { href: "#" + x.id, "data-sec": x.id, text: x.label }))); });
+      nav.appendChild(h("div", { class: "side-group" }, h("div", { class: "side-label", text: "このページ" }), ul));
+    }
+    /* 解説のレベル */
+    var lvBox = h("div", { class: "side-levels", role: "radiogroup", "aria-label": "解説のレベル" });
+    LV.forEach(function (x) {
+      var id = CA.uid("lv");
+      var r = h("input", { type: "radio", name: "side-level", id: id, value: x[0] });
+      r.checked = CA.level.get() === x[0];
+      r.onchange = function () { if (r.checked) CA.level.set(x[0]); };
+      lvBox.appendChild(h("label", { for: id }, r, h("b", { text: x[1] }), h("span", { text: x[2] })));
+    });
+    CA.level.on(function (v) { lvBox.querySelectorAll("input").forEach(function (r) { r.checked = r.value === v; }); });
+    nav.appendChild(h("div", { class: "side-group" }, h("div", { class: "side-label", text: "解説のレベル" }), lvBox));
+    /* ページ一覧 */
+    if (site.sessions && site.sessions.length) {
+      var sl = h("ul", { class: "side-list side-pages" });
+      site.sessions.forEach(function (ss) {
+        var links = ss.pages.map(function (pg) {
+          if (pg.current) return h("span", { class: "cur", "aria-current": "page", text: pg.label });
+          return pg.href ? h("a", { href: pg.href, text: pg.label }) : h("span", { class: "off", text: pg.label });
+        });
+        sl.appendChild(h("li", null, h("span", { class: "s-no", text: "第" + ss.no + "回" }), h("span", { class: "s-ttl", text: ss.title }), h("span", { class: "s-links" }, links)));
+      });
+      nav.appendChild(h("div", { class: "side-group" }, h("div", { class: "side-label", text: "予習・復習ページ" }), sl));
+    }
+    var backdrop = h("div", { class: "side-backdrop", hidden: true });
+    function open(v) {
+      document.body.classList.toggle("side-open", v);
+      backdrop.hidden = !v;
+      if (v) { var f = nav.querySelector("a, button"); if (f) f.focus(); } else if (menuBtn) menuBtn.focus();
+    }
+    close.onclick = function () { open(false); };
+    backdrop.onclick = function () { open(false); };
+    nav.addEventListener("click", function (e) { if (e.target.tagName === "A" && window.matchMedia("(max-width: 1179px)").matches) open(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && document.body.classList.contains("side-open")) open(false); });
+    var menuBtn = h("button", { type: "button", class: "menu-btn", "aria-controls": "side", "aria-label": "メニューを開く", text: "☰ メニュー" });
+    menuBtn.onclick = function () { open(!document.body.classList.contains("side-open")); };
+    var mi = document.querySelector(".mast-inner");
+    if (mi) mi.insertBefore(menuBtn, mi.firstChild);
+    document.body.insertBefore(nav, document.body.firstChild);
+    document.body.appendChild(backdrop);
+    document.body.classList.add("has-side");
+    /* いま読んでいる場所を強調 */
+    if ("IntersectionObserver" in root && secs.length) {
+      var links2 = nav.querySelectorAll("[data-sec]");
+      var io = new IntersectionObserver(function (ents) {
+        ents.forEach(function (en) {
+          if (en.isIntersecting) links2.forEach(function (a) { a.classList.toggle("here", a.getAttribute("data-sec") === en.target.id); });
+        });
+      }, { rootMargin: "-30% 0px -60% 0px" });
+      secs.forEach(function (x) { var el = document.getElementById(x.id); if (el) io.observe(el); });
+    }
+  };
+
+  /* ---------- 進み具合（最低限の項目ごとのランプ） ---------- */
+  var progress = { items: [], done: {}, listeners: [] };
+  CA.progress = {
+    /* opts.label：ランプの見出し（既定は「最低限」） */
+    init: function (items, opts) {
+      progress.items = items;
+      progress.label = (opts && opts.label) || "最低限";
+      progress.done = CA.store.get("done", {}) || {};
+      this.render();
+    },
+    mark: function (id) {
+      if (progress.done[id]) return;
+      progress.done[id] = true;
+      CA.store.set("done", progress.done);
+      this.render();
+    },
+    isDone: function (id) { return !!progress.done[id]; },
+    count: function () { return progress.items.filter(function (it) { return progress.done[it.id]; }).length; },
+    onChange: function (fn) { progress.listeners.push(fn); },
+    render: function () {
+      var n = this.count(), total = progress.items.length;
+      document.querySelectorAll("[data-lamps]").forEach(function (box) {
+        box.innerHTML = "";
+        box.appendChild(h("span", { class: "label", text: progress.label + " " + n + " / " + total }));
+        progress.items.forEach(function (it, i) {
+          box.appendChild(h("a", {
+            class: "lamp" + (progress.done[it.id] ? " on" : ""), href: "#" + it.id,
+            title: (i + 1) + ". " + it.title + (progress.done[it.id] ? "（確認問題に正解）" : "（まだ）"),
+            "aria-label": (i + 1) + "番 " + it.title + (progress.done[it.id] ? " 正解済み" : " まだ")
+          }, String(i + 1)));
+        });
+      });
+      document.querySelectorAll("[data-item-state]").forEach(function (el) {
+        var id = el.getAttribute("data-item-state");
+        el.textContent = progress.done[id] ? "確認問題に正解しました" : "";
+      });
+      progress.listeners.forEach(function (fn) { fn(n, total); });
+    }
+  };
+
+  /* ---------- ステップ再生 ----------
+     frames: [{ caption, render(stageEl) }] */
+  CA.stepper = function (mount, opts) {
+    var frames = opts.frames, i = 0, timer = null;
+    var stage = h("div", { class: "stage", "aria-hidden": "false" });
+    var cap = h("p", { class: "caption", "aria-live": "polite" });
+    var rid = CA.uid("rng");
+    var range = h("input", { type: "range", min: 0, max: frames.length - 1, value: 0, id: rid, "aria-label": "場面" });
+    var count = h("span", { class: "count" });
+    var bFirst = h("button", { type: "button", text: "最初から" });
+    var bPrev = h("button", { type: "button", text: "◀ 前へ" });
+    var bNext = h("button", { type: "button", class: "primary", text: "次へ ▶" });
+    var bPlay = h("button", { type: "button", text: "自動で再生" });
+    function stop() { if (timer) { clearInterval(timer); timer = null; bPlay.textContent = "自動で再生"; } }
+    function show(k) {
+      i = Math.max(0, Math.min(frames.length - 1, k));
+      stage.innerHTML = "";
+      frames[i].render(stage);
+      cap.innerHTML = frames[i].caption;
+      range.value = i;
+      count.textContent = (i + 1) + " / " + frames.length;
+      bPrev.disabled = i === 0; bFirst.disabled = i === 0;
+      bNext.disabled = i === frames.length - 1;
+      if (i === frames.length - 1 && opts.onEnd) opts.onEnd();
+    }
+    bFirst.onclick = function () { stop(); show(0); };
+    bPrev.onclick = function () { stop(); show(i - 1); };
+    bNext.onclick = function () { stop(); show(i + 1); };
+    range.oninput = function () { stop(); show(+range.value); };
+    bPlay.onclick = function () {
+      if (timer) { stop(); return; }
+      if (i === frames.length - 1) show(0);
+      bPlay.textContent = "止める";
+      timer = setInterval(function () {
+        if (i >= frames.length - 1) { stop(); return; }
+        show(i + 1);
+      }, opts.interval || 2600);
+    };
+    var box = h("div", { class: "stepper" }, stage, cap,
+      h("div", { class: "ctrl" }, bFirst, bPrev, bNext, range, count, bPlay));
+    box.addEventListener("keydown", function (e) {
+      if (e.target === range) return;
+      if (e.key === "ArrowRight") { stop(); show(i + 1); }
+      if (e.key === "ArrowLeft") { stop(); show(i - 1); }
+    });
+    mount.appendChild(box);
+    show(0);
+    return { show: show };
+  };
+
+  /* ---------- ドリル・確認問題 ----------
+     opts.mode: "drill"（何問でも） / "check"（1問、正解で項目のランプが点く） / "seq"（決まった問題を順に）
+     opts.make(): 問題を返す。問題は { prompt, inputLabel, check(x)->{ok,msg}, solution, type, choices } */
+  CA.quiz = function (mount, opts) {
+    var mode = opts.mode || "drill";
+    var stats = CA.store.get("q." + opts.id, { ok: 0, tried: 0 }) || { ok: 0, tried: 0 };
+    var p = null, answered = false, wrongs = 0, seqIndex = 0, seqOk = 0;
+    var kind = h("div", { class: "kind" });
+    var prompt = h("div", { class: "prompt" });
+    var area = h("div");
+    var fb = h("div", { class: "feedback", role: "status", "aria-live": "polite" });
+    var sol = h("details", { class: "solution" }, h("summary", { text: "解き方を見る" }), h("div"));
+    var exq = h("details", { class: "solution explain-q" }, h("summary", { text: "解説を見る（簡単・通常・詳細・発展）" }), h("div")), exBox = null;
+    var bNext = h("button", { type: "button", text: mode === "seq" ? "次の問題へ" : "別の問題を出す" });
+    var foot = h("div", { class: "row" });
+    if (mode !== "check") foot.appendChild(bNext);
+    var box = h("div", { class: "quiz" + (mode === "check" ? " check-quiz" : "") }, kind, prompt, area, fb, sol, exq, foot);
+    if (mode === "check" && opts.itemId && CA.progress.isDone(opts.itemId)) box.classList.add("done");
+
+    function label() {
+      kind.innerHTML = "";
+      var title = mode === "check" ? "確認問題" : mode === "seq" ? (opts.title || "仕上げ") + "　" + (seqIndex + 1) + " / " + opts.seq.length : (opts.title || "練習");
+      kind.appendChild(h("b", { text: title }));
+      if (mode === "drill") kind.appendChild(h("span", { class: "score", text: "正解 " + stats.ok + " / " + stats.tried }));
+      if (mode === "check") kind.appendChild(h("span", { class: "score", "data-item-state": opts.itemId }));
+      if (mode === "seq") kind.appendChild(h("span", { class: "score", text: "正解 " + seqOk }));
+    }
+    function judge(res, picked) {
+      if (answered && mode !== "check") return;
+      if (mode !== "check" || !answered) { stats.tried += 1; }
+      if (res.ok) {
+        answered = true;
+        stats.ok += 1;
+        if (mode === "seq") seqOk += 1;
+        fb.className = "feedback ok";
+        fb.innerHTML = "<span class=\"head\">正解</span>" + (opts.okNote ? "　" + opts.okNote : "");
+        if (mode === "check") { box.classList.add("done"); if (opts.itemId) CA.progress.mark(opts.itemId); }
+        sol.open = false;
+        if (opts.onCorrect) opts.onCorrect();
+      } else {
+        wrongs += 1;
+        if (mode === "seq") answered = true;
+        fb.className = "feedback ng";
+        fb.innerHTML = "<span class=\"head\">" + (mode === "seq" ? "ちがいます" : "もう一度") + "</span>　" + (res.msg || (wrongs >= 2 || mode === "seq" ? "「解き方を見る」で手順を確かめましょう。" : "手順を一つずつ確かめてみましょう。"));
+        if (wrongs >= 2 || mode === "seq") sol.open = true;
+      }
+      CA.store.set("q." + opts.id, stats);
+      label();
+      if (mode === "seq") { bNext.disabled = false; if (seqIndex === opts.seq.length - 1) bNext.textContent = "結果を見る"; }
+    }
+    function load() {
+      answered = false; wrongs = 0;
+      p = mode === "seq" ? opts.seq[seqIndex]() : opts.make();
+      prompt.innerHTML = p.prompt;
+      sol.lastChild.innerHTML = p.solution;
+      sol.open = false;
+      var ex = CA.EXP.forQuestion(p, mode === "seq" ? opts.id + (seqIndex + 1) : opts.id);
+      if (exBox) exBox.dispose();
+      exq.lastChild.innerHTML = "";
+      exq.open = false;
+      exq.hidden = !ex;
+      exBox = ex ? CA.levelTabs(exq.lastChild, ex) : null;
+      fb.className = "feedback"; fb.innerHTML = "";
+      area.innerHTML = "";
+      if (p.type === "choice") {
+        var list = h("div", { class: "choices" });
+        /* 選択肢は毎回並べかえて出す（正解がいつも同じ位置にならないように）。数だけの選択肢と keepOrder は並びのまま */
+        var order = p.choices.map(function (c, k) { return k; });
+        var numeric = p.choices.every(function (c) { return /^\s*-?\d+\s*$/.test(String(c)); });
+        if (!p.keepOrder && !numeric) for (var oi = order.length - 1; oi > 0; oi--) { var oj = Math.floor(Math.random() * (oi + 1)); var ot = order[oi]; order[oi] = order[oj]; order[oj] = ot; }
+        order.forEach(function (k) {
+          var c = p.choices[k];
+          var b = h("button", { type: "button", html: c, "data-k": k });
+          b.onclick = function () {
+            if (answered) return;
+            var res = p.check(k);
+            list.querySelectorAll("button").forEach(function (x) { x.classList.remove("picked-ng"); });
+            b.classList.add(res.ok ? "picked-ok" : "picked-ng");
+            judge(res, k);
+          };
+          list.appendChild(b);
+        });
+        area.appendChild(list);
+      } else {
+        var iid = CA.uid("ans");
+        var inp = h("input", { type: "text", id: iid, autocomplete: "off", autocapitalize: "off", spellcheck: "false", inputmode: p.inputMode || "text" });
+        var go = h("button", { type: "button", class: "primary", text: "答え合わせ" });
+        go.onclick = function () {
+          if (!inp.value.trim()) { fb.className = "feedback ng"; fb.innerHTML = "答えを入力してください。"; return; }
+          judge(p.check(inp.value));
+        };
+        inp.addEventListener("keydown", function (e) { if (e.key === "Enter") go.onclick(); });
+        area.appendChild(h("div", { class: "answer-row" }, h("label", { for: iid, text: p.inputLabel || "答え" }), inp, go));
+      }
+      if (mode === "seq") bNext.disabled = true;
+      label();
+      CA.progress.render();
+    }
+    bNext.onclick = function () {
+      if (mode === "seq") {
+        if (seqIndex === opts.seq.length - 1) { if (opts.onFinish) opts.onFinish(seqOk, opts.seq.length, box); return; }
+        seqIndex += 1;
+      }
+      load();
+    };
+    box.restart = function () { seqIndex = 0; seqOk = 0; bNext.textContent = "次の問題へ"; load(); };
+    mount.appendChild(box);
+    load();
+    return box;
+  };
+
+  /* ---------- 抽象レベルの地図（第3回スライド2の9層） ---------- */
+  var LEVELS = [
+    ["アプリケーションソフトウェア", "プログラム"],
+    ["OS", "デバイスドライバ"],
+    ["アーキテクチャ", "命令とレジスタ"],
+    ["マイクロアーキテクチャ", "データパス、コントローラ"],
+    ["論理", "加算器、メモリ"],
+    ["ディジタル回路", "ANDゲート、NOTゲート"],
+    ["アナログ回路", "増幅器、フィルタ"],
+    ["デバイス（素子）", "トランジスタ、ダイオード"],
+    ["物理", "電子"]
+  ];
+  CA.levels = function (mount, here, note) {
+    var ol = h("ol");
+    LEVELS.forEach(function (lv, k) {
+      var mark = here[k];
+      ol.appendChild(h("li", { class: mark ? "here" : "" }, h("span", { text: lv[0] }), h("span", { class: "ex", text: mark ? mark : lv[1] })));
+    });
+    var d = h("details", { class: "levels" }, h("summary", { text: note }), ol);
+    mount.appendChild(d);
+  };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+/* 部品⑤ チューリングマシン（第8回）。画面に依存しない計算と問題生成。node のテストからも読む。
+   記号は "0" "1" "_"（空白、画面では □）。向きは "L"（左）"R"（右）。状態は "A" "B" "C" "D"、停止は "H"（画面では「停止」）。
+   1 ステップ＝規則を 1 回使うこと（停止に入るステップも 1 と数える）。
+   規則は [状態, 読んだ記号, 書く記号, 向き, 次の状態] の配列。 */
+(function (root) {
+  "use strict";
+  var BLANK = "_", HALT = "H", STATES = ["A", "B", "C", "D"], SYMS = ["0", "1", "_"];
+  var LIMIT = 200;
+
+  function key(st, sym) { return st + "," + sym; }
+  function table(rules) {
+    var t = {};
+    rules.forEach(function (r) { t[key(r[0], r[1])] = { write: r[2], move: r[3], next: r[4] }; });
+    return t;
+  }
+  /* 入力の文字列から始めの様子を作る。start: "left"／"right"（入力の左端／右端の文字からヘッドを始める） */
+  function init(input, start, state) {
+    var tape = {};
+    for (var i = 0; i < input.length; i++) tape[i] = input[i];
+    return { tape: tape, head: start === "right" ? input.length - 1 : 0, state: state || "A", steps: 0, width: input.length };
+  }
+  function read(c) { var v = c.tape[c.head]; return v === undefined ? BLANK : v; }
+  function clone(c) {
+    var t = {};
+    for (var k in c.tape) t[k] = c.tape[k];
+    return { tape: t, head: c.head, state: c.state, steps: c.steps, width: c.width };
+  }
+  /* 1 ステップ進めた新しい様子を返す。規則が無いときは null（rule: 使った規則） */
+  function step(rules, c) {
+    if (c.state === HALT) return null;
+    var t = Array.isArray(rules) ? table(rules) : rules;
+    var sym = read(c), r = t[key(c.state, sym)];
+    if (!r) return null;
+    var n = clone(c);
+    n.tape[n.head] = r.write;
+    n.head += r.move === "L" ? -1 : 1;
+    n.state = r.next;
+    n.steps++;
+    n.used = { state: c.state, read: sym, write: r.write, move: r.move, next: r.next };
+    return n;
+  }
+  /* 止まるか、規則が無いか、上限まで動かす */
+  function run(rules, input, opt) {
+    opt = opt || {};
+    var t = table(rules), c = init(input, opt.start, opt.state), max = opt.maxSteps || LIMIT, hist = [c];
+    while (c.state !== HALT) {
+      if (c.steps >= max) return { halted: false, reason: "limit", conf: c, hist: hist, steps: c.steps, tape: c.tape };
+      var n = step(t, c);
+      if (!n) return { halted: false, reason: "norule", read: read(c), conf: c, hist: hist, steps: c.steps, tape: c.tape };
+      c = n;
+      hist.push(c);
+    }
+    return { halted: true, conf: c, hist: hist, steps: c.steps, tape: c.tape };
+  }
+  /* テープの中身を、空白でない左端から右端まで（内側の空白は "_"） */
+  function show(tape) {
+    var ks = Object.keys(tape).map(Number).filter(function (k) { return tape[k] !== BLANK; });
+    if (!ks.length) return "";
+    var lo = Math.min.apply(null, ks), hi = Math.max.apply(null, ks), s = "";
+    for (var k = lo; k <= hi; k++) s += tape[k] === undefined ? BLANK : tape[k];
+    return s;
+  }
+  /* 位置 lo..hi の記号を並べる（空白は "_"） */
+  function cells(tape, lo, hi) {
+    var a = [];
+    for (var k = lo; k <= hi; k++) a.push(tape[k] === undefined ? BLANK : tape[k]);
+    return a;
+  }
+  /* 入力と同じ位置（0..width-1）だけを読む。幅の外に書いた桁は捨てる（4 ビットの計算と同じ見方） */
+  function windowOf(tape, width) { return cells(tape, 0, width - 1).join(""); }
+
+  /* 書き出しの形：「A,0,1,R,A; A,1,0,R,A; …」。停止は H、空白は _ */
+  function exportRules(rules) {
+    return rules.map(function (r) { return r.join(","); }).join("; ");
+  }
+  function parseRules(s) {
+    var out = [], bad = [];
+    String(s || "").split(/[;\n]/).forEach(function (part) {
+      var p = part.trim();
+      if (!p) return;
+      var f = p.split(/\s*,\s*/);
+      var ok = f.length === 5 && STATES.indexOf(f[0]) >= 0 && SYMS.indexOf(f[1]) >= 0 && SYMS.indexOf(f[2]) >= 0 &&
+        (f[3] === "L" || f[3] === "R") && (STATES.indexOf(f[4]) >= 0 || f[4] === HALT);
+      if (ok) out.push(f); else bad.push(p);
+    });
+    return { rules: out, bad: bad };
+  }
+
+  /* 発展課題A の判定：4 ビットの全 16 入力で、2 の補数（(16−n) mod 16）になるか。ヘッドは左端、状態 A から。
+     期待値は計算で出す（答えの規則表はページに入れない）。 */
+  function judgeTwos(rules) {
+    var fails = [], pass = 0;
+    for (var n = 0; n < 16; n++) {
+      var x = toBin(n, 4), want = toBin((16 - n) % 16, 4);
+      var r = run(rules, x, { start: "left", state: "A" });
+      var got = windowOf(r.tape, 4);
+      if (r.halted && got === want) pass++;
+      else fails.push({ input: x, want: want, got: got, reason: r.halted ? "wrong" : r.reason });
+    }
+    return { pass: pass, total: 16, fails: fails };
+  }
+  function toBin(n, w) { var s = n.toString(2); while (s.length < w) s = "0" + s; return s; }
+
+  /* ---------- 用意する機械 ---------- */
+  var MACHINES = {
+    invert: { name: "ビット反転", start: "left", note: "0 と 1 を入れかえる。ヘッドは左端から。", rules: [
+      ["A", "0", "1", "R", "A"],
+      ["A", "1", "0", "R", "A"],
+      ["A", "_", "_", "L", "H"]] },
+    plus1: { name: "＋1", start: "right", note: "2 進数に 1 を足す。ヘッドは右端から。", rules: [
+      ["A", "1", "0", "L", "A"],
+      ["A", "0", "1", "L", "H"],
+      ["A", "_", "1", "L", "H"]] },
+    append1: { name: "右端に 1 を足す", start: "left", note: "右端の空白まで進み、そこに 1 を書く。", rules: [
+      ["A", "0", "0", "R", "A"],
+      ["A", "1", "1", "R", "A"],
+      ["A", "_", "1", "L", "H"]] },
+    parity: { name: "1 の個数の偶奇", start: "left", note: "数字を 0 に消しながら進み、1 の個数が偶数なら 0、奇数なら 1 を右端に書く。A は「ここまで偶数」、B は「ここまで奇数」。", rules: [
+      ["A", "0", "0", "R", "A"],
+      ["A", "1", "0", "R", "B"],
+      ["B", "0", "0", "R", "B"],
+      ["B", "1", "0", "R", "A"],
+      ["A", "_", "0", "L", "H"],
+      ["B", "_", "1", "L", "H"]] }
+  };
+  /* 必須課題で使う入力。練習の問題では出さない */
+  var RESERVED = ["0111", "1111"];
+
+  /* 止まる？止まらない？（固定の 3 問） */
+  var HALT_QS = [
+    { id: "h1", input: "101", start: "left", halts: false, rules: [
+      ["A", "0", "0", "R", "A"], ["A", "1", "1", "R", "A"], ["A", "_", "_", "R", "A"]] },
+    { id: "h2", input: "0110", start: "left", halts: true, rules: [
+      ["A", "0", "0", "R", "A"], ["A", "1", "1", "R", "B"], ["B", "1", "1", "R", "B"], ["B", "0", "1", "L", "H"], ["B", "_", "_", "L", "H"], ["A", "_", "_", "L", "H"]] },
+    { id: "h3", input: "00", start: "left", halts: false, rules: [
+      ["A", "0", "0", "R", "B"], ["B", "0", "0", "L", "A"], ["A", "1", "1", "R", "H"], ["B", "1", "1", "R", "H"]] }
+  ];
+
+  /* ---------- 問題生成 ---------- */
+  function mulberry32(seed) {
+    return function () {
+      seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+      var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function randInt(rng, lo, hi) { return lo + Math.floor(rng() * (hi - lo + 1)); }
+  function pick(rng, arr) { return arr[Math.floor(rng() * arr.length)]; }
+  function randBits(rng, w) { var s = ""; for (var i = 0; i < w; i++) s += rng() < 0.5 ? "0" : "1"; return s; }
+  function shuffle(rng, a) {
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(rng() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function sig(c) { return show(c.tape) + "|" + JSON.stringify(cells(c.tape, -2, c.width + 1)) + "|" + c.head + "|" + c.state; }
+
+  /* 問題1：1 ステップを読む。途中の様子を見せ、次の 1 ステップ後を 4 択で選ぶ */
+  function genStep1(rng) {
+    for (var tries = 0; tries < 100; tries++) {
+      var mk = pick(rng, ["invert", "plus1", "append1", "parity"]), m = MACHINES[mk];
+      var input = randBits(rng, randInt(rng, 3, 4));
+      if (RESERVED.indexOf(input) >= 0) continue;
+      var r = run(m.rules, input, { start: m.start });
+      if (!r.halted || r.hist.length < 2) continue;
+      var k = randInt(rng, 0, r.hist.length - 2), c = r.hist[k], next = r.hist[k + 1], u = next.used;
+      /* まちがいの選択肢：書く記号・向き・次の状態のどれかを変えたもの */
+      var wrong = [];
+      function variant(write, move, st) {
+        var v = clone(c);
+        v.tape[v.head] = write;
+        v.head += move === "L" ? -1 : 1;
+        v.state = st;
+        v.steps++;
+        return v;
+      }
+      var otherSym = SYMS.filter(function (s) { return s !== u.write; });
+      var otherMove = u.move === "L" ? "R" : "L";
+      var stPool = ["A", "B", HALT].filter(function (s) { return s !== u.next; });
+      wrong.push(variant(u.write, otherMove, u.next));
+      wrong.push(variant(pick(rng, otherSym), u.move, u.next));
+      wrong.push(variant(u.write, u.move, pick(rng, stPool)));
+      wrong.push(variant(read(c), u.move, u.next)); /* 書き換えを忘れる */
+      wrong.push(variant(pick(rng, otherSym), otherMove, u.next));
+      var seen = {}, opts = [{ conf: next, ok: true }];
+      seen[sig(next)] = 1;
+      shuffle(rng, wrong).forEach(function (w) {
+        if (opts.length >= 4 || seen[sig(w)]) return;
+        seen[sig(w)] = 1;
+        opts.push({ conf: w, ok: false });
+      });
+      if (opts.length < 4) continue;
+      shuffle(rng, opts);
+      return { machine: mk, input: input, conf: c, used: u, choices: opts, answer: opts.map(function (o) { return o.ok; }).indexOf(true) };
+    }
+    return null;
+  }
+  /* 問題2：数ステップ追う。k ステップ後のテープを答える */
+  function genTrace(rng) {
+    for (var tries = 0; tries < 100; tries++) {
+      var mk = pick(rng, ["invert", "plus1", "append1"]), m = MACHINES[mk];
+      var input = randBits(rng, 4);
+      if (RESERVED.indexOf(input) >= 0) continue;
+      var r = run(m.rules, input, { start: m.start });
+      if (!r.halted || r.steps < 3) continue;
+      var k = randInt(rng, 2, r.steps - 1), c = r.hist[k];
+      return { machine: mk, input: input, k: k, answer: show(c.tape), conf: c };
+    }
+    return null;
+  }
+
+  var api = {
+    BLANK: BLANK, HALT: HALT, STATES: STATES, SYMS: SYMS, LIMIT: LIMIT,
+    init: init, step: step, run: run, read: read, clone: clone, show: show, cells: cells, window: windowOf, table: table,
+    exportRules: exportRules, parseRules: parseRules, judgeTwos: judgeTwos, toBin: toBin,
+    MACHINES: MACHINES, RESERVED: RESERVED, HALT_QS: HALT_QS,
+    mulberry32: mulberry32, gen: { step1: genStep1, trace: genTrace }
+  };
+  root.CA = root.CA || {};
+  root.CA.tm = api;
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+/* 部品⑤ チューリングマシンの画面（第8回）：テープの表示、規則表、模擬器、規則表を作る欄、判定と書き出し */
+(function (root) {
+  "use strict";
+  var CA = root.CA, h = CA.h, T = CA.tm;
+  var REDUCE = !!(root.matchMedia && root.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+  function symLabel(s) { return s === T.BLANK ? "□" : s; }
+  function stLabel(s) { return s === T.HALT ? "停止" : s; }
+  function mvLabel(m) { return m === "L" ? "左" : "右"; }
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  /* テープを HTML の文字列で。lo..hi の位置を並べ、ヘッドの下に ▲ を付ける */
+  function range(conf, pad) {
+    pad = pad == null ? 1 : pad;
+    var ks = Object.keys(conf.tape).map(Number).filter(function (k) { return conf.tape[k] !== T.BLANK; });
+    var lo = Math.min(0, conf.head, ks.length ? Math.min.apply(null, ks) : 0) - pad;
+    var hi = Math.max(conf.width - 1, conf.head, ks.length ? Math.max.apply(null, ks) : 0) + pad;
+    return [lo, hi];
+  }
+  function tapeHTML(conf, opt) {
+    opt = opt || {};
+    var r = opt.range || range(conf, opt.pad), s = "<span class=\"tm-tape" + (opt.small ? " small" : "") + "\" role=\"img\" aria-label=\"" + esc(tapeAria(conf, r)) + "\">";
+    for (var k = r[0]; k <= r[1]; k++) {
+      var v = conf.tape[k] === undefined ? T.BLANK : conf.tape[k];
+      s += "<span class=\"tm-cell" + (k === conf.head ? " at" : "") + (v === T.BLANK ? " blank" : "") + "\">" + symLabel(v) + "</span>";
+    }
+    s += "</span>";
+    if (opt.state !== false) s += " <span class=\"tm-st\">" + (conf.state === T.HALT ? "停止" : "状態 " + conf.state) + "</span>";
+    return s;
+  }
+  function tapeAria(conf, r) {
+    var a = [];
+    for (var k = r[0]; k <= r[1]; k++) a.push((conf.tape[k] === undefined || conf.tape[k] === T.BLANK ? "空白" : conf.tape[k]) + (k === conf.head ? "（ヘッド）" : ""));
+    return "テープ：" + a.join("、") + "。" + (conf.state === T.HALT ? "停止" : "状態 " + conf.state);
+  }
+  /* 規則表（読むだけ）。hl：光らせる行の [状態, 読んだ記号] */
+  function tableHTML(rules, hl) {
+    var s = "<div class=\"tbl-wrap\"><table class=\"tm-rules\"><thead><tr><th>今の状態</th><th>読んだ記号</th><th>書く記号</th><th>動く向き</th><th>次の状態</th></tr></thead><tbody>";
+    rules.forEach(function (r) {
+      var on = hl && hl[0] === r[0] && hl[1] === r[1];
+      s += "<tr" + (on ? " class=\"hl\"" : "") + "><td>" + r[0] + "</td><td>" + symLabel(r[1]) + "</td><td>" + symLabel(r[2]) + "</td><td>" + mvLabel(r[3]) + "</td><td>" + stLabel(r[4]) + "</td></tr>";
+    });
+    return s + "</tbody></table></div>";
+  }
+
+  /* ---------- 模擬器 ----------
+     opts: { id, machines: ["invert","plus1"], custom: function () { return { name, rules, start } } | null, input } */
+  CA.tmSim = function (mount, opts) {
+    opts = opts || {};
+    var keys = (opts.machines || ["invert", "plus1"]).slice();
+    if (opts.custom) keys.push("custom");
+    var cur = CA.store.get("sim." + (opts.id || "sim") + ".m", keys[0]);
+    if (keys.indexOf(cur) < 0) cur = keys[0];
+    var conf = null, hist = [], timer = 0, msg = "";
+
+    function machine() {
+      if (cur === "custom") return opts.custom();
+      return T.MACHINES[cur];
+    }
+    var seg = h("div", { class: "seg", role: "group", "aria-label": "機械を選ぶ" });
+    keys.forEach(function (k) {
+      seg.appendChild(h("button", { type: "button", "data-k": k, text: k === "custom" ? "自分で作った表" : T.MACHINES[k].name, onclick: function () { stop(); cur = k; CA.store.set("sim." + (opts.id || "sim") + ".m", k); reset(); } }));
+    });
+    var iid = CA.uid("tmin");
+    var inp = h("input", { type: "text", id: iid, value: opts.input || "1011", inputmode: "numeric", autocomplete: "off", spellcheck: "false", maxlength: "8", size: "9" });
+    var bSet = h("button", { type: "button", text: "テープに入れる" });
+    var note = h("p", { class: "hint tm-note" });
+    var view = h("div", { class: "tm-view", "aria-live": "polite" });
+    var count = h("div", { class: "tm-count" });
+    var tbl = h("div", { class: "tm-tbl" });
+    var bStep = h("button", { type: "button", class: "primary", text: "1 ステップ" });
+    var bRun = h("button", { type: "button", text: "最後まで" });
+    var bBack = h("button", { type: "button", text: "1 つ戻す" });
+    var bReset = h("button", { type: "button", text: "最初に戻す" });
+    var out = h("div", { class: "feedback", role: "status" });
+
+    function cleanInput() {
+      var v = inp.value.replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }).replace(/[^01]/g, "");
+      if (!v) v = "0";
+      inp.value = v;
+      return v;
+    }
+    function reset() {
+      var m = machine();
+      conf = T.init(cleanInput(), m.start, "A");
+      hist = [conf];
+      msg = "";
+      render();
+    }
+    function nextConf() {
+      var m = machine();
+      if (conf.state === T.HALT) return false;
+      if (conf.steps >= T.LIMIT) { msg = "limit"; return false; }
+      var n = T.step(m.rules, conf);
+      if (!n) { msg = "norule"; return false; }
+      conf = n; hist.push(n);
+      if (conf.state === T.HALT) msg = "halt";
+      return true;
+    }
+    function render() {
+      var m = machine();
+      seg.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-k") === cur ? "true" : "false"); });
+      note.textContent = m.note || "";
+      var r = range(conf, 2);
+      view.innerHTML = tapeHTML(conf, { range: r });
+      count.textContent = "ステップ数：" + conf.steps;
+      var nextKey = conf.state === T.HALT ? null : [conf.state, T.read(conf)];
+      tbl.innerHTML = m.rules.length ? tableHTML(m.rules, nextKey) : "<p class=\"hint\">規則がまだありません。下の表で作ってください。</p>";
+      if (conf.state !== T.HALT && nextKey) tbl.insertBefore(h("p", { class: "hint", text: "次に使う行：状態 " + conf.state + "・読んだ記号 " + symLabel(nextKey[1]) + (m.rules.some(function (x) { return x[0] === nextKey[0] && x[1] === nextKey[1]; }) ? "（光っている行）" : "（この組の規則がありません）") }), tbl.firstChild);
+      if (msg === "halt") { out.className = "feedback ok"; out.innerHTML = "<span class=\"head\">停止しました</span>　" + conf.steps + " ステップ。テープ：" + (T.show(conf.tape) || "（空）"); }
+      else if (msg === "norule") { out.className = "feedback ng"; out.innerHTML = "<span class=\"head\">止まりました（規則なし）</span>　状態 " + conf.state + " で " + symLabel(T.read(conf)) + " を読んだときの規則がありません。"; }
+      else if (msg === "limit") { out.className = "feedback ng"; out.innerHTML = "<span class=\"head\">" + T.LIMIT + " ステップで打ち切りました</span>　この表は止まらないかもしれません。"; }
+      else { out.className = "feedback"; out.innerHTML = ""; }
+      var done = conf.state === T.HALT || msg === "norule" || msg === "limit";
+      bStep.disabled = done; bRun.disabled = done && !timer; bBack.disabled = hist.length < 2;
+      bRun.textContent = timer ? "止める" : "最後まで";
+    }
+    function stop() { if (timer) { clearInterval(timer); timer = 0; } }
+    bStep.onclick = function () { stop(); nextConf(); render(); };
+    bBack.onclick = function () { stop(); if (hist.length > 1) { hist.pop(); conf = hist[hist.length - 1]; msg = ""; render(); } };
+    bReset.onclick = function () { stop(); reset(); };
+    bSet.onclick = function () { stop(); reset(); };
+    inp.addEventListener("keydown", function (e) { if (e.key === "Enter") { stop(); reset(); } });
+    bRun.onclick = function () {
+      if (timer) { stop(); render(); return; }
+      if (REDUCE) { while (nextConf()) { /* 一気に進める */ } render(); return; }
+      timer = setInterval(function () { if (!nextConf()) stop(); render(); }, 280);
+      render();
+    };
+    var box = h("div", { class: "tm-sim" },
+      h("div", { class: "row" }, h("span", { class: "tm-lab", text: "機械" }), seg),
+      note,
+      h("div", { class: "row" }, h("label", { for: iid, class: "tm-lab", text: "入力（0 と 1）" }), inp, bSet),
+      h("div", { class: "tm-stage" }, view, count),
+      h("div", { class: "row" }, bStep, bRun, bBack, bReset),
+      out, tbl);
+    mount.appendChild(box);
+    reset();
+    return {
+      refresh: function () { stop(); reset(); },
+      select: function (k, input) { stop(); if (keys.indexOf(k) >= 0) cur = k; if (input) inp.value = input; reset(); }
+    };
+  };
+
+  /* ---------- 規則表を作る欄（発展課題A） ----------
+     状態 A〜D × 読んだ記号 0・1・□ の 12 行。行ごとに 書く記号・動く向き・次の状態 を選ぶ（「—」は規則なし） */
+  CA.tmEditor = function (mount, opts) {
+    opts = opts || {};
+    var KEY = "edit." + (opts.id || "ed");
+    var saved = CA.store.get(KEY, {}) || {};
+    var sels = {};
+    var tb = h("tbody");
+    function sel(name, list, val, label) {
+      var s = h("select", { "aria-label": label });
+      list.forEach(function (o) { var op = h("option", { value: o[0], text: o[1] }); if (o[0] === val) op.selected = true; s.appendChild(op); });
+      return s;
+    }
+    T.STATES.forEach(function (st) {
+      T.SYMS.forEach(function (sym) {
+        var k = st + "," + sym, v = saved[k] || ["", "", ""];
+        var lab = "状態 " + st + "・読んだ記号 " + symLabel(sym);
+        var w = sel("w", [["", "—"], ["0", "0"], ["1", "1"], ["_", "□"]], v[0], lab + "：書く記号");
+        var m = sel("m", [["", "—"], ["L", "左"], ["R", "右"]], v[1], lab + "：動く向き");
+        var n = sel("n", [["", "—"], ["A", "A"], ["B", "B"], ["C", "C"], ["D", "D"], ["H", "停止"]], v[2], lab + "：次の状態");
+        sels[k] = [w, m, n];
+        [w, m, n].forEach(function (s) { s.addEventListener("change", changed); });
+        tb.appendChild(h("tr", { class: sym === "0" ? "first" : null }, h("td", { text: st }), h("td", { text: symLabel(sym) }), h("td", null, w), h("td", null, m), h("td", null, n)));
+      });
+    });
+    var listeners = [];
+    function rules() {
+      var out = [];
+      T.STATES.forEach(function (st) {
+        T.SYMS.forEach(function (sym) {
+          var s = sels[st + "," + sym];
+          if (s[0].value && s[1].value && s[2].value) out.push([st, sym, s[0].value, s[1].value, s[2].value]);
+        });
+      });
+      return out;
+    }
+    function partial() {
+      var p = [];
+      for (var k in sels) {
+        var s = sels[k], f = [s[0].value, s[1].value, s[2].value].filter(Boolean).length;
+        if (f > 0 && f < 3) p.push(k);
+      }
+      return p;
+    }
+    function changed() {
+      var o = {};
+      for (var k in sels) o[k] = [sels[k][0].value, sels[k][1].value, sels[k][2].value];
+      CA.store.set(KEY, o);
+      listeners.forEach(function (fn) { fn(); });
+    }
+    function load(rs) {
+      for (var k in sels) sels[k].forEach(function (s) { s.value = ""; });
+      rs.forEach(function (r) { var s = sels[r[0] + "," + r[1]]; if (s) { s[0].value = r[2]; s[1].value = r[3]; s[2].value = r[4]; } });
+      changed();
+    }
+    var bClear = h("button", { type: "button", text: "表を空にする", onclick: function () { load([]); } });
+    var table = h("div", { class: "tbl-wrap tm-edit-wrap" }, h("table", { class: "tm-rules tm-edit" },
+      h("thead", null, h("tr", null, h("th", { text: "今の状態" }), h("th", { text: "読んだ記号" }), h("th", { text: "書く記号" }), h("th", { text: "動く向き" }), h("th", { text: "次の状態" }))), tb));
+    mount.appendChild(h("div", { class: "tm-editor" }, table, h("div", { class: "row" }, bClear)));
+    return { rules: rules, partial: partial, load: load, onChange: function (fn) { listeners.push(fn); } };
+  };
+
+  /* 判定（2 の補数、16 通り）の結果を表示する */
+  CA.tmJudgeView = function (res) {
+    var box = h("div", { class: "feedback " + (res.pass === res.total ? "ok" : "ng"), role: "status" });
+    box.appendChild(h("span", { class: "head", text: res.total + " 通り中 " + res.pass + " 通り通りました" }));
+    if (res.fails.length) {
+      var why = { wrong: "止まったが答えがちがう", norule: "規則がない組に当たって止まった", limit: T.LIMIT + " ステップで止まらなかった" };
+      var ul = h("ul");
+      res.fails.slice(0, 4).forEach(function (f) {
+        ul.appendChild(h("li", { text: "入力 " + f.input + "：" + why[f.reason] + (f.reason === "wrong" ? "（4 桁は " + f.got.replace(/_/g, "□") + "、2 の補数は " + f.want + "）" : "") }));
+      });
+      if (res.fails.length > 4) ul.appendChild(h("li", { text: "ほか " + (res.fails.length - 4) + " 通り" }));
+      box.appendChild(ul);
+    } else {
+      box.appendChild(document.createTextNode("　16 通りすべてで、4 桁が 2 の補数になりました。"));
+    }
+    return box;
+  };
+
+  CA.tmView = { tapeHTML: tapeHTML, tableHTML: tableHTML, symLabel: symLabel, stLabel: stLabel, mvLabel: mvLabel, range: range };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+/* 第8回（オンデマンド）の回答の書き出しと読み戻し。画面に依存しない。node の検査と採点の台本からも読む。
+   書き出しには名前・学籍番号・点数を入れない（WebClass が提出者を記録する）。正解もこのファイルには入れない。
+   形（v1）：
+     CA2026 第8回 回答 v1
+     書き出し: 2026-11-28 12:34
+     =====選択と数字=====
+     Q1=B … Q10=A          クイズ（未回答は空）
+     R1=… R2=… R3=… R4=…   必須課題1（0111 のテープ・ステップ数、1111 のテープ・ステップ数）
+     A_JUDGE=16/16          発展課題A（書き出した時点の判定）
+     A_RULES=A,0,1,R,A; …   発展課題A（規則表）
+     B_CHOICE=a             発展課題B（a か b、未回答は空）
+     =====必須課題2=====
+     （自由記述）
+     =====発展課題B=====
+     （自由記述）
+     =====おわり=====                                    */
+(function (root) {
+  "use strict";
+  var VERSION = "v1", HEAD = "CA2026 第8回 回答 " + VERSION;
+  var SEC = { score: "選択と数字", req2: "必須課題2", advB: "発展課題B", end: "おわり" };
+  var QN = 10, RN = 4;
+
+  function line(k, v) { return k + "=" + String(v == null ? "" : v).replace(/[\r\n]+/g, " ").trim(); }
+  function bar(name) { return "=====" + name + "====="; }
+  /* 自由記述の中に区切りの行が入っていたら、行頭に全角の空白を足して区切りと見なされないようにする */
+  function body(s) { return String(s || "").replace(/\r\n?/g, "\n").replace(/^(=====)/gm, "　$1").replace(/\s+$/, ""); }
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+  function stamp(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) + " " + pad2(d.getHours()) + ":" + pad2(d.getMinutes()); }
+
+  /* ans: { quiz: ["B", "", …], req1: ["1000", "4", …], req2: "…", aRules: "A,0,…", aJudge: "16/16", bChoice: "a", bText: "…" } */
+  function build(ans, now) {
+    ans = ans || {};
+    var L = [HEAD, "書き出し: " + stamp(now || new Date()), bar(SEC.score)];
+    for (var i = 0; i < QN; i++) L.push(line("Q" + (i + 1), (ans.quiz || [])[i] || ""));
+    for (var j = 0; j < RN; j++) L.push(line("R" + (j + 1), (ans.req1 || [])[j] || ""));
+    L.push(line("A_JUDGE", ans.aJudge || ""));
+    L.push(line("A_RULES", ans.aRules || ""));
+    L.push(line("B_CHOICE", ans.bChoice || ""));
+    L.push(bar(SEC.req2));
+    L.push(body(ans.req2));
+    L.push(bar(SEC.advB));
+    L.push(body(ans.bText));
+    L.push(bar(SEC.end));
+    return L.join("\n") + "\n";
+  }
+
+  /* 読み戻し。WebClass に貼られた文（前後に余計な行があってもよい）や .txt の中身から取り出す */
+  function parse(text) {
+    var s = String(text || "").replace(/\r\n?/g, "\n").replace(/^﻿/, "");
+    var out = { ok: false, version: null, quiz: [], req1: [], aJudge: "", aRules: "", bChoice: "", req2: "", bText: "", problems: [] };
+    var hm = s.match(/CA2026 第8回 回答 (v\d+)/);
+    if (hm) out.version = hm[1]; else out.problems.push("見出しの行がない");
+    function section(name) {
+      var re = new RegExp("^" + bar(name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "m");
+      var m = re.exec(s);
+      if (!m) return null;
+      var rest = s.slice(m.index + m[0].length + 1);
+      var nx = /^=====[^\n]*=====$/m.exec(rest);
+      return (nx ? rest.slice(0, nx.index) : rest).replace(/\s+$/, "");
+    }
+    var sc = section(SEC.score);
+    if (sc == null) { out.problems.push("選択と数字の区切りがない"); return out; }
+    var kv = {};
+    sc.split("\n").forEach(function (l) { var m = l.match(/^([A-Z0-9_]+)=(.*)$/); if (m) kv[m[1]] = m[2].trim(); });
+    for (var i = 0; i < QN; i++) out.quiz.push(kv["Q" + (i + 1)] || "");
+    for (var j = 0; j < RN; j++) out.req1.push(kv["R" + (j + 1)] || "");
+    out.aJudge = kv.A_JUDGE || ""; out.aRules = kv.A_RULES || ""; out.bChoice = kv.B_CHOICE || "";
+    var r2 = section(SEC.req2), bb = section(SEC.advB);
+    out.req2 = r2 == null ? "" : r2.replace(/^　(=====)/gm, "$1");
+    out.bText = bb == null ? "" : bb.replace(/^　(=====)/gm, "$1");
+    if (r2 == null) out.problems.push("必須課題2の区切りがない");
+    if (section(SEC.end) == null) out.problems.push("おわりの区切りがない（途中で切れているかもしれない）");
+    out.ok = true;
+    return out;
+  }
+
+  /* 数字の答えの正規化（全角→半角、空白・□ を除く） */
+  function normDigits(v) {
+    return String(v || "").replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }).replace(/[\s□_]/g, "");
+  }
+  /* 文字数（空白と改行を数えない） */
+  function chars(s) { return String(s || "").replace(/\s/g, "").length; }
+
+  var api = { VERSION: VERSION, HEAD: HEAD, build: build, parse: parse, normDigits: normDigits, chars: chars, QN: QN, RN: RN };
+  root.CA = root.CA || {};
+  root.CA.w08form = api;
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+/* 動画プレイヤー：時刻 t の関数として描く SVG アニメーションを、再生・一時停止・シーク・字幕・場面の頭出しつきで見せる。
+   予測の場面では自動で止まり、予想を選ぶと続きが再生される。自動再生はしない。
+   場面は { name, dur, cues: [[t, 字幕]], pause: { t, q, choices, answer, reveal }, draw(t, F) -> SVG の中身 } */
+(function (root) {
+  "use strict";
+  var CA = root.CA, h = CA.h;
+  var REDUCE = !!(root.matchMedia && root.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+  /* ---------- 描画の道具（どれも SVG の文字列を返す） ---------- */
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function attrs(o) {
+    var s = "";
+    for (var k in o) if (o[k] != null && o[k] !== false) s += " " + k + "=\"" + o[k] + "\"";
+    return s;
+  }
+  function clamp(x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
+  function ease(p) { return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; }
+  var F = {
+    REDUCE: REDUCE,
+    /* start から dur かけて 0→1。動きを減らす設定なら start で一気に 1 */
+    tw: function (t, start, dur) {
+      if (REDUCE) return t >= start ? 1 : 0;
+      return ease(clamp((t - start) / (dur || 400)));
+    },
+    on: function (t, start) { return t >= start; },
+    lerp: function (a, b, p) { return a + (b - a) * p; },
+    text: function (x, y, str, o) {
+      o = o || {};
+      return "<text" + attrs({ x: x, y: y, "font-size": o.size || 32, "font-weight": o.weight || null, "text-anchor": o.anchor || "start",
+        "class": (o.mono ? "fm " : "ft ") + (o.cls || "k-ink"), opacity: o.op != null ? o.op : null, "dominant-baseline": o.base || null }) + ">" + esc(str) + "</text>";
+    },
+    rect: function (x, y, w, hh, o) {
+      o = o || {};
+      return "<rect" + attrs({ x: x, y: y, width: w, height: hh, rx: o.rx != null ? o.rx : 10, "class": o.cls || "k-panel s-rule", "stroke-width": o.sw || 2, opacity: o.op != null ? o.op : null, "stroke-dasharray": o.dash || null }) + "/>";
+    },
+    line: function (x1, y1, x2, y2, o) {
+      o = o || {};
+      return "<line" + attrs({ x1: x1, y1: y1, x2: x2, y2: y2, "class": o.cls || "s-mut", "stroke-width": o.sw || 4, "stroke-linecap": "round", "stroke-dasharray": o.dash || null, opacity: o.op != null ? o.op : null }) + "/>";
+    },
+    circle: function (cx, cy, r, o) {
+      o = o || {};
+      return "<circle" + attrs({ cx: cx, cy: cy, r: r, "class": o.cls || "k-off s-rule", "stroke-width": o.sw || 2, opacity: o.op != null ? o.op : null }) + "/>";
+    },
+    path: function (d, o) {
+      o = o || {};
+      var c = o.cls || "s-mut";
+      return "<path" + attrs({ d: d, "class": c, fill: o.fill || (/(^| )k-/.test(c) ? null : "none"), "stroke-width": o.sw || 4, "stroke-linecap": "round", "stroke-linejoin": "round", "stroke-dasharray": o.dash || null, opacity: o.op != null ? o.op : null }) + "/>";
+    },
+    group: function (inner, o) {
+      o = o || {};
+      return "<g" + attrs({ transform: o.tr || null, opacity: o.op != null ? o.op : null, "clip-path": o.clip || null }) + ">" + inner + "</g>";
+    },
+    /* 吹き出し風の問い（予測の場面で見せる） */
+    ask: function (x, y, str, op, w) {
+      w = w || 460;
+      return F.group(F.rect(x - w / 2, y - 44, w, 72, { cls: "k-wiresoft s-wire", sw: 3, rx: 36 }) + F.text(x, y + 4, str, { size: 34, anchor: "middle", weight: 700, cls: "k-wire", base: "middle" }), { op: op });
+    }
+  };
+  CA.filmTools = F;
+
+  function fmtTime(ms) {
+    var s = Math.max(0, Math.round(ms / 1000));
+    return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
+  }
+
+  CA.film = function (mount, opts) {
+    var scenes = opts.scenes, starts = [], total = 0;
+    scenes.forEach(function (sc) { starts.push(total); total += sc.dur; });
+    var T = 0, playing = false, last = 0, raf = 0, pred = {}, waiting = null, passed = -1;
+
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 800 450");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", opts.title + "（動画。字幕は下に表示されます）");
+    var big = h("button", { type: "button", class: "film-big", "aria-label": "再生" }, h("span", { class: "tri", "aria-hidden": "true" }), h("span", { text: "再生（" + fmtTime(total) + "）" }));
+    var pauseBox = h("div", { class: "film-pause", role: "dialog", "aria-label": "予想してみよう" });
+    pauseBox.hidden = true;
+    var stage = h("div", { class: "film-stage" }, svg, big);
+    var sceneLab = h("div", { class: "film-scene" });
+    var cap = h("p", { class: "film-cap", "aria-live": "polite" });
+    var predNote = h("p", { class: "film-pred" });
+    var bPlay = h("button", { type: "button", class: "primary", text: "再生" });
+    var bPrev = h("button", { type: "button", text: "◀ 前の場面" });
+    var bNext = h("button", { type: "button", text: "次の場面 ▶" });
+    var seek = h("input", { type: "range", min: 0, max: total, step: 100, value: 0, "aria-label": "再生位置" });
+    var time = h("span", { class: "film-time" });
+    var bFull = h("button", { type: "button", text: "全画面" });
+    bFull.onclick = function () {
+      try { var r = stage.requestFullscreen ? stage.requestFullscreen() : null; if (r && r.catch) r.catch(function () {}); } catch (e) { /* 全画面にできない環境 */ }
+    };
+    var chaps = h("div", { class: "film-chaps", role: "group", "aria-label": "場面の頭出し" });
+    scenes.forEach(function (sc, i) {
+      chaps.appendChild(h("button", { type: "button", "data-i": i, onclick: function () { go(starts[i]); } }, h("b", { text: String(i + 1) }), " " + sc.name));
+    });
+    var script = h("details", { class: "film-script" }, h("summary", { text: "字幕の全文を読む" }));
+    var ol = h("ol");
+    scenes.forEach(function (sc, i) {
+      ol.appendChild(h("li", null, h("b", { text: "場面" + (i + 1) + "　" + sc.name + "：" }), sc.cues.map(function (c) { return c[1]; }).join(" ")));
+    });
+    script.appendChild(ol);
+
+    function at(Tg) {
+      var i = 0;
+      while (i < scenes.length - 1 && Tg >= starts[i + 1]) i++;
+      return { i: i, t: Tg - starts[i] };
+    }
+    function render() {
+      var p = at(T), sc = scenes[p.i];
+      svg.innerHTML = sc.draw(p.t, { pred: pred[p.i], scene: p.i }) || "";
+      var c = "";
+      sc.cues.forEach(function (cu) { if (p.t >= cu[0]) c = cu[1]; });
+      if (cap.textContent !== c) cap.textContent = c;
+      sceneLab.textContent = "場面 " + (p.i + 1) + " / " + scenes.length + "：" + sc.name;
+      /* 予想の答え合わせ。答えが次の場面で明かされるときは pause.noteScene / noteAt で指定する */
+      var note = "", hit = false;
+      scenes.forEach(function (s2, j) {
+        var ps = s2.pause;
+        if (!ps || pred[j] == null) return;
+        var ns = ps.noteScene != null ? ps.noteScene : j;
+        var atT = ps.noteScene != null ? (ps.noteAt || 0) : (ps.reveal != null ? ps.reveal : ps.t + 600);
+        if (ns !== p.i || p.t < atT) return;
+        hit = pred[j] === ps.answer;
+        note = "あなたの予想：" + ps.choices[pred[j]] + (hit ? "　→ 当たり" : "　→ 答えは「" + ps.choices[ps.answer] + "」");
+      });
+      predNote.textContent = note;
+      predNote.className = "film-pred" + (note ? (hit ? " ok" : " ng") : "");
+      seek.value = Math.round(T);
+      time.textContent = fmtTime(T) + " / " + fmtTime(total);
+      chaps.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-current", +b.getAttribute("data-i") === p.i ? "true" : "false"); });
+    }
+    function setPlaying(v) {
+      playing = v;
+      bPlay.textContent = v ? "一時停止" : (T >= total ? "もう一度見る" : "再生");
+      big.hidden = v || waiting != null;
+      if (v) { last = performance.now(); raf = requestAnimationFrame(tick); }
+      else cancelAnimationFrame(raf);
+    }
+    function showPause(i) {
+      var ps = scenes[i].pause;
+      waiting = i;
+      pauseBox.innerHTML = "";
+      pauseBox.appendChild(h("p", { class: "q", text: "予想してみよう：" + ps.q }));
+      var row = h("div", { class: "choices" });
+      ps.choices.forEach(function (c, k) {
+        row.appendChild(h("button", { type: "button", text: c, onclick: function () { pred[i] = k; resume(); } }));
+      });
+      pauseBox.appendChild(row);
+      pauseBox.appendChild(h("button", { type: "button", class: "skip", text: "予想せずに続きを見る", onclick: resume }));
+      pauseBox.hidden = false;
+      big.hidden = true;
+      setPlaying(false);
+      var first = row.querySelector("button");
+      if (first) first.focus();
+    }
+    function resume() {
+      passed = T; /* 再開した地点の予測では、もう止まらない */
+      waiting = null; pauseBox.hidden = true;
+      setPlaying(true);
+    }
+    function tick(now) {
+      if (!playing) return;
+      var prev = T;
+      T = Math.min(total, T + Math.max(0, now - last));
+      last = now;
+      /* 予測の場面を通り過ぎるところで止める */
+      for (var i = 0; i < scenes.length; i++) {
+        var ps = scenes[i].pause;
+        if (!ps) continue;
+        var pt = starts[i] + ps.t;
+        if (prev < pt && T >= pt && pt !== passed) { T = pt; render(); showPause(i); return; }
+      }
+      render();
+      if (T >= total) { setPlaying(false); return; }
+      raf = requestAnimationFrame(tick);
+    }
+    function go(Tg) {
+      waiting = null; pauseBox.hidden = true; passed = -1;
+      T = Math.max(0, Math.min(total, Tg));
+      render();
+      if (!playing) { big.hidden = T > 0; bPlay.textContent = T >= total ? "もう一度見る" : "再生"; }
+    }
+    function toggle() {
+      if (waiting != null) { resume(); return; }
+      if (playing) { setPlaying(false); return; }
+      if (T >= total) T = 0;
+      setPlaying(true);
+    }
+    big.onclick = toggle;
+    bPlay.onclick = toggle;
+    bPrev.onclick = function () { var p = at(T); go(p.t > 1500 || p.i === 0 ? starts[p.i] : starts[p.i - 1]); };
+    bNext.onclick = function () { var p = at(T); go(p.i < scenes.length - 1 ? starts[p.i + 1] : total); };
+    seek.oninput = function () { setPlaying(false); go(+seek.value); };
+    var box = h("div", { class: "film", tabindex: "-1" },
+      h("div", { class: "film-head" }, h("span", { class: "film-title", text: opts.title }), sceneLab),
+      h("p", { class: "film-hint", text: "スマホでは、横向きにして「全画面」で見ると図の文字が読みやすくなります。" }),
+      stage, pauseBox, cap, predNote,
+      h("div", { class: "film-ctrl" }, bPlay, bPrev, bNext, seek, time, bFull),
+      chaps, script);
+    box.addEventListener("keydown", function (e) {
+      if (e.target === seek || /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+      if (e.key === " " || e.key === "k") { e.preventDefault(); toggle(); }
+      if (e.key === "ArrowRight") { e.preventDefault(); bNext.onclick(); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); bPrev.onclick(); }
+    });
+    mount.appendChild(box);
+    render();
+    return { go: go, total: total };
+  };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+/* 動画1〜4：チューリングマシン（第8回）。絵コンテ「第8回_動画の絵コンテ.md」（2026-11-22）。
+   動画1 1 台で何でもできる機械／動画2 チューリングテストと中国語の部屋／動画3 チューリングマシンの 1 ステップ／動画4 止まらない機械と、今のコンピュータ
+   テープの動き（動画3 の場面4・5、動画4 の場面1）は CA.tm で計算したとおりに動かす。
+   動画の予想には、クイズ 10 問と同じ問いを置かない。 */
+(function (root) {
+  "use strict";
+  var CA = root.CA, F = CA.filmTools, TM = CA.tm;
+
+  /* ---------- 共通の部品 ---------- */
+  function sym(c) { return c === "_" ? "□" : c; }
+  function dir(m) { return m === "R" ? "右" : "左"; }
+  function stName(s) { return s === "H" ? "停止" : s; }
+
+  /* テープ。o: y, x0（位置 lo のマスの左端）, lo, hi, get(k), write {k, from, to, p, lit}, head（小数可、null なら出さない）, ell（両端の …） */
+  var CW = 64, CS = 70;
+  function cellSym(x, y, c, o) {
+    o = o || {};
+    var blank = c === "_";
+    return F.text(x + CW / 2, y + CW / 2 + (blank ? 12 : 13), sym(c), { size: blank ? 34 : 36, anchor: "middle", mono: !blank, weight: 700,
+      cls: o.cls || (blank ? "k-mut" : "k-ink"), op: o.op });
+  }
+  function tape(o) {
+    var s = "";
+    for (var k = o.lo; k <= o.hi; k++) {
+      var x = o.x0 + (k - o.lo) * CS, w = o.write && o.write.k === k ? o.write : null;
+      var lit = w && w.lit;
+      s += F.rect(x, o.y, CW, CW, { cls: lit ? "k-lamp s-lamp" : "k-panel s-mut", sw: 3, rx: 6 });
+      if (w && w.p > 0 && w.p < 1) {
+        s += cellSym(x, o.y, w.from, { op: 1 - w.p, cls: lit ? "k-lampink" : null }) + cellSym(x, o.y, w.to, { op: w.p, cls: lit ? "k-lampink" : null });
+      } else {
+        var c = w && w.p >= 1 ? w.to : o.get(k);
+        s += cellSym(x, o.y, c, { cls: lit ? "k-lampink" : null });
+      }
+    }
+    if (o.ell !== false) {
+      s += F.text(o.x0 - 22, o.y + 42, "…", { size: 30, anchor: "middle", cls: "k-mut" });
+      s += F.text(o.x0 + (o.hi - o.lo + 1) * CS + 16, o.y + 42, "…", { size: 30, anchor: "middle", cls: "k-mut" });
+    }
+    if (o.head != null) s += headMark(o.x0 + (o.head - o.lo) * CS + CW / 2, o.y + CW + 10);
+    return s;
+  }
+  /* ヘッドの印（マスの下の三角） */
+  function headMark(x, y) {
+    return F.path("M" + x + "," + y + " L" + (x - 20) + "," + (y + 30) + " L" + (x + 20) + "," + (y + 30) + " Z", { cls: "k-wire s-wire", sw: 2 });
+  }
+  /* 状態の札 */
+  function stateTag(cx, y, st, op) {
+    var halt = st === "H";
+    return F.group(F.rect(cx - 80, y, 160, 56, { cls: halt ? "k-acc s-acc" : "k-panel s-wire", sw: 3 }) +
+      F.text(cx, y + 39, halt ? "停止" : "状態 " + st, { size: 30, anchor: "middle", weight: 700, cls: halt ? "k-accink" : "k-wire" }), { op: op });
+  }
+  /* 規則表（3 行）。o: hl（光らせる行、-1 なら無し）, hlOp, cols（書く・向き・次の状態の列を光らせる強さ） */
+  var COL = [45, 140, 205, 270, 350, 460], TW = 540, THH = 46, TRH = 52;
+  function ruleTable(x, y, rules, o) {
+    o = o || {};
+    var s = F.rect(x, y, TW, THH + rules.length * TRH, { cls: "k-panel s-rule", sw: 2 });
+    if (o.cols) s += F.rect(x + 235, y + 4, TW - 239, THH + rules.length * TRH - 8, { cls: "k-wiresoft s-none", sw: 0, rx: 6, op: o.cols });
+    ["状態", "読んだ", "", "書く", "向き", "次の状態"].forEach(function (hd, i) {
+      if (hd) s += F.text(x + COL[i], y + 32, hd, { size: 26, anchor: "middle", cls: "k-mut" });
+    });
+    s += F.line(x + 10, y + THH, x + TW - 10, y + THH, { cls: "s-rule", sw: 2 });
+    rules.forEach(function (r, i) {
+      var ry = y + THH + i * TRH;
+      if (o.hl === i) s += F.rect(x + 4, ry + 3, TW - 8, TRH - 6, { cls: "k-wiresoft s-wire", sw: 3, rx: 6, op: o.hlOp != null ? o.hlOp : 1 });
+      var cells = [r[0], sym(r[1]), "→", sym(r[2]), dir(r[3]), stName(r[4])];
+      cells.forEach(function (c, j) {
+        var halt = j === 5 && r[4] === "H";
+        s += F.text(x + COL[j], ry + 37, c, { size: 30, anchor: "middle", weight: j === 2 ? null : 700, mono: j !== 2 && j !== 4 && !halt && c !== "□",
+          cls: j === 2 ? "k-mut" : halt ? "k-acc" : "k-ink" });
+      });
+    });
+    return s;
+  }
+  /* 計算どおりの動き。hist：CA.tm.run の hist、starts／durs：各ステップの始まりと長さ。
+     1 ステップの中は 読む（行が光る）→ 書く → 動く → 状態が変わる の順 */
+  function tmAt(hist, rules, starts, durs, t) {
+    var i = -1;
+    for (var j = 0; j < starts.length && j < hist.length - 1; j++) if (t >= starts[j]) i = j;
+    if (i < 0) return { conf: hist[0], write: null, head: hist[0].head, state: hist[0].state, steps: 0, row: -1 };
+    var a = hist[i], b = hist[i + 1], st0 = starts[i], D = durs[i], u = b.used;
+    var row = -1;
+    rules.forEach(function (r, k) { if (r[0] === u.state && r[1] === u.read) row = k; });
+    var pw = F.tw(t, st0 + 0.25 * D, 350), pm = F.tw(t, st0 + 0.45 * D, 450), ps = t >= st0 + 0.75 * D;
+    return { conf: a, write: { k: a.head, from: TM.read(a), to: u.write, p: pw, lit: pw > 0 && pm < 1 },
+      head: F.lerp(a.head, b.head, pm), state: ps ? b.state : a.state, steps: ps ? b.steps : a.steps, row: row, i: i };
+  }
+  function getter(conf) { return function (k) { var v = conf.tape[k]; return v === undefined ? "_" : v; }; }
+
+  /* 人（丸と四角だけ）。y は頭の中心 */
+  function person(x, y, o) {
+    o = o || {};
+    return F.circle(x, y, 24, { cls: o.cls || "k-off s-ink", sw: 3 }) + F.rect(x - 32, y + 30, 64, 80, { cls: o.cls || "k-off s-ink", sw: 3, rx: 18 });
+  }
+  function arrow(x1, y1, x2, y2, o) {
+    o = o || {};
+    var a = Math.atan2(y2 - y1, x2 - x1), L = 14;
+    var p1 = [x2 - L * Math.cos(a - 0.5), y2 - L * Math.sin(a - 0.5)], p2 = [x2 - L * Math.cos(a + 0.5), y2 - L * Math.sin(a + 0.5)];
+    return F.line(x1, y1, x2, y2, { cls: o.cls || "s-mut", sw: o.sw || 4, op: o.op }) +
+      F.path("M" + p1[0] + "," + p1[1] + " L" + x2 + "," + y2 + " L" + p2[0] + "," + p2[1], { cls: o.cls || "s-mut", sw: o.sw || 4, op: o.op });
+  }
+  /* 記述のカード */
+  function card(cx, y, str, op) {
+    return F.group(F.rect(cx - 110, y, 220, 64, { cls: "k-wiresoft s-wire", sw: 3, rx: 8 }) +
+      F.text(cx, y + 42, str, { size: 28, anchor: "middle", weight: 700, cls: "k-wire" }), { op: op });
+  }
+
+  var INV = TM.MACHINES.invert.rules, PLUS = TM.MACHINES.plus1.rules;
+  var LOOP = [["A", "0", "0", "R", "A"], ["A", "1", "1", "R", "A"], ["A", "_", "_", "R", "A"]];
+  var RUN_INV = TM.run(INV, "1011", { start: "left" });
+  var RUN_PLUS = TM.run(PLUS, "1011", { start: "right" });
+  var RUN_LOOP = TM.run(LOOP, "1011", { start: "left", maxSteps: 30 });
+
+  CA.films = CA.films || {};
+
+  /* ==================== 動画1 ==================== */
+  var EVENTS = [["17 世紀", "デカルト・ライプニッツ", "四則演算の計算機"], ["19 世紀", "バベッジ", "プログラムできる計算機"],
+    ["1936", "チューリング", "チューリングマシン"], ["1945", "ノイマン", "ノイマン型コンピュータ"], ["1956", "ダートマス会議", "「人工知能」"]];
+  var JOBS = [["3, 5", "足し算の機械", "8"], ["3 1 2", "並べかえの機械", "1 2 3"], ["あい", "文字を写す機械", "あい"]];
+
+  CA.films.tm1 = {
+    title: "動画1：1 台で何でもできる機械（約1分35秒）",
+    scenes: [
+      {
+        name: "年表", dur: 20000,
+        cues: [[0, "コンピュータが生まれる前から、人は「考える機械」を考えてきました。"], [10000, "今日の主役は、1936 年のチューリングです。"]],
+        draw: function (t) {
+          var s = arrow(150, 40, 150, 420, { cls: "s-rule", sw: 4 });
+          var hot = F.tw(t, 10000, 500);
+          EVENTS.forEach(function (e, i) {
+            var y = 70 + i * 76, op = F.tw(t, 500 + i * 1600, 500), me = i === 2;
+            var g = "";
+            if (me) g += F.rect(20, y - 34, 760, 60, { cls: "k-wiresoft s-wire", sw: 3, op: hot });
+            g += F.circle(150, y - 4, me && hot > 0 ? 14 : 10, { cls: me && hot > 0 ? "k-lamp s-lamp" : "k-off s-mut", sw: 3 });
+            g += F.text(126, y + 6, e[0], { size: 28, anchor: "end", weight: 700, cls: me && hot > 0 ? "k-wire" : "k-ink" });
+            g += F.text(180, y + 6, e[1], { size: 26, weight: 700 });
+            g += F.text(490, y + 6, e[2], { size: 26, cls: me && hot > 0 ? "k-wire" : "k-mut", weight: me && hot > 0 ? 700 : null });
+            s += F.group(g, { op: op });
+          });
+          return s;
+        }
+      },
+      {
+        name: "デカルト", dur: 25000,
+        cues: [[0, "1637 年、デカルトは考えました。機械は、作られたとおりの 1 つの方法でしか動けない。"], [12000, "人間は行き詰まっても別のやり方を選べるが、機械にはそれができない、と。"]],
+        pause: { t: 23000, q: "1 台の機械に、いろいろな仕事をさせるには？", choices: ["仕事の数だけ機械を作る", "機械に渡す「記述」を取りかえる", "機械を大きくする"], answer: 1, noteScene: 2, noteAt: 5000 },
+        draw: function (t) {
+          var s = "";
+          JOBS.forEach(function (j, i) {
+            var y = 40 + i * 100, op = F.tw(t, 300 + i * 900, 400), out = F.tw(t, 1500 + i * 900, 400);
+            s += F.group(F.text(130, y + 50, j[0], { size: 30, anchor: "middle", mono: true, weight: 700 }) +
+              arrow(185, y + 40, 250, y + 40) +
+              F.rect(260, y, 280, 76, { cls: "k-panel s-ink", sw: 3 }) + F.text(400, y + 49, j[1], { size: 28, anchor: "middle", weight: 700 }) +
+              arrow(550, y + 40, 615, y + 40, { op: out }) +
+              F.group(F.text(690, y + 50, j[2], { size: 30, anchor: "middle", mono: true, weight: 700, cls: "k-acc" }), { op: out }), { op: op });
+          });
+          s += F.group(F.text(400, 390, "機械は 1 つの方法でしか動けない", { size: 32, anchor: "middle", weight: 700 }), { op: F.tw(t, 4000, 500) * (1 - F.tw(t, 20000, 400)) });
+          if (t >= 20400) s += F.ask(400, 400, "いろいろな仕事をさせるには？", F.tw(t, 20400, 400), 540);
+          return s;
+        }
+      },
+      {
+        name: "チューリング", dur: 30000,
+        cues: [[0, "1936 年、チューリングは答えを示しました。"], [5000, "機械は 1 台のまま、手順を書いた「記述」を取りかえる。"],
+          [14000, "すると、ほかの機械ができることを、同じ 1 台が順を追って全部できます。"]],
+        draw: function (t) {
+          var s = F.text(770, 50, "1936 チューリング", { size: 28, anchor: "end", cls: "k-mut" });
+          /* カード：入る→差してある→抜ける */
+          var CARDS = [["足し算の記述", 5000, 10000, "3, 5 → 8"], ["並べかえの記述", 11000, 17000, "3 1 2 → 1 2 3"], ["文字を写す記述", 18000, 99999, "あい → あい"]];
+          CARDS.forEach(function (c) {
+            var pin = F.tw(t, c[1], 1500), pout = F.tw(t, c[2], 900);
+            if (t < c[1] || pout >= 1) return;
+            var x = F.lerp(150, 400, pin) + pout * 250, y = F.lerp(100, 146, pin) - pout * 60;
+            s += card(x, y, c[0], Math.min(1, pin * 3) * (1 - pout));
+          });
+          s += F.rect(220, 210, 360, 180, { cls: "k-panel s-ink", sw: 4 });
+          s += F.line(320, 210, 480, 210, { cls: "s-ink", sw: 10 });
+          s += F.text(400, 262, "万能の機械", { size: 32, anchor: "middle", weight: 700 });
+          CARDS.forEach(function (c) {
+            var op = F.tw(t, c[1] + 2000, 400) * (1 - F.tw(t, c[2], 300));
+            if (op > 0) s += F.group(F.text(400, 335, c[3], { size: 32, anchor: "middle", mono: true, weight: 700, cls: "k-acc" }), { op: op });
+          });
+          s += F.group(F.text(400, 432, "同じ 1 台で、どの仕事も", { size: 30, anchor: "middle", weight: 700, cls: "k-wire" }), { op: F.tw(t, 14000, 500) });
+          return s;
+        }
+      },
+      {
+        name: "まとめ", dur: 20000,
+        cues: [[0, "この「記述」が、今のプログラムです。"], [6000, "1 台のパソコンで表計算もゲームも動くのは、このしくみのおかげです。"], [14000, "その機械の中身は、動画3で見ます。"]],
+        draw: function (t) {
+          var s = card(280, 100, "記述", 1);
+          s += F.rect(150, 172, 260, 150, { cls: "k-panel s-ink", sw: 4 }) + F.line(220, 172, 340, 172, { cls: "s-ink", sw: 10 });
+          s += F.text(280, 262, "機械", { size: 32, anchor: "middle", weight: 700 });
+          s += F.group(F.text(440, 143, "カード ＝ プログラム", { size: 30, weight: 700, cls: "k-wire" }), { op: F.tw(t, 1000, 500) });
+          s += F.group(F.text(440, 258, "箱 ＝ コンピュータ", { size: 30, weight: 700, cls: "k-acc" }), { op: F.tw(t, 2500, 500) });
+          var a = F.tw(t, 6000, 500) * (1 - F.tw(t, 13600, 400));
+          if (a > 0) s += F.group(card(170, 360, "表計算", 1) + card(410, 360, "ゲーム", 1) +
+            F.text(540, 403, "同じ 1 台で", { size: 28, weight: 700 }), { op: a });
+          s += F.group(F.text(400, 410, "その中身は → 動画3", { size: 34, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 14000, 500) });
+          return s;
+        }
+      }
+    ]
+  };
+
+  /* ==================== 動画2 ==================== */
+  /* 文字の吹き出し。from→to を p（0〜1）で動く */
+  function bubble(x, y, str, op) {
+    return F.group(F.rect(x - 68, y - 24, 136, 48, { cls: "k-panel s-wire", sw: 3, rx: 16 }) +
+      F.text(x, y + 9, str, { size: 26, anchor: "middle", weight: 700, cls: "k-wire" }), { op: op });
+  }
+  var MSGS = [[2000, "趣味は？", 1, 125], [4500, "読書です", -1, 125], [7000, "趣味は？", 1, 305], [9500, "音楽です", -1, 305],
+    [12000, "好きな色？", 1, 125], [14500, "青です", -1, 125], [17000, "好きな色？", 1, 305], [19500, "赤かな", -1, 305]];
+
+  CA.films.tm2 = {
+    title: "動画2：チューリングテストと中国語の部屋（約2分）",
+    scenes: [
+      {
+        name: "やり方", dur: 35000,
+        cues: [[0, "1950 年、チューリングは「機械は考えることができるか」という問いを、確かめ方に置きかえました。"],
+          [10000, "試験官は、壁の向こうの 2 者と、文字だけで会話します。片方は人間、片方は機械です。"],
+          [22000, "試験官がどちらが機械かを見分けられなければ、その機械は人間らしくふるまえた、と考えます。"]],
+        draw: function (t) {
+          var s = person(90, 200) + F.text(90, 352, "試験官", { size: 28, anchor: "middle", weight: 700 });
+          s += F.rect(290, 40, 24, 340, { cls: "k-off s-mut", sw: 2, rx: 4 });
+          s += F.text(302, 425, "文字だけで会話", { size: 26, anchor: "middle", cls: "k-mut" });
+          ["A", "B"].forEach(function (n, i) {
+            var y = 40 + i * 190;
+            s += F.rect(400, y, 360, 150, { cls: "k-panel s-ink", sw: 3 });
+            s += F.text(420, y + 40, "部屋 " + n, { size: 28, weight: 700 });
+            s += F.text(650, y + 100, "？", { size: 56, anchor: "middle", weight: 700, cls: "k-mut" });
+          });
+          MSGS.forEach(function (m) {
+            if (t < m[0] || t >= m[0] + 2500) return;
+            var p = F.tw(t, m[0], 1800), x = m[2] > 0 ? F.lerp(196, 480, p) : F.lerp(480, 196, p);
+            /* 壁を通る間は見せない（吹き出しと壁が重ならないように） */
+            if (Math.abs(x - 302) < 82) return;
+            s += bubble(x, m[3], m[1], 1 - F.tw(t, m[0] + 2100, 300));
+          });
+          s += F.group(F.text(580, 425, "片方は人間、片方は機械", { size: 26, anchor: "middle", weight: 700 }), { op: F.tw(t, 10000, 500) });
+          var q = F.tw(t, 22000, 500);
+          if (q > 0) s += F.group(F.rect(20, 30, 250, 60, { cls: "k-wiresoft s-wire", sw: 3, rx: 30 }) +
+            F.text(145, 70, "どちらが機械？", { size: 28, anchor: "middle", weight: 700, cls: "k-wire" }), { op: q });
+          return s;
+        }
+      },
+      {
+        name: "30% の数字", dur: 25000,
+        cues: [[0, "スライド5の「30% 以上」は、チューリングが書いた見込みを言いかえたものです。"],
+          [12000, "チューリングは、これを合格の決まりとしたのではなく、50 年後の予想として書きました。"]],
+        draw: function (t) {
+          var s = F.text(400, 56, "チューリングの見込み（1950）", { size: 32, anchor: "middle", weight: 700 });
+          s += F.group(F.rect(50, 80, 700, 170, { cls: "k-panel s-rule", sw: 2 }) +
+            F.text(80, 128, "50 年ほどたつと、5 分の質問のあと", { size: 28 }) +
+            F.text(80, 176, "平均的な試験官が正しく見分ける確率は", { size: 28 }) +
+            F.text(80, 224, "70% 以下になるだろう", { size: 28, weight: 700 }), { op: F.tw(t, 500, 500) });
+          s += F.group(arrow(400, 262, 400, 292) +
+            F.text(400, 332, "言いかえ：30% 以上の試験官が見分けられない", { size: 28, anchor: "middle", weight: 700, cls: "k-wire" }), { op: F.tw(t, 5000, 500) });
+          s += F.group(F.text(220, 412, "合格の決まり ✕", { size: 30, anchor: "middle", weight: 700, cls: "k-ng" }), { op: F.tw(t, 12000, 500) });
+          s += F.group(F.text(580, 412, "50 年後の予想 ○", { size: 30, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 14000, 500) });
+          return s;
+        }
+      },
+      {
+        name: "中国語の部屋", dur: 35000,
+        cues: [[0, "1980 年、哲学者のサールは、こんな部屋を考えました。"],
+          [9000, "中には中国語を全く知らない人と、記号の組み合わせ方を書いたルールブックがあります。"],
+          [20000, "中国語の質問が差し入れられると、中の人はルールブックどおりに記号を並べて返します。"]],
+        pause: { t: 30000, q: "外から見ると、中の人は中国語がわかるように見える？", choices: ["見える", "見えない"], answer: 0, reveal: 30600 },
+        draw: function (t) {
+          var s = F.path("M330,200 V60 H785 V360 H330 V260", { cls: "s-ink", sw: 4 });
+          s += person(90, 230) + F.text(90, 385, "外の人", { size: 26, anchor: "middle", weight: 700 });
+          s += F.group(person(470, 170) + F.text(470, 330, "中国語を知らない", { size: 26, anchor: "middle", weight: 700 }), { op: F.tw(t, 9000, 500) });
+          var look = F.tw(t, 22500, 300) * (1 - F.tw(t, 26000, 300));
+          var book = F.rect(630, 180, 120, 110, { cls: look > 0 ? "k-wiresoft s-wire" : "k-panel s-ink", sw: 3, rx: 6 }) +
+            F.line(650, 215, 730, 215, { cls: "s-mut", sw: 3 }) + F.line(650, 240, 730, 240, { cls: "s-mut", sw: 3 }) + F.line(650, 265, 710, 265, { cls: "s-mut", sw: 3 }) +
+            F.text(690, 330, "ルールブック", { size: 26, anchor: "middle", weight: 700 });
+          s += F.group(book, { op: F.tw(t, 10500, 500) });
+          if (look > 0) s += F.group(F.text(690, 160, "形を探す", { size: 26, anchor: "middle", weight: 700, cls: "k-wire" }), { op: look });
+          /* 紙：入る→探す→返す */
+          var pin = F.tw(t, 20000, 2200), pout = F.tw(t, 26000, 2500);
+          if (t >= 20000 && t < 26000) s += paper(F.lerp(220, 360, pin), "你好吗？", 1);
+          if (t >= 26000) s += paper(F.lerp(360, 220, pout), "我很好", 1);
+          if (t >= 29400 && t < 30600) s += F.ask(400, 412, "わかるように見える？", F.tw(t, 29400, 300), 400);
+          var r = F.tw(t, 30600, 400);
+          if (r > 0) s += F.group(F.rect(14, 76, 240, 96, { cls: "k-wiresoft s-wire", sw: 3, rx: 16 }) +
+            F.text(134, 116, "中国語が", { size: 26, anchor: "middle", weight: 700, cls: "k-wire" }) +
+            F.text(134, 154, "わかる人がいる", { size: 26, anchor: "middle", weight: 700, cls: "k-wire" }), { op: r });
+          return s;
+        }
+      },
+      {
+        name: "問い", dur: 25000,
+        cues: [[0, "ルールブックはプログラム、中の人はコンピュータにあたります。"],
+          [6000, "規則どおりに記号を扱えれば、意味を理解していると言えるのか。サールは「言えない」と考えました。"],
+          [13000, "（強い AI：正しいプログラムを動かせば本当に理解が生まれる、という考え。サールはこれに反対しました。）"],
+          [20000, "あなたはどう考えますか。必須課題2で答えてください。"]],
+        draw: function (t) {
+          var s = person(230, 60);
+          s += F.rect(520, 50, 120, 110, { cls: "k-panel s-ink", sw: 3, rx: 6 }) +
+            F.line(540, 85, 620, 85, { cls: "s-mut", sw: 3 }) + F.line(540, 110, 620, 110, { cls: "s-mut", sw: 3 }) + F.line(540, 135, 600, 135, { cls: "s-mut", sw: 3 });
+          s += F.group(F.text(230, 210, "中の人 ＝ コンピュータ", { size: 26, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 800, 500) });
+          s += F.group(F.text(580, 210, "ルールブック ＝ プログラム", { size: 26, anchor: "middle", weight: 700, cls: "k-wire" }), { op: F.tw(t, 300, 500) });
+          var q = F.tw(t, 6000, 500) * (1 - F.tw(t, 19600, 400));
+          if (q > 0) s += F.group(F.text(400, 266, "記号を扱える ＝ 意味がわかる？", { size: 32, anchor: "middle", weight: 700 }), { op: q });
+          s += F.group(F.text(400, 266, "あなたはどう考える？ → 必須課題2", { size: 30, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 20000, 500) });
+          s += F.group(F.rect(30, 290, 740, 130, { cls: "k-panel s-rule", sw: 2 }) +
+            F.text(50, 336, "強い AI", { size: 26, weight: 700, cls: "k-wire" }) + F.text(170, 336, "正しいプログラムで理解が生まれる", { size: 26 }) +
+            F.text(755, 336, "サールは反対", { size: 26, anchor: "end", weight: 700, cls: "k-ng" }) +
+            F.text(50, 396, "弱い AI", { size: 26, weight: 700, cls: "k-wire" }) + F.text(170, 396, "心の研究に役立つ道具と見る", { size: 26 }), { op: F.tw(t, 13000, 500) });
+          return s;
+        }
+      }
+    ]
+  };
+  /* 部屋に差し入れる紙 */
+  function paper(cx, str, op) {
+    return F.group(F.rect(cx - 70, 202, 140, 56, { cls: "k-panel s-acc", sw: 3, rx: 4 }) +
+      F.text(cx, 240, str, { size: 28, anchor: "middle", weight: 700 }), { op: op });
+  }
+
+  /* ==================== 動画3 ==================== */
+  /* 動く場面の画面：上にテープ、左下に規則表、右下に表の名前・状態・ステップ数 */
+  var TX0 = 120, TLO = -2, THI = 5;
+  function tmScreen(t, hist, rules, starts, durs, label, o) {
+    o = o || {};
+    var m = tmAt(hist, rules, starts, durs, t), s = "";
+    s += tape({ y: 30, x0: TX0, lo: TLO, hi: THI, get: getter(m.conf), write: m.write, head: m.head });
+    s += F.group(ruleTable(30, 150, rules, { hl: m.row, hlOp: 1 }), { op: o.tableOp != null ? o.tableOp : 1 });
+    s += F.text(690, 182, label, { size: 28, anchor: "middle", weight: 700, cls: "k-mut" });
+    s += stateTag(690, 205, m.state, 1);
+    s += F.text(690, 332, "ステップ " + m.steps, { size: 30, anchor: "middle", weight: 700, mono: false });
+    return { svg: s, m: m };
+  }
+  var S4_ST = [1500, 12000, 18500, 23500, 28500], S4_D = [10000, 5000, 5000, 5000, 5000];
+  var S5_ST = [4000, 11000, 19000], S5_D = [6000, 6000, 6000];
+
+  CA.films.tm3 = {
+    title: "動画3：チューリングマシンの 1 ステップ（約2分30秒）",
+    scenes: [
+      {
+        name: "計算とは", dur: 15000,
+        cues: [[0, "チューリングは、「計算とは何か」をはっきりさせるために、とても単純な機械を考えました。"], [7000, "答えを出して止まれば、その問題は計算できた、と考えます。"]],
+        draw: function (t) {
+          var s = F.rect(40, 140, 160, 80, { cls: "k-panel s-rule", sw: 3 }) + F.text(120, 191, "入力", { size: 30, anchor: "middle", weight: 700 });
+          s += arrow(210, 180, 270, 180);
+          s += F.rect(280, 120, 240, 120, { cls: "k-panel s-ink", sw: 4 }) + F.text(400, 191, "計算機", { size: 34, anchor: "middle", weight: 700 });
+          s += F.group(arrow(530, 180, 590, 180) + F.rect(600, 140, 160, 80, { cls: "k-panel s-acc", sw: 3 }) +
+            F.text(680, 191, "出力", { size: 30, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 2500, 500) });
+          s += F.group(F.text(400, 320, "止まって答えを出す ＝ 計算できた", { size: 32, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 7000, 500) });
+          return s;
+        }
+      },
+      {
+        name: "部品", dur: 20000,
+        cues: [[0, "左右に無限に長いテープ。マスには 0、1、空白（□）のどれかが書かれています。"], [10000, "ヘッドは 1 マスだけを読み書きでき、機械は今の「状態」を覚えています。"]],
+        draw: function (t) {
+          var c0 = TM.init("1011", "left"), s = "";
+          s += F.text(400, 70, "テープ：左右に無限に続く", { size: 28, anchor: "middle", weight: 700 });
+          s += tape({ y: 100, x0: TX0, lo: TLO, hi: THI, get: getter(c0) });
+          var hx = TX0 + (0 - TLO) * CS + CW / 2, h = F.tw(t, 10000, 500);
+          s += F.group(headMark(hx, 174) + F.text(hx, 250, "ヘッド：1 マスだけ読み書き", { size: 28, anchor: "middle", weight: 700, cls: "k-wire" }), { op: h });
+          s += F.group(stateTag(640, 300, "A", 1) + F.text(640, 400, "今の状態を覚える", { size: 28, anchor: "middle", weight: 700 }), { op: F.tw(t, 12500, 500) });
+          return s;
+        }
+      },
+      {
+        name: "規則表", dur: 20000,
+        cues: [[0, "何をするかは「規則表」で決まります。"], [7000, "今の状態と読んだ記号の組ごとに、書く記号・動く向き・次の状態の 3 つを決めておきます。"]],
+        draw: function (t) {
+          var s = F.text(400, 60, "規則表（ビット反転）", { size: 32, anchor: "middle", weight: 700 });
+          var c = F.tw(t, 7000, 500), x = 130;
+          s += ruleTable(x, 170, INV, { cols: c });
+          s += F.group(F.text(x + 92, 150, "この組ごとに", { size: 26, anchor: "middle", weight: 700, cls: "k-mut" }) +
+            F.text(x + 392, 150, "決めておく 3 つ", { size: 26, anchor: "middle", weight: 700, cls: "k-wire" }), { op: c });
+          return s;
+        }
+      },
+      {
+        name: "動かす", dur: 45000,
+        cues: [[0, "ヘッドの下は 1、状態は A。表の「A・1」の行を使います。"], [4000, "0 を書いて右へ 1 マス進み、状態は A のまま。これで 1 ステップです。"],
+          [12000, "2 ステップ目は 0 を読むので「A・0」の行。1 を書いて右へ進みます。"],
+          [19800, "3・4 ステップ目も「A・1」の行。1 を 0 にして右へ進みます。"],
+          [28500, "空白を読んだら「停止」。テープには 0100 が残りました。5 ステップでした。"]],
+        pause: { t: 17500, q: "次の 1 ステップで、ヘッドの下の 1 はどうなる？", choices: ["0 になって右へ進む", "1 のまま右へ進む", "0 になって左へ進む"], answer: 0, reveal: 19800 },
+        draw: function (t) {
+          var r = tmScreen(t, RUN_INV.hist, INV, S4_ST, S4_D, "反転の表"), s = r.svg;
+          if (t >= 16300 && t < 18500) s += F.ask(400, 410, "ヘッドの下の 1 はどうなる？", F.tw(t, 16300, 400), 480);
+          if (t >= 33000) s += F.group(F.text(400, 420, "0100 が残った（" + RUN_INV.steps + " ステップ）", { size: 32, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 33000, 500) });
+          return s;
+        }
+      },
+      {
+        name: "取りかえる", dur: 35000,
+        cues: [[0, "規則表を取りかえると、同じ機械が別の仕事をします。今度は 1 を足す表です。"], [4000, "1 を読んだら 0 にして左へ。繰り上がりを左の桁へ運びます。"],
+          [19000, "0 を読んだら 1 にして停止。1011 ＋ 1 ＝ 1100 です。"]],
+        pause: { t: 3000, q: "1 を足す表では、ヘッドはどちらへ進む？", choices: ["右へ", "左へ"], answer: 1, reveal: 6800 },
+        draw: function (t) {
+          var swap = F.tw(t, 300, 900);
+          var r = tmScreen(t, RUN_PLUS.hist, PLUS, S5_ST, S5_D, "＋1 の表", { tableOp: swap }), s = r.svg;
+          if (swap < 1) s += F.group(ruleTable(30, 150, INV, {}), { op: 1 - swap });
+          if (t >= 1800 && t < 4000) s += F.ask(400, 410, "ヘッドはどちらへ進む？", F.tw(t, 1800, 400), 440);
+          s += F.group(F.text(400, 420, "繰り上がりは左の桁へ", { size: 30, anchor: "middle", weight: 700, cls: "k-wire" }), { op: F.tw(t, 6800, 400) * (1 - F.tw(t, 24000, 400)) });
+          s += F.group(F.text(400, 420, "1011 ＋ 1 ＝ " + TM.window(RUN_PLUS.tape, 4), { size: 34, anchor: "middle", weight: 700, mono: true, cls: "k-acc" }), { op: F.tw(t, 24400, 500) });
+          return s;
+        }
+      },
+      {
+        name: "まとめ", dur: 15000,
+        cues: [[0, "規則表を取りかえることは、動画1の「記述を取りかえる」ことと同じです。"], [7000, "ページの模擬器で、自分でも動かしてみましょう。"]],
+        draw: function (t) {
+          var s = F.text(400, 120, "規則表を取りかえる", { size: 40, anchor: "middle", weight: 700, cls: "k-wire" });
+          s += F.group(F.text(400, 190, "＝", { size: 40, anchor: "middle", weight: 700 }), { op: F.tw(t, 1000, 400) });
+          s += F.group(F.text(400, 260, "記述（プログラム）を取りかえる", { size: 40, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 1800, 500) });
+          s += F.group(F.text(400, 380, "ページの模擬器で動かしてみよう", { size: 30, anchor: "middle", weight: 700 }), { op: F.tw(t, 7000, 500) });
+          return s;
+        }
+      }
+    ]
+  };
+
+  /* ==================== 動画4 ==================== */
+  var L_ST = [], L_D = [];
+  for (var li = 0; li < RUN_LOOP.steps; li++) { L_ST.push(3200 + li * 1100); L_D.push(1100); }
+
+  CA.films.tm4 = {
+    title: "動画4：止まらない機械と、今のコンピュータ（約1分45秒）",
+    scenes: [
+      {
+        name: "止まらない", dur: 25000,
+        cues: [[0, "空白を読んでも右へ進む表にすると、どうなるでしょう。"], [9000, "テープは無限に長いので、機械は止まらずに進み続けます。"], [17000, "止まらなければ、答えは出ません。"]],
+        pause: { t: 2500, q: "この機械は止まる？", choices: ["いつか止まる", "ずっと止まらない"], answer: 1, reveal: 9000 },
+        draw: function (t) {
+          var m = tmAt(RUN_LOOP.hist, LOOP, L_ST, L_D, t), s = "";
+          /* ヘッドを追って、テープの見える範囲を右へずらす */
+          var cam = Math.max(1.5, m.head);
+          function cx(k) { return 400 - CW / 2 + (k - cam) * CS; }
+          /* 枠（x 70〜730）に全部入るマスだけを描く。途中で切れたマスは出さない */
+          var lo = Math.ceil(cam - (400 - CW / 2 - 70) / CS), hi = Math.floor(cam + (730 - 400 - CW / 2) / CS);
+          s += tape({ y: 30, x0: cx(lo), lo: lo, hi: hi, get: getter(m.conf), write: m.write, head: m.head, ell: false });
+          s += F.text(46, 72, "…", { size: 30, anchor: "middle", cls: "k-mut" }) + F.text(754, 72, "…", { size: 30, anchor: "middle", cls: "k-mut" });
+          s += ruleTable(30, 150, LOOP, { hl: m.row });
+          /* 予想の答えになるので、答え合わせ（9 秒）まで出さない */
+          s += F.group(F.text(690, 182, "停止の行なし", { size: 26, anchor: "middle", weight: 700, cls: "k-ng" }), { op: F.tw(t, 9000, 500) });
+          s += stateTag(690, 205, m.state, 1);
+          s += F.text(690, 332, "ステップ " + m.steps, { size: 30, anchor: "middle", weight: 700 });
+          if (t >= 1300 && t < 3200) s += F.ask(400, 410, "この機械は止まる？", F.tw(t, 1300, 400), 400);
+          s += F.group(F.text(400, 420, "止まらない → 答えは出ない", { size: 32, anchor: "middle", weight: 700, cls: "k-ng" }), { op: F.tw(t, 17000, 500) });
+          return s;
+        }
+      },
+      {
+        name: "停止性問題", dur: 30000,
+        cues: [[0, "では、どんな規則表と入力を渡されても、止まるかどうかを必ず言い当てる機械は作れるでしょうか。"],
+          [10000, "チューリングは 1936 年の論文で、そのような機械は作れないことを示しました（今は停止性問題と呼ばれます）。"],
+          [20000, "スライド7の「出力不可能 → アルゴリズムは存在しない」は、このことを短く言ったものです。"]],
+        draw: function (t) {
+          var s = "";
+          s += F.rect(30, 150, 140, 56, { cls: "k-wiresoft s-wire", sw: 3, rx: 8 }) + F.text(100, 188, "規則表", { size: 28, anchor: "middle", weight: 700, cls: "k-wire" });
+          s += F.rect(30, 250, 140, 56, { cls: "k-wiresoft s-wire", sw: 3, rx: 8 }) + F.text(100, 288, "入力", { size: 28, anchor: "middle", weight: 700, cls: "k-wire" });
+          s += arrow(178, 178, 222, 205) + arrow(178, 278, 222, 255);
+          var x = F.tw(t, 14000, 500);
+          s += F.rect(230, 130, 330, 200, { cls: x > 0 ? "k-panel s-ng" : "k-panel s-ink", sw: 4, dash: x > 0 ? "12 8" : null });
+          s += F.text(395, 218, "止まるかを", { size: 30, anchor: "middle", weight: 700 }) + F.text(395, 262, "言い当てる機械？", { size: 30, anchor: "middle", weight: 700 });
+          var flick = t >= 3000 && t < 10000 ? Math.floor((t - 3000) / 1000) % 2 : -1;
+          s += arrow(568, 205, 618, 182) + arrow(568, 255, 618, 278);
+          s += F.rect(625, 150, 150, 56, { cls: flick === 0 ? "k-lamp s-lamp" : "k-panel s-rule", sw: 3, rx: 8 }) +
+            F.text(700, 188, "止まる", { size: 28, anchor: "middle", weight: 700, cls: flick === 0 ? "k-lampink" : "k-ink" });
+          s += F.rect(625, 250, 150, 56, { cls: flick === 1 ? "k-lamp s-lamp" : "k-panel s-rule", sw: 3, rx: 8 }) +
+            F.text(700, 288, "止まらない", { size: 28, anchor: "middle", weight: 700, cls: flick === 1 ? "k-lampink" : "k-ink" });
+          /* ✕ は箱の角に付ける（箱の中の文字と重ねない） */
+          if (x > 0) s += F.group(F.circle(560, 130, 32, { cls: "k-panel s-ng", sw: 5 }) +
+            F.line(545, 115, 575, 145, { cls: "s-ng", sw: 7 }) + F.line(575, 115, 545, 145, { cls: "s-ng", sw: 7 }), { op: x });
+          s += F.group(F.text(400, 385, "作れない（停止性問題）", { size: 32, anchor: "middle", weight: 700, cls: "k-ng" }), { op: F.tw(t, 15000, 500) });
+          s += F.group(F.text(400, 432, "スライド7の「出力不可能」はこのこと", { size: 28, anchor: "middle", weight: 700, cls: "k-mut" }), { op: F.tw(t, 20000, 500) });
+          s += F.text(400, 80, "どの規則表と入力でも、必ず？", { size: 30, anchor: "middle", weight: 700 });
+          return s;
+        }
+      },
+      {
+        name: "今の PC", dur: 20000,
+        cues: [[0, "チューリングマシンでできることは、今のパソコンでも（時間とメモリがあれば）できます。"],
+          [10000, "チューリングマシンでできないことは、速さやメモリを増やしても、今のパソコンでもできません。"]],
+        draw: function (t) {
+          var s = F.text(200, 70, "チューリングマシン", { size: 28, anchor: "middle", weight: 700 }) + F.text(600, 70, "今のパソコン", { size: 28, anchor: "middle", weight: 700 });
+          ["1", "0", "1", "1", "_"].forEach(function (c, i) {
+            var x = 82 + i * 48;
+            s += F.rect(x, 100, 44, 44, { cls: "k-panel s-mut", sw: 3, rx: 4 }) +
+              F.text(x + 22, 132, sym(c), { size: 26, anchor: "middle", weight: 700, mono: c !== "_", cls: c === "_" ? "k-mut" : "k-ink" });
+          });
+          s += headMark(104, 152);
+          s += F.rect(530, 96, 140, 92, { cls: "k-panel s-ink", sw: 4, rx: 6 }) + F.rect(590, 188, 20, 14, { cls: "k-off s-ink", sw: 2, rx: 0 }) +
+            F.line(560, 204, 640, 204, { cls: "s-ink", sw: 5 });
+          s += F.group(F.text(200, 270, "できる", { size: 32, anchor: "middle", weight: 700, cls: "k-acc" }) + arrow(290, 260, 500, 260) +
+            F.text(600, 270, "できる", { size: 32, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 1500, 500) });
+          s += F.group(F.text(200, 350, "できない", { size: 32, anchor: "middle", weight: 700, cls: "k-ng" }) + arrow(290, 340, 500, 340) +
+            F.text(600, 350, "できない", { size: 32, anchor: "middle", weight: 700, cls: "k-ng" }), { op: F.tw(t, 10000, 500) });
+          s += F.group(F.text(400, 420, "速さやメモリを増やしても変わらない", { size: 28, anchor: "middle", weight: 700 }), { op: F.tw(t, 12500, 500) });
+          return s;
+        }
+      },
+      {
+        name: "プログラム内蔵", dur: 30000,
+        cues: [[0, "チューリングは、規則表そのものもテープに書いて読ませる「万能チューリングマシン」を考えました。"],
+          [10000, "今のコンピュータも、命令（プログラム）とデータを同じメインメモリに置きます。これがプログラム内蔵方式です。"],
+          [22000, "CPU がこの命令をどう実行するかは、第9回で見ます。"]],
+        draw: function (t) {
+          var s = "", a = 1 - F.tw(t, 9600, 400);
+          if (a > 0) {
+            var g = F.text(400, 70, "万能チューリングマシン", { size: 32, anchor: "middle", weight: 700 });
+            var R = ["A", "0", "1", "右", "A", "…"], I = ["1", "0", "1", "1"];
+            R.forEach(function (c, i) {
+              var x = 100 + i * 56;
+              g += F.rect(x, 150, 52, 52, { cls: "k-wiresoft s-wire", sw: 3, rx: 4 }) +
+                F.text(x + 26, 186, c, { size: 28, anchor: "middle", weight: 700, mono: c !== "右" && c !== "…", cls: "k-wire" });
+            });
+            I.forEach(function (c, i) {
+              var x = 476 + i * 56;
+              g += F.rect(x, 150, 52, 52, { cls: "k-panel s-mut", sw: 3, rx: 4 }) + F.text(x + 26, 186, c, { size: 28, anchor: "middle", weight: 700, mono: true });
+            });
+            g += F.text(68, 186, "…", { size: 28, anchor: "middle", cls: "k-mut" }) + F.text(720, 186, "…", { size: 28, anchor: "middle", cls: "k-mut" });
+            g += F.group(F.path("M102,220 V232 H430 V220", { cls: "s-wire", sw: 3 }) + F.text(266, 272, "規則表", { size: 28, anchor: "middle", weight: 700, cls: "k-wire" }), { op: F.tw(t, 2500, 500) });
+            g += F.group(F.path("M478,220 V232 H698 V220", { cls: "s-mut", sw: 3 }) + F.text(588, 272, "入力", { size: 28, anchor: "middle", weight: 700 }), { op: F.tw(t, 4000, 500) });
+            g += F.group(F.text(400, 360, "規則表もテープに書いて読ませる", { size: 30, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 5500, 500) });
+            s += F.group(g, { op: a });
+          }
+          var b = F.tw(t, 10000, 500);
+          if (b > 0) {
+            var MEM = [["10", "LD Reg1, 20"], ["11", "ADD Reg1, 21"], ["12", "ST Reg1, 22"], ["20", "3"], ["21", "5"]];
+            var g2 = F.text(300, 60, "メインメモリ", { size: 30, anchor: "middle", weight: 700 });
+            g2 += F.rect(120, 80, 360, 46 + MEM.length * 52, { cls: "k-panel s-rule", sw: 2 });
+            g2 += F.text(180, 112, "アドレス", { size: 26, anchor: "middle", cls: "k-mut" }) + F.text(360, 112, "中身", { size: 26, anchor: "middle", cls: "k-mut" });
+            g2 += F.line(130, 126, 470, 126, { cls: "s-rule", sw: 2 }) + F.line(240, 88, 240, 118 + MEM.length * 52, { cls: "s-rule", sw: 2 });
+            MEM.forEach(function (r, i) {
+              var y = 126 + i * 52;
+              if (i === 3) g2 += F.line(130, y, 470, y, { cls: "s-mut", sw: 2, dash: "6 6" });
+              g2 += F.text(180, y + 37, r[0], { size: 30, anchor: "middle", weight: 700, mono: true, cls: "k-mut" });
+              g2 += F.text(260, y + 37, r[1], { size: 28, weight: 700, mono: true, cls: i < 3 ? "k-wire" : "k-ink" });
+            });
+            g2 += F.group(F.path("M495,132 H510 V276 H495", { cls: "s-wire", sw: 3 }) + F.text(525, 214, "命令（プログラム）", { size: 28, weight: 700, cls: "k-wire" }), { op: F.tw(t, 12000, 500) });
+            g2 += F.group(F.path("M495,284 H510 V380 H495", { cls: "s-ink", sw: 3 }) + F.text(525, 342, "データ", { size: 28, weight: 700 }), { op: F.tw(t, 15000, 500) });
+            g2 += F.group(F.text(400, 430, "CPU がどう実行するか → 第9回", { size: 30, anchor: "middle", weight: 700, cls: "k-acc" }), { op: F.tw(t, 22000, 500) });
+            s += F.group(g2, { op: b });
+          }
+          return s;
+        }
+      }
+    ]
+  };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+/* 第8回（オンデマンド）の手書きの解説（簡単・通常・詳細・発展）。
+   問題の項目（p1〜p4）と、確認問題（c1〜c4）。練習問題の解説は、ページの中で問題ごとに作る。
+   クイズ・必須課題・発展課題の答えはここに入れない（締切のあとにページの「答え」に載せる）。 */
+(function (root) {
+  "use strict";
+  var CA = root.CA = root.CA || {};
+  CA.EXP_ITEMS = CA.EXP_ITEMS || {};
+  CA.EXP_Q = CA.EXP_Q || {};
+
+  CA.EXP_ITEMS.w08 = {
+    p1: {
+      easy: "今の状態と、ヘッドの下の記号。この2つの組で、規則表の行が1つ決まります。その行のとおりに書いて、動いて、状態を変えます。",
+      normal: "チューリングマシンの1ステップは、次の順に進みます。<ol><li>ヘッドの下の1マスを読む。</li><li>今の状態と読んだ記号の組に当たる行を、規則表から探す。</li><li>その行の「書く記号」をマスに書く。</li><li>「動く向き」へ1マス動く。</li><li>「次の状態」に変わる。</li></ol>",
+      detail: "規則表の行は「状態」と「読んだ記号」の組で1つに決まります。状態が A と B、記号が 0・1・□ なら、組は 2×3＝6 通りです。表にない組に当たったときは、どうしてよいか決まっていないので、そこで止まってしまいます（模擬器では「規則なし」と出ます）。<br>まちがえやすいのは、書き換える前に動いてしまうこと、向きを逆にすること、状態を変え忘れることです。",
+      adv: "状態は、機械が覚えておける「ここまでの事情」です。たとえば「1 の個数の偶奇」の機械では、A が「ここまで偶数個」、B が「ここまで奇数個」を表します。テープに書かずに覚えておける量は状態の数で決まり、それより多いことはテープに書いて覚えます。CPU のレジスタとメモリの関係に似ています。"
+    },
+    p2: {
+      easy: "1ステップで変わるのは、ヘッドの下の1マスだけ。ヘッドの位置と状態を書きとめながら、1つずつ進めます。",
+      normal: "数ステップ追うときは、毎回「状態・読んだ記号 → 書く・動く・次の状態」を当てはめ、テープを書き写します。「＋1」はヘッドが右端から始まり左へ進み、「ビット反転」は左端から右へ進みます。始まりの位置をまちがえないようにしましょう。",
+      detail: "表にまとめると追いやすくなります。<table><tr><th>ステップ</th><th>状態</th><th>ヘッドの位置</th><th>テープ</th></tr><tr><td>0</td><td>A</td><td>右端</td><td>入力のまま</td></tr><tr><td>1</td><td>…</td><td>…</td><td>…</td></tr></table>1行ごとに、前の行のテープの1マスだけが変わります。2マス以上変わっていたら、どこかでまちがえています。",
+      adv: "ステップ数は、計算にかかる時間の目安です。「＋1」は、右端から続く 1 の数だけ繰り上がりを運ぶので、入力によってステップ数が変わります。n 桁の入力では、多くても n＋1 ステップで止まります。このように、手間を入力の長さで見積もる考え方を「計算量」と言います。"
+    },
+    p3: {
+      easy: "「停止」に入る行に当たれば止まります。当たらずに同じ動きをくり返す表は、止まりません。",
+      normal: "止まるかどうかは、数ステップ追うと分かることが多いです。<ul><li>どの行の「次の状態」にも「停止」がなければ、必ず止まりません。</li><li>状態とヘッドの位置とテープが、前と同じ様子に戻ったら、その先も同じくり返しなので止まりません。</li></ul>",
+      detail: "止まらない典型は2つです。<ol><li>空白を読んでも同じ向きに進み続ける（テープは無限に長いので、空白は終わらない）。</li><li>同じ数マスを行ったり来たりする（様子が同じに戻る）。</li></ol>止まらない機械は答えを出さないので、その入力については「計算できた」とは言えません。",
+      adv: "上の見分け方は、どの表にも使えるわけではありません。テープを書き足しながら進み、同じ様子に二度と戻らないのに止まりもしない機械もあります。チューリングは、どんな表と入力についても止まるかを必ず言い当てる機械は作れないことを示しました（停止性問題）。"
+    },
+    p4: {
+      easy: "テープは無限に長いので、桁があふれません。決まったビット数のレジスタでは、はみ出した桁は消えます。",
+      normal: "「＋1」の機械で 1 が並んだ数に1を足すと、繰り上がりが左端の外まで出て、空白のマスに 1 を書きます。テープには場所がいくらでもあるので、桁が1つ増えた答えが残ります。3ビットや4ビットのレジスタには、その桁を置く場所がないので消えます（第3回のオーバーフロー）。",
+      detail: "比べてみましょう。<table><tr><th></th><th>111 ＋ 1</th></tr><tr><td>テープ（チューリングマシン）</td><td>1000</td></tr><tr><td>3ビットのレジスタ</td><td>000（あふれ）</td></tr></table>計算の手順は同じで、違うのは結果を置く場所の大きさだけです。",
+      adv: "今のコンピュータのメモリは有限なので、厳密にはテープが無限のチューリングマシンより弱い機械です。それでも「メモリが足りなくなったら足せる」と考えれば、チューリングマシンでできることは今のコンピュータでもできます。スライド9の「チューリングマシンでできること → 現在のPCでもできる」は、この意味です。"
+    }
+  };
+
+  CA.EXP_Q.w08 = {
+    c1: {
+      easy: "使う行は「状態 A・読んだ記号 1」。0 を書いて左へ、状態は A のままです。",
+      normal: "ヘッドの下は 1、状態は A です。規則表の「A・1」の行は「0 を書く・左・A」。右端の 1 が 0 になり、ヘッドは左のマスへ動き、状態は A のままです。",
+      detail: "手順：<ol><li>読む：ヘッドの下は 1。</li><li>行を探す：状態 A と 1 の組 → 「0 を書く・左・A」。</li><li>書く：0101 の右端が 0 になり 0100。</li><li>動く：左へ1マス（右から2番目の 0 の上）。</li><li>状態：A のまま。</li></ol>",
+      adv: "「＋1」の機械は、繰り上がりを状態 A のまま左へ運びます。0 か空白に出会うと 1 を書いて停止します。繰り上がりが続くかどうかを、状態ではなく「次に読む記号」で決めているのがこの表の工夫です。"
+    },
+    c2: {
+      easy: "2ステップで、右の 1 が2つとも 0 になります。答えは 0000 です。",
+      normal: "0011 の右端から始めます。1ステップ目：1 を 0 にして左へ（0010）。2ステップ目：1 を 0 にして左へ（0000）。3ステップ目で 0 を 1 にして停止し、最後は 0100 になります。聞かれているのは2ステップ後なので 0000 です。",
+      detail: "途中の様子：<table><tr><th>ステップ</th><th>テープ</th><th>ヘッド</th></tr><tr><td>0</td><td>0011</td><td>右から1番目</td></tr><tr><td>1</td><td>0010</td><td>右から2番目</td></tr><tr><td>2</td><td>0000</td><td>右から3番目</td></tr><tr><td>3</td><td>0100</td><td>停止</td></tr></table>途中では、繰り上がりが運ばれている最中なので、一時的に 0000 になります。",
+      adv: "途中の 0000 は、まだ答えではありません。チューリングマシンでは、止まったときのテープだけが答えです。CPU の加算でも、計算の途中の値と、計算が終わって確定した値を区別します（第6回のクロックで値を取りこむ考え方）。"
+    },
+    c3: {
+      easy: "0110 では、最後の 0 を読んだところで「停止」に入ります。止まります。",
+      normal: "状態 A で 0 を読むと右へ。1 を読むと状態 B。B のまま 1 を読んで右へ。B で 0 を読むと 1 を書いて停止します。4ステップで止まります。",
+      detail: "様子を並べると：A・0 → 右へ A／A・1 → 右へ B／B・1 → 右へ B／B・0 → 1 を書いて停止。止まったときのテープは 0111 です。入力に 0 がなくても、B で空白を読めば停止の行があるので、どんな入力でも止まる表です。",
+      adv: "「どんな入力でも止まる」ことは、場合分けで確かめられます。A のまま進む間は右へ1マスずつ進み、いつか 1 か空白に当たる。B に入ったら、いつか 0 か空白に当たる。どちらも停止か B に移るので、無限に続く道がありません。"
+    },
+    c4: {
+      easy: "3ビットのレジスタには3桁しか入らないので、111＋1 の答え 1000 の上の桁はあふれて、000 が残ります。",
+      normal: "111 ＋ 1 は、右の桁から繰り上がりが続いて 1000 になります。3ビットのレジスタには下の3桁 000 だけが残り、4桁目の 1 はあふれて消えます。チューリングマシンのテープなら、空白のマスに 1 を書けるので 1000 が残ります。",
+      detail: "筆算：1＋1＝10 で 0 を書いて繰り上がり、次も 1＋1＝10、さらに次も 1＋1＝10。最後の繰り上がりは4桁目に出ます。レジスタは3ビットなので、4桁目を置くマスがありません（オーバーフロー）。",
+      adv: "符号なしの3ビットなら 7＋1 が 0 に戻る（1周する）と見ることもできます。第3回の「4ビットのメーター」と同じ考え方で、ビット数が決まっている限り、数は円のように回ります。テープが無限のチューリングマシンには、この1周がありません。"
+    }
+  };
+  if (typeof module !== "undefined" && module.exports) module.exports = { items: CA.EXP_ITEMS.w08, q: CA.EXP_Q.w08 };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>CA.explainItems((CA.EXP_ITEMS || {})[window.CA_PAGE]); CA.sidebar();</script>
+<script>
+(function () {
+  var T = CA.tm, V = CA.tmView, WF = CA.w08form, h = CA.h;
+  function $(id) { return document.getElementById(id); }
+  var ITEMS = [{ id: "p1", title: "1ステップ" }, { id: "p2", title: "数ステップ" }, { id: "p3", title: "止まる？" }, { id: "p4", title: "無限のテープ" }];
+  CA.progress.init(ITEMS, { label: "問題" });
+  function choiceQ(prompt, choices, answer, msgs, solution) {
+    return function () { return { type: "choice", prompt: prompt, choices: choices, answer: answer, solution: solution,
+      check: function (i) { return i === answer ? { ok: true } : { ok: false, msg: msgs[i] }; } }; };
+  }
+  function textQ(prompt, label, answer, msg, solution) {
+    return function () { return { type: "text", prompt: prompt, inputLabel: label, inputMode: "numeric", solution: solution,
+      check: function (x) { return WF.normDigits(x) === answer ? { ok: true } : { ok: false, msg: msg }; } }; };
+  }
+  function conf(input, head, state, steps) { var c = T.init(input, "left", state); c.head = head; c.steps = steps || 0; return c; }
+  function rangeOf(list) {
+    var lo = 0, hi = 0;
+    list.forEach(function (c) { var r = V.range(c, 1); lo = Math.min(lo, r[0]); hi = Math.max(hi, r[1]); });
+    return [lo, hi];
+  }
+  function hist(m, input, k) { var r = T.run(m.rules, input, { start: m.start }); return r.hist.slice(0, (k == null ? r.hist.length - 1 : k) + 1); }
+  function histHTML(list) {
+    var rg = rangeOf(list);
+    return "<div class=\"step-list\">" + list.map(function (c, i) { return "<div>" + i + " ステップ後：" + V.tapeHTML(c, { range: rg, small: true }) + "</div>"; }).join("") + "</div>";
+  }
+
+  /* 動画 */
+  ["tm1", "tm2", "tm3", "tm4"].forEach(function (k, i) { if (CA.films && CA.films[k]) CA.film($("film" + (i + 1)), CA.films[k]); });
+
+  /* 模擬器（必須課題1でも使う）と、自分で作る表 */
+  var ed = CA.tmEditor($("editor"), { id: "advA" });
+  var sim = CA.tmSim($("simbox"), { id: "main", machines: ["invert", "plus1"], input: "1011",
+    custom: function () { return { name: "自分で作った表", start: "left", note: "発展課題Aで作った表。ヘッドは左端、状態 A から。", rules: ed.rules() }; } });
+
+  /* 問題1 */
+  (function () {
+    var m = T.MACHINES.plus1, c0 = conf("0101", 3, "A");
+    var right = T.step(m.rules, c0);
+    var w1 = T.clone(c0); w1.tape[3] = "0"; w1.head = 4;
+    var w2 = T.clone(c0); w2.head = 2;
+    var w3 = T.clone(c0); w3.tape[3] = "0"; w3.head = 2; w3.state = "H";
+    var rg = rangeOf([c0, right, w1, w2, w3]);
+    var o = { range: rg, small: true };
+    CA.quiz($("c1"), { mode: "check", id: "c1", itemId: "p1", make: choiceQ("機械「＋1」の規則表と、今の様子です。1ステップ後はどれ？" + V.tableHTML(m.rules) + "<p>今：" + V.tapeHTML(c0, { range: rg }) + "</p>",
+      [V.tapeHTML(right, o), V.tapeHTML(w1, o), V.tapeHTML(w2, o), V.tapeHTML(w3, o)], 0,
+      [null, "書く記号は合っていますが、向きを見直しましょう。「＋1」は繰り上がりを左の桁へ運ぶので、左へ進みます。", "読んだ 1 を書き換えていません。この行の「書く記号」は 0 です。", "次の状態は「停止」ではなく A です。1 を読んだときは、まだ繰り上がりが続くかもしれません。"],
+      "使う行は「状態 A・読んだ記号 1」。0 を書き、左へ1マス、状態は A のまま。") });
+    CA.quiz($("d1"), { mode: "drill", id: "d1", title: "練習：1ステップ後はどれ？（何問でも）", make: function () {
+      var p = T.gen.step1(Math.random), mm = T.MACHINES[p.machine], u = p.used;
+      var rg2 = rangeOf([p.conf].concat(p.choices.map(function (x) { return x.conf; })));
+      var row = "状態 " + u.state + "・読んだ記号 " + V.symLabel(u.read);
+      var act = V.symLabel(u.write) + " を書き、" + V.mvLabel(u.move) + "へ1マス、" + (u.next === "H" ? "停止" : "状態 " + u.next);
+      return { type: "choice", keepOrder: true, answer: p.answer,
+        prompt: "機械「" + mm.name + "」の規則表と、今の様子です。1ステップ後はどれ？" + V.tableHTML(mm.rules) + "<p>今：" + V.tapeHTML(p.conf, { range: rg2 }) + "</p>",
+        choices: p.choices.map(function (x) { return V.tapeHTML(x.conf, { range: rg2, small: true }); }),
+        check: function (k) { return k === p.answer ? { ok: true } : { ok: false, msg: "ヘッドの下の記号と今の状態から、使う行を探しましょう。使うのは「" + row + "」の行です。" }; },
+        solution: "使う行は「" + row + "」。" + act + "。",
+        explain: {
+          easy: "使う行は「" + row + "」。その行のとおりに、" + act + "。",
+          normal: "1ステップは「行を選ぶ → 書く → 動く → 状態を変える」の順です。今の状態と、ヘッドの下の記号の組で行が1つに決まります。ここでは「" + row + "」の行なので、" + act + "。",
+          detail: "手順：<ol><li>ヘッドの下の記号を読む（" + V.symLabel(u.read) + "）。</li><li>今の状態（" + u.state + "）と組にして、規則表の行を探す。</li><li>その行の「書く記号」（" + V.symLabel(u.write) + "）を、ヘッドの下のマスに書く。</li><li>「動く向き」（" + V.mvLabel(u.move) + "）へ1マス動く。</li><li>「次の状態」（" + V.stLabel(u.next) + "）に変わる。</li></ol>まちがいの選択肢は、書き換えを忘れたもの、向きを逆にしたもの、状態を取りちがえたものです。",
+          adv: "規則表は「(今の状態, 読んだ記号) → (書く記号, 向き, 次の状態)」という関数です。状態の数と記号の数が有限なので、表の行も有限です。それでもテープが無限に長いので、どんなに長い入力でも扱えます。"
+        } };
+    } });
+  })();
+
+  /* 問題2 */
+  (function () {
+    var m = T.MACHINES.plus1, hs = hist(m, "0011", 2);
+    CA.quiz($("c2"), { mode: "check", id: "c2", itemId: "p2", make: textQ("機械「＋1」に 0011 を入れて動かします（ヘッドは右端から）。" + V.tableHTML(m.rules) + "2ステップ後のテープは？（□ を除いた 0 と 1 の並び）",
+      "2ステップ後のテープ", "0000", "1ステップごとにヘッドの位置を書きとめましょう。右端の 1 を 0 にして左へ、次の 1 も 0 にして左へ、です。", histHTML(hs)) });
+    CA.quiz($("d2"), { mode: "drill", id: "d2", title: "練習：数ステップ後のテープ（何問でも）", make: function () {
+      var q = T.gen.trace(Math.random), mm = T.MACHINES[q.machine], hh = hist(mm, q.input, q.k);
+      var where = mm.start === "right" ? "右端" : "左端";
+      return { type: "text", inputLabel: q.k + "ステップ後のテープ", inputMode: "numeric",
+        prompt: "機械「" + mm.name + "」に " + q.input + " を入れて動かします（ヘッドは" + where + "から）。" + V.tableHTML(mm.rules) + q.k + "ステップ後のテープは？（□ を除いた 0 と 1 の並び）",
+        check: function (x) { return WF.normDigits(x) === q.answer ? { ok: true } : { ok: false, msg: "1ステップずつ、ヘッドの位置と状態を書きとめながら進めましょう。" }; },
+        solution: histHTML(hh),
+        explain: {
+          easy: q.k + "ステップ後のテープは " + q.answer + "。1ステップで変わるのは、ヘッドの下の1マスだけです。",
+          normal: "ヘッドは" + where + "から始まります。1ステップごとに、ヘッドの下のマスを規則表のとおりに書き換えて1マス動きます。" + q.k + "回くり返すと " + q.answer + " になります。",
+          detail: "途中のテープを並べると、次のとおりです。" + histHTML(hh) + "▲ がヘッドの位置です。毎回、光る行を探すつもりで「状態・読んだ記号」の組を確かめます。",
+          adv: "ステップ数を数えるのは、計算にかかる時間を測ることでもあります。たとえば「＋1」は、繰り上がりが長く続く入力ほど多くのステップがかかります。計算の手間を入力の長さで比べる考え方を「計算量」と言います。"
+        } };
+    } });
+  })();
+
+  /* 問題3 */
+  (function () {
+    function haltProblem(q, title) {
+      var r = T.run(q.rules, q.input, { start: q.start, maxSteps: 12 });
+      var shown = r.hist.slice(0, Math.min(r.hist.length, 6));
+      return { type: "choice", keepOrder: true, answer: q.halts ? 0 : 1, choices: ["止まる", "止まらない"],
+        prompt: (title || "") + "この規則表で " + q.input + " を動かします（ヘッドは左端、状態 A から）。止まる？止まらない？" + V.tableHTML(q.rules),
+        check: function (k) { return k === (q.halts ? 0 : 1) ? { ok: true } : { ok: false, msg: q.halts ? "数ステップ追ってみましょう。「停止」に入る行に当たります。" : "数ステップ追ってみましょう。同じ様子がくり返されて、「停止」に入る行に当たりません。" }; },
+        solution: histHTML(shown) + (q.halts ? "「停止」に入って止まる。" : "同じ動きがくり返され、「停止」に入らない。"),
+        id: q.id };
+    }
+    var EXP3 = {
+      h1: { easy: "空白を読んでも右へ進んで状態 A のまま。いつまでも止まりません。", normal: "数字の上を右へ進み、空白に出ても「□ を読んだら右へ、状態 A」の行が使われ続けます。テープは無限に長いので、空白は終わりません。「停止」に入る行がないので止まりません。", detail: "表に「停止」が1つも出てこないことに気づけば、すぐに「止まらない」と言えます。次の状態がどの行も A なので、停止に移りようがありません。", adv: "どの行にも「停止」がない表は、必ず止まりません。ただし「停止」がある表でも、そこに行き着かないことがあります（ほかの問題）。見た目だけでは決まらないのが難しいところです。" },
+      h2: { easy: "0 を読むと右へ、1 で状態 B、B で 0 を読むと停止。止まります。", normal: "0110 では、0 で右へ、1 で状態 B に変わり、B のまま 1 を読んで右へ、最後の 0 を読んで 1 を書き、停止します。4ステップで止まります。", detail: "途中のテープ：最初は状態 A でヘッドは左端の 0。A・0 で右へ。A・1 で B へ。B・1 で右へ。B・0 で 1 を書いて停止。止まったときのテープは 0111 です。", adv: "この表は「最初の 1 の並びのあとの 0 を 1 にする」機械です。入力に 0 がなくても、空白を読めば停止します。どんな入力でも止まる表であることを、場合分けで確かめられます。" },
+      h3: { easy: "右へ行って状態 B、左へ戻って状態 A…をくり返します。止まりません。", normal: "00 の左端で A・0 → 右へ B、B・0 → 左へ A と、同じ2マスを行ったり来たりします。1 を読むことがないので「停止」の行は使われず、止まりません。", detail: "様子（状態とヘッドの位置）が、2ステップごとに同じに戻ります。同じ様子に戻ったら、そこから先も同じことのくり返しなので、止まらないと言い切れます。", adv: "「前と同じ様子に戻ったら止まらない」は1つの見分け方です。しかし、テープがどんどん伸びて同じ様子に二度と戻らない機械もあります。どんな表にも使える見分け方はない、というのが停止性問題です。" }
+    };
+    var h2 = T.HALT_QS.filter(function (q) { return q.id === "h2"; })[0];
+    CA.quiz($("c3"), { mode: "check", id: "c3", itemId: "p3", make: function () { var p = haltProblem(h2); delete p.id; return p; } });
+    CA.quiz($("d3"), { mode: "drill", id: "d3", title: "練習：止まる？止まらない？（3つの表）", make: function () {
+      var q = T.HALT_QS[Math.floor(Math.random() * T.HALT_QS.length)];
+      var p = haltProblem(q, "（表 " + q.id.slice(1) + "）");
+      p.explain = EXP3[q.id];
+      return p;
+    } });
+  })();
+
+  /* 問題4 */
+  (function () {
+    CA.quiz($("c4"), { mode: "check", id: "c4", itemId: "p4", make: choiceQ("3ビットのレジスタに 111 が入っています。1 を足すと、レジスタに残るのは？",
+      ["000（4桁目はあふれて消える）", "1000", "111（変わらない）", "110"], 0,
+      [null, "それはテープの「＋1」の機械の結果です。レジスタは3ビットしかないので、4桁目を置く場所がありません。", "1 を足すと、すべての桁で繰り上がりが起きて変わります。", "1 を足したのに減っています。右の桁から繰り上がりを確かめましょう。"],
+      "111 ＋ 1 ＝ 1000 だが、3ビットには下の3桁 000 だけが残る（オーバーフロー）。") });
+    CA.quiz($("d4"), { mode: "drill", id: "d4", title: "練習：テープとレジスタ（何問でも）", make: function () {
+      var x, w;
+      do { w = 3 + Math.floor(Math.random() * 3); x = Math.random() < 0.5 ? new Array(w + 1).join("1") : T.toBin(Math.floor(Math.random() * Math.pow(2, w)), w); } while (T.RESERVED.indexOf(x) >= 0);
+      var n = parseInt(x, 2), reg = T.toBin((n + 1) % Math.pow(2, w), w), r = T.run(T.MACHINES.plus1.rules, x, { start: "right" }), tape = T.show(r.tape);
+      var askReg = Math.random() < 0.5, ans = askReg ? reg : tape;
+      var over = (n + 1) >= Math.pow(2, w);
+      return { type: "text", inputMode: "numeric", inputLabel: "答え",
+        prompt: askReg ? w + "ビットのレジスタに " + x + " が入っています。1 を足すと、レジスタに残るのは？（" + w + "桁で）" : "機械「＋1」に " + x + " を入れて最後まで動かすと、止まったときのテープは？（□ を除く）",
+        check: function (v) { return WF.normDigits(v) === ans ? { ok: true } : { ok: false, msg: askReg ? "レジスタに残るのは下の " + w + " 桁だけです。" : "テープは無限に長いので、はみ出した桁も書けます。" }; },
+        solution: x + " ＋ 1 ＝ " + tape + "。" + (askReg ? w + "ビットのレジスタに残るのは " + reg + (over ? "（あふれた桁は消える）" : "") : "テープには " + tape + " が残る") + "。",
+        explain: {
+          easy: askReg ? "レジスタは " + w + " 桁だけ。答えは " + reg + "。" : "テープは無限に長いので、答えは " + tape + "。",
+          normal: x + " ＋ 1 ＝ " + tape + " です。" + (over ? "桁が1つ増えるので、" + w + "ビットのレジスタでは一番上の桁があふれて " + reg + " が残り、テープでは " + tape + " がそのまま残ります。" : "桁は増えないので、レジスタでもテープでも同じ " + reg.replace(/^0+(?=.)/, "") + " の値です（レジスタは " + reg + " と " + w + " 桁で書く）。"),
+          detail: "右の桁から1を足し、1＋1 は 0 にして繰り上がりを左へ運びます。" + (over ? "全部の桁が 1 だと、繰り上がりが一番左の外まで出ます。レジスタはそこにマスがないので消え、テープは空白のマスに 1 を書きます。" : "途中で 0 に出会えば、そこを 1 にして終わりです。"),
+          adv: "実際のコンピュータのメモリは有限なので、厳密にはチューリングマシンより弱い機械です。それでも、必要なだけメモリを足せる限り、チューリングマシンと同じことができると考えます。"
+        } };
+    } });
+  })();
+
+  /* クイズ（正解はページに入れない。締切のあとに「答え」に載せる） */
+  var QUIZ = [
+    ["チューリングマシンを考えた人物と年は？", ["フォン・ノイマン（1945年）", "アラン・チューリング（1936年）", "クロード・シャノン（1948年）", "チャールズ・バベッジ（19世紀）"]],
+    ["チューリングマシンが1ステップごとに決めることの組み合わせは？", ["読む記号の数・テープの長さ・電源", "書き換える値・進む速さ・クロック", "書き換える値・左右どちらに進むか・次の状態", "書き換える値・上下どちらに進むか・次の状態"]],
+    ["チューリングマシンで「計算できる（アルゴリズムが存在する）」とは？", ["解を出して停止すること", "止まらずに動き続けること", "人間と区別がつかないこと", "人間より速く答えること"]],
+    ["チューリングマシンでできないことは、現在のPCでは？", ["メモリを増やせばできる", "クロックを速くすればできる", "プログラムを工夫すればできる", "できない"]],
+    ["チューリングテスト（1950年）が判定するものは？", ["プログラムが必ず止まるか", "機械が人間らしく振る舞えるか", "CPUの計算速度", "計算できるアルゴリズムがあるか"]],
+    ["サールの「中国語の部屋」（1980年）が問いかけたことは？", ["中国語の文法を機械が自動で学べるか", "機械翻訳の精度をどう測るか", "計算できない問題があるか", "ルールどおりに記号を処理できれば、意味を理解していると言えるか"]],
+    ["チューリングが示した「万能のコンピュータ」の考え方は？", ["同じ機械が記述（プログラム）を切り替えて、他の機械ができることをすべて行える", "1台の機械は1つの仕事しかできない", "機械は人間の脳と同じ構造にする必要がある", "計算は必ず有限の時間で終わる"]],
+    ["デカルト（17世紀）が考えた、人間と機械の関係は？", ["機械は人間と同じように考えられる", "人間と機械には埋められない差がある", "機械のほうが人間より臨機応変である", "人間の心は脳の計算そのものである"]],
+    ["1956年のダートマス会議で生まれた言葉は？", ["情報理論", "チューリングテスト", "人工知能", "パーソナルコンピュータ"]],
+    ["現在のコンピュータの「プログラム内蔵方式」とは？", ["データと命令（プログラム）をメインメモリに置く", "プログラムを配線の組み替えで作る", "命令は人がその都度キーボードから入れる", "プログラムを CPU の中だけに置く"]]
+  ];
+  var L4 = ["A", "B", "C", "D"];
+  var saved = CA.store.get("ans", {}) || {};
+  function save() { CA.store.set("ans", collect()); }
+  QUIZ.forEach(function (q, i) {
+    var fs = h("fieldset", { class: "mq" }, h("legend", { text: "Q" + (i + 1) + ". " + q[0] }));
+    q[1].forEach(function (c, k) {
+      var r = h("input", { type: "radio", name: "mq" + (i + 1), value: L4[k] });
+      if ((saved.quiz || [])[i] === L4[k]) r.checked = true;
+      r.addEventListener("change", save);
+      fs.appendChild(h("label", null, r, h("span", { text: L4[k] + ". " + c })));
+    });
+    $("quizbox").appendChild(fs);
+  });
+
+  /* 必須課題1 */
+  var R1 = [["0111 を入れたとき、止まったときのテープ", "r1"], ["0111 を入れたとき、止まるまでのステップ数", "r2"], ["1111 を入れたとき、止まったときのテープ", "r3"], ["1111 を入れたとき、止まるまでのステップ数", "r4"]];
+  R1.forEach(function (x, i) {
+    var inp = h("input", { type: "text", id: x[1], inputmode: "numeric", autocomplete: "off", spellcheck: "false", value: (saved.req1 || [])[i] || "" });
+    inp.addEventListener("input", save);
+    $("req1").appendChild(h("label", { for: x[1], text: "(" + (i + 1) + ") " + x[0] }));
+    $("req1").appendChild(inp);
+  });
+  /* 自由記述（文字数を数える） */
+  function essay(mount, id, label, target, val) {
+    var ta = h("textarea", { id: id, rows: "8", "aria-label": label });
+    ta.value = val || "";
+    var ct = h("span", { class: "counter" });
+    function upd() { ct.textContent = "空白を除いて " + WF.chars(ta.value) + " 字（目安 " + target + " 字）"; }
+    ta.addEventListener("input", function () { upd(); save(); });
+    upd();
+    mount.appendChild(h("div", { class: "stack" }, ta, ct));
+    return ta;
+  }
+  var ta2 = essay($("req2"), "req2t", "必須課題2の回答", 200, saved.req2);
+  var bRow = h("div", { class: "row", role: "radiogroup", "aria-label": "発展課題Bで選ぶ問い" });
+  ["a", "b"].forEach(function (v) {
+    var r = h("input", { type: "radio", name: "bchoice", value: v });
+    if (saved.bChoice === v) r.checked = true;
+    r.addEventListener("change", save);
+    bRow.appendChild(h("label", null, r, " (" + v + ") を選ぶ"));
+  });
+  $("advb").appendChild(bRow);
+  var taB = essay($("advb"), "advbt", "発展課題Bの回答", 400, saved.bText);
+
+  /* 発展課題A：判定と、模擬器で動かす */
+  function judgeNow() {
+    var rs = ed.rules();
+    $("judgeout").innerHTML = "";
+    if (!rs.length) { $("judgeout").appendChild(h("div", { class: "feedback ng", html: "<span class=\"head\">表が空です</span>　上の表で規則を選んでください。" })); return null; }
+    var res = T.judgeTwos(rs);
+    var pt = ed.partial();
+    $("judgeout").appendChild(CA.tmJudgeView(res));
+    if (pt.length) $("judgeout").appendChild(h("p", { class: "hint", text: "3つの欄のうち一部だけ選んだ行があります（" + pt.map(function (k) { return "状態 " + k.replace(",", "・").replace("_", "□"); }).join("、") + "）。3つとも選んだ行だけが規則として使われます。" }));
+    return res;
+  }
+  $("judge").onclick = judgeNow;
+  $("trycustom").onclick = function () { sim.select("custom", "0011"); $("sim").scrollIntoView({ behavior: "smooth", block: "start" }); };
+  ed.onChange(function () { $("judgeout").innerHTML = ""; save(); });
+
+  /* 書き出し（画面の入力欄から読む。保存が使えない環境でも書き出せるように） */
+  function collect() {
+    var quiz = QUIZ.map(function (q, i) { var c = document.querySelector("input[name=mq" + (i + 1) + "]:checked"); return c ? c.value : ""; });
+    var req1 = R1.map(function (x) { var el = $(x[1]); return el ? el.value.trim() : ""; });
+    var bc = document.querySelector("input[name=bchoice]:checked");
+    return { quiz: quiz, req1: req1, req2: ta2 ? ta2.value : "", bChoice: bc ? bc.value : "", bText: taB ? taB.value : "" };
+  }
+  $("doexport").onclick = function () {
+    var a = collect(), rs = ed.rules();
+    a.aRules = rs.length ? T.exportRules(rs) : "";
+    a.aJudge = rs.length ? T.judgeTwos(rs).pass + "/16" : "";
+    var text = WF.build(a, new Date());
+    var box = $("exportbox");
+    box.innerHTML = "";
+    var nq = a.quiz.filter(Boolean).length, nr = a.req1.filter(Boolean).length, c2 = WF.chars(a.req2);
+    var miss = h("ul", { class: "miss" },
+      h("li", { class: nq === 10 ? "done" : "todo", text: "クイズ：10問中 " + nq + "問に回答" }),
+      h("li", { class: nr === 4 ? "done" : "todo", text: "必須課題1：4つ中 " + nr + "つに回答" }),
+      h("li", { class: c2 > 0 ? "done" : "todo", text: "必須課題2：空白を除いて " + c2 + " 字" }),
+      h("li", { class: "done", text: "発展課題（任意）：A " + (rs.length ? "表あり（判定 " + a.aJudge + "）" : "なし") + "、B " + (WF.chars(a.bText) ? (a.bChoice ? "(" + a.bChoice + ") " : "") + WF.chars(a.bText) + " 字" : "なし") }));
+    box.appendChild(miss);
+    if (nq < 10 || nr < 4 || !c2) box.appendChild(h("p", { class: "hint", text: "まだ答えていない所があります。このまま提出することもできますが、答えてから書き出し直すこともできます。" }));
+    var ta = h("textarea", { readonly: true, "aria-label": "書き出した回答" });
+    ta.value = text;
+    var note = h("p", { class: "hint", role: "status" });
+    var bSel = h("button", { type: "button", text: "すべて選択", onclick: function () { ta.focus(); ta.select(); } });
+    var COPIED = "コピーしました。メモ帳などに貼り付けて .txt のファイルとして保存し、そのファイルを提出してください。";
+    var bCopy = h("button", { type: "button", text: "コピー", onclick: function () {
+      function fallback() { try { ta.focus(); ta.select(); var okc = document.execCommand("copy"); note.textContent = okc ? COPIED : "コピーできませんでした。欄の文をすべて選んでコピーしてください。"; } catch (e) { note.textContent = "コピーできませんでした。欄の文をすべて選んでコピーしてください。"; } }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { note.textContent = COPIED; }, fallback);
+        else fallback();
+      } catch (e) { fallback(); }
+    } });
+    var bSave = h("button", { type: "button", class: "primary", text: ".txt で保存", onclick: function () {
+      try {
+        var blob = new Blob(["﻿" + text], { type: "text/plain;charset=utf-8" });
+        var url = URL.createObjectURL(blob), a2 = h("a", { href: url, download: "CA第8回_回答.txt" });
+        document.body.appendChild(a2); a2.click(); a2.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+        note.textContent = "「CA第8回_回答.txt」を保存しました。WebClass の第8回の課題に、このファイルを添付して提出してください。保存できていないときは「コピー」を押し、メモ帳などに貼り付けて .txt で保存してください。";
+      } catch (e) { note.textContent = "保存できませんでした。「コピー」を押し、メモ帳などに貼り付けて .txt で保存してください。"; }
+    } });
+    box.appendChild(h("div", { class: "row" }, bSave, bCopy, bSel));
+    box.appendChild(note);
+    box.appendChild(ta);
+    save();
+  };
+
+  CA.progress.render();
+})();
+</script>
+
+</body>
+</html>
