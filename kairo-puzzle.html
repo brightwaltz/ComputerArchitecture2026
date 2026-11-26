@@ -1,0 +1,2208 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>コンピュータアーキテクチャ オンデマンド 回路パズル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&family=BIZ+UDPGothic:wght@400;700&display=swap">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<style>
+/* レイアウト：1カラムの「実験ノート」。読む部分は 40em、手を動かす実験台は方眼のパネルで少し広く。
+   色：授業スライドの緑を濃くしたものを地の色、点いたビットは表示灯の琥珀色、操作できるものは配線の青。 */
+:root {
+  --paper: #f4f7f5;
+  --panel: #ffffff;
+  --ink: #1b2620;
+  --muted: #53635a;
+  --rule: #cdd8d1;
+  --grid: rgba(43, 125, 71, 0.08);
+  --accent: #2b7d47;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2f0e6;
+  --lamp: #e89a00;
+  --lamp-ink: #2a1c00;
+  --lamp-glow: rgba(232, 154, 0, 0.35);
+  --lamp-off: #dde4df;
+  --wire: #1d62a6;
+  --wire-soft: #e3edf8;
+  --ok: #1d7a3d;
+  --ok-soft: #e1f2e6;
+  --ng: #b5361f;
+  --ng-soft: #fbe8e3;
+  --s-bit: #1d62a6;
+  --e-bit: #b86e00;
+  --f-bit: #2b7d47;
+  --font-body: "BIZ UDPGothic", "BIZ UDPゴシック", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+  --font-mono: "BIZ UDGothic", "BIZ UDゴシック", "Osaka-Mono", Menlo, Consolas, monospace;
+  --fs-body: 20px;
+  --fs-small: 16px;
+  --fs-h1: 32px;
+  --fs-h2: 28px;
+  --fs-h3: 22px;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #111714; --panel: #18201c; --ink: #e3ebe6; --muted: #9db0a4; --rule: #2e3a34;
+    --grid: rgba(91, 193, 125, 0.07); --accent: #5bc17d; --accent-ink: #0d1a12; --accent-soft: #1c3226;
+    --lamp: #ffb833; --lamp-ink: #241700; --lamp-glow: rgba(255, 184, 51, 0.45); --lamp-off: #2a3530;
+    --wire: #74b3f2; --wire-soft: #1a2a3a; --ok: #63c986; --ok-soft: #1b3325; --ng: #ff7d69; --ng-soft: #3b211c;
+    --s-bit: #74b3f2; --e-bit: #ffb833; --f-bit: #5bc17d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #111714; --panel: #18201c; --ink: #e3ebe6; --muted: #9db0a4; --rule: #2e3a34;
+  --grid: rgba(91, 193, 125, 0.07); --accent: #5bc17d; --accent-ink: #0d1a12; --accent-soft: #1c3226;
+  --lamp: #ffb833; --lamp-ink: #241700; --lamp-glow: rgba(255, 184, 51, 0.45); --lamp-off: #2a3530;
+  --wire: #74b3f2; --wire-soft: #1a2a3a; --ok: #63c986; --ok-soft: #1b3325; --ng: #ff7d69; --ng-soft: #3b211c;
+  --s-bit: #74b3f2; --e-bit: #ffb833; --f-bit: #5bc17d;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.8;
+  padding-inline: 16px;
+  padding-block: 0 64px;
+}
+.page { max-width: 960px; margin-inline: auto; display: grid; gap: 40px; }
+.prose { max-width: 40em; }
+h1, h2, h3 { line-height: 1.4; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--fs-h1); }
+h2 { font-size: var(--fs-h2); }
+h3 { font-size: var(--fs-h3); }
+p { margin: 0; }
+a { color: var(--wire); }
+.mono, code, kbd { font-family: var(--font-mono); }
+.small { font-size: var(--fs-small); color: var(--muted); }
+sub { font-size: 0.7em; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.stack { display: grid; gap: 16px; }
+.page > *, .item > *, .stack > *, .lab > *, .intro > *, .quiz > *, .stepper > * { min-width: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+:focus-visible { outline: 3px solid var(--wire); outline-offset: 2px; }
+
+/* 見出しまわり */
+.mast {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+  padding-block: 12px;
+  margin-inline: -16px; padding-inline: 16px;
+}
+.mast-inner { max-width: 960px; margin-inline: auto; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; justify-content: space-between; }
+.mast .course { font-size: var(--fs-small); color: var(--muted); }
+.mast .title { font-size: var(--fs-h3); font-weight: 700; line-height: 1.4; }
+.badge {
+  display: inline-block; font-size: var(--fs-small); line-height: 1.4; padding: 2px 10px; border-radius: 999px;
+  border: 1px solid var(--lamp); color: var(--ink); background: transparent; vertical-align: middle; margin-left: 8px;
+}
+.lamps { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lamps .label { font-size: var(--fs-small); color: var(--muted); margin-right: 4px; }
+.lamp {
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  font: 700 var(--fs-small)/1 var(--font-mono); color: var(--muted);
+  background: var(--lamp-off); border: 1px solid var(--rule); text-decoration: none;
+}
+.lamp.on { background: var(--lamp); color: var(--lamp-ink); border-color: var(--lamp); box-shadow: 0 0 0 4px var(--lamp-glow); }
+
+.intro { display: grid; gap: 16px; padding-top: 24px; }
+.intro h1 .sub { display: block; font-size: var(--fs-h3); font-weight: 400; color: var(--muted); }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: var(--fs-small); color: var(--muted); }
+
+/* 抽象レベルの地図 */
+.levels { border: 1px solid var(--rule); border-radius: var(--radius); background: var(--panel); padding: 12px 16px; }
+.levels summary { cursor: pointer; font-size: var(--fs-small); color: var(--muted); }
+.levels ol { list-style: none; margin: 12px 0 4px; padding: 0; display: grid; gap: 4px; }
+.levels li { display: grid; grid-template-columns: 15em 1fr; gap: 12px; align-items: baseline; padding: 4px 10px; border-radius: 6px; font-size: var(--fs-small); }
+.levels li .ex { color: var(--muted); }
+.levels li.here { background: var(--accent-soft); outline: 2px solid var(--accent); }
+.levels li.here .ex { color: var(--ink); }
+@media (max-width: 520px) { .levels li { grid-template-columns: 1fr; gap: 0; } }
+
+/* 目次 */
+.toc { display: flex; flex-wrap: wrap; gap: 8px; }
+.toc a {
+  font-size: var(--fs-small); text-decoration: none; color: var(--ink);
+  border: 1px solid var(--rule); background: var(--panel); border-radius: 999px; padding: 4px 14px;
+}
+.toc a .n { font-family: var(--font-mono); color: var(--accent); margin-right: 6px; }
+
+/* 実験台（方眼のパネル） */
+.lab {
+  background-color: var(--panel);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 20px 20px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: grid; gap: 16px;
+  min-width: 0;
+}
+.lab > h3 { font-size: var(--fs-h3); }
+.lab .hint { font-size: var(--fs-small); color: var(--muted); }
+
+/* 項目 */
+.item { display: grid; gap: 20px; scroll-margin-top: 120px; }
+.item-head { display: grid; gap: 6px; border-top: 3px solid var(--accent); padding-top: 16px; }
+.item-head .no { font: 700 var(--fs-small)/1 var(--font-mono); color: var(--accent); letter-spacing: 0.08em; }
+.item-head .rule { font-size: var(--fs-body); }
+.item-head .slides { font-size: var(--fs-small); color: var(--muted); }
+.keyline {
+  font-weight: 700; background: var(--accent-soft); border-radius: 6px; padding: 10px 14px; max-width: 40em;
+}
+
+/* ステップ再生 */
+.stepper { display: grid; gap: 12px; min-width: 0; }
+.stepper .stage { min-height: 160px; overflow-x: auto; display: grid; align-content: center; padding: 8px 0; }
+.stepper .caption { min-height: 3.6em; max-width: 40em; }
+.stepper .ctrl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.stepper input[type="range"] { flex: 1 1 140px; accent-color: var(--accent); min-width: 0; }
+.stepper .count { font: var(--fs-small) var(--font-mono); color: var(--muted); min-width: 3.5em; text-align: right; }
+
+/* ボタンと入力 */
+button, .btn {
+  font: inherit; font-size: var(--fs-small); line-height: 1.4;
+  padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--rule); background: var(--panel); color: var(--ink);
+}
+button:hover { border-color: var(--wire); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+button:disabled { opacity: 0.45; cursor: default; }
+input[type="text"], textarea {
+  font: 24px/1.4 var(--font-mono); padding: 8px 12px; border-radius: 8px;
+  border: 2px solid var(--rule); background: var(--panel); color: var(--ink); width: 100%; max-width: 16em;
+}
+textarea { font: var(--fs-body)/1.7 var(--font-body); max-width: 100%; min-height: 4.5em; resize: vertical; }
+input[type="text"]:focus, textarea:focus { border-color: var(--wire); outline: none; }
+
+/* ドリル・確認問題 */
+.quiz { display: grid; gap: 12px; padding: 16px 20px; border-radius: var(--radius); border: 1px solid var(--rule); background: var(--panel); min-width: 0; }
+.quiz .kind { font-size: var(--fs-small); color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+.quiz .kind b { color: var(--ink); }
+.quiz .prompt { font-size: var(--fs-body); }
+.quiz .answer-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.quiz .answer-row label { font-size: var(--fs-small); color: var(--muted); }
+.quiz .choices { display: grid; gap: 8px; }
+.quiz .choices button { text-align: left; font-size: var(--fs-body); padding: 10px 16px; }
+.quiz .choices button.picked-ok { border-color: var(--ok); background: var(--ok-soft); }
+.quiz .choices button.picked-ng { border-color: var(--ng); background: var(--ng-soft); }
+.feedback { border-radius: 8px; padding: 10px 14px; display: none; }
+.feedback.ok { display: block; background: var(--ok-soft); border-left: 6px solid var(--ok); }
+.feedback.ng { display: block; background: var(--ng-soft); border-left: 6px solid var(--ng); }
+.feedback .head { font-weight: 700; }
+.solution { border-top: 1px dashed var(--rule); padding-top: 10px; }
+.solution summary { cursor: pointer; font-size: var(--fs-small); color: var(--wire); }
+.check-quiz { border: 2px solid var(--lamp); }
+.check-quiz.done { border-color: var(--ok); }
+.score { font: var(--fs-small) var(--font-mono); color: var(--muted); }
+
+/* ビット */
+.bits { display: inline-flex; gap: 6px; flex-wrap: nowrap; }
+.bit {
+  width: 44px; height: 52px; border-radius: 8px; display: grid; place-items: center;
+  font: 700 26px/1 var(--font-mono); border: 2px solid var(--rule); background: var(--lamp-off); color: var(--muted);
+}
+.bit.on { background: var(--lamp); color: var(--lamp-ink); border-color: var(--lamp); box-shadow: 0 0 0 3px var(--lamp-glow); }
+button.bit { padding: 0; }
+.bitcol { display: grid; gap: 4px; justify-items: center; }
+.bitcol .w { font: var(--fs-small)/1 var(--font-mono); color: var(--muted); }
+.bitcol.dim .w { opacity: 0.5; }
+.gap4 { width: 10px; }
+.readout { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; align-items: baseline; }
+.readout dt { font-size: var(--fs-small); color: var(--muted); }
+.readout dd { margin: 0; font: 700 24px/1.4 var(--font-mono); overflow-wrap: anywhere; }
+.readout dd .expr { font-weight: 400; font-size: var(--fs-small); color: var(--muted); display: block; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+
+/* 計算の表（筆算） */
+.calc { border-collapse: collapse; font: 26px/1.3 var(--font-mono); margin: 0 auto; }
+.calc td { width: 1.25em; text-align: center; padding: 2px 0; }
+.calc td.rl { width: auto; text-align: right; padding-right: 12px; font: var(--fs-small) var(--font-body); color: var(--muted); white-space: nowrap; }
+.calc tr.carry td { font-size: var(--fs-small); color: var(--wire); height: 1.4em; }
+.calc tr.sum td { border-top: 2px solid var(--ink); }
+.calc td.hl { background: var(--wire-soft); border-radius: 4px; }
+.calc td.drop { color: var(--ng); text-decoration: line-through; }
+.calc td.ghost { color: transparent; }
+.calc td.flip { color: var(--wire); }
+
+.divtable { border-collapse: collapse; font: 24px/1.5 var(--font-mono); margin: 0 auto; }
+.divtable td { padding: 2px 10px; text-align: right; }
+.divtable td.r { color: var(--lamp-ink); background: var(--lamp); border-radius: 6px; text-align: center; min-width: 1.6em; }
+.divtable td.r.off { background: transparent; color: var(--muted); }
+.divtable td.note { font: var(--fs-small) var(--font-body); color: var(--muted); text-align: left; }
+.divwrap { display: flex; gap: 16px; align-items: stretch; justify-content: center; flex-wrap: wrap; }
+.uparrow { display: grid; align-content: stretch; justify-items: center; color: var(--wire); font: 700 var(--fs-small)/1.3 var(--font-body); }
+.uparrow .bar { width: 6px; background: var(--wire); border-radius: 3px; flex: 1; min-height: 60px; position: relative; }
+.uparrow .bar::before { content: ""; position: absolute; top: -10px; left: -7px; border: 10px solid transparent; border-bottom-color: var(--wire); border-top: 0; }
+
+.result { text-align: center; font: 700 28px/1.4 var(--font-mono); }
+.result .small { font-family: var(--font-body); }
+
+/* 一覧の表 */
+.tbl-wrap { overflow-x: auto; }
+table.ref { border-collapse: collapse; font-size: var(--fs-small); }
+table.ref th, table.ref td { border: 1px solid var(--rule); padding: 4px 10px; text-align: center; }
+table.ref th { background: var(--accent-soft); font-weight: 700; }
+table.ref td.mono { font-family: var(--font-mono); }
+
+/* 4ビットの時計 */
+.clock-wrap { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 20px; align-items: center; }
+@media (max-width: 720px) { .clock-wrap { grid-template-columns: 1fr; } }
+.clock svg { width: 100%; height: auto; display: block; }
+.clock .t-bits { font: 700 24px var(--font-mono); fill: var(--ink); }
+.clock .t-dec { font: 24px var(--font-mono); fill: var(--muted); }
+.clock .t-sdec { font: 700 24px var(--font-mono); fill: var(--wire); }
+.clock .dot { fill: var(--lamp-off); stroke: var(--rule); }
+.clock .dot.cur { fill: var(--lamp); stroke: var(--lamp); }
+.clock .boundary-s { stroke: var(--ng); stroke-width: 4; stroke-dasharray: 6 5; }
+.clock .boundary-u { stroke: var(--wire); stroke-width: 4; stroke-dasharray: 2 5; }
+.clock .hand { stroke: var(--ink); stroke-width: 4; stroke-linecap: round; }
+.clock .hub { fill: var(--ink); }
+.clock .ring { fill: none; stroke: var(--rule); stroke-width: 2; }
+select { font: 18px/1.4 var(--font-mono); padding: 6px 8px; border-radius: 8px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); }
+
+.log { font-size: var(--fs-small); min-height: 3em; }
+.log .warn { color: var(--ng); font-weight: 700; }
+.log .warnu { color: var(--wire); font-weight: 700; }
+
+/* 浮動小数点 */
+.fbits { display: flex; flex-wrap: wrap; gap: 3px; align-items: flex-end; }
+.fgroup { display: grid; gap: 4px; }
+.fgroup .glab { font-size: var(--fs-small); font-weight: 700; }
+.fgroup .gbits { display: flex; flex-wrap: wrap; gap: 3px; }
+.fbit { width: 26px; height: 36px; padding: 0; border-radius: 5px; font: 700 18px/1 var(--font-mono); border: 2px solid var(--rule); background: var(--panel); color: var(--muted); }
+.fbit.on { color: var(--panel); }
+.g-s .glab { color: var(--s-bit); } .g-s .fbit.on { background: var(--s-bit); border-color: var(--s-bit); }
+.g-e .glab { color: var(--e-bit); } .g-e .fbit.on { background: var(--e-bit); border-color: var(--e-bit); }
+.g-f .glab { color: var(--f-bit); } .g-f .fbit.on { background: var(--f-bit); border-color: var(--f-bit); }
+.formula { font: 22px/1.6 var(--font-mono); overflow-wrap: anywhere; }
+.formula .s { color: var(--s-bit); } .formula .e { color: var(--e-bit); } .formula .f { color: var(--f-bit); }
+
+/* つまずき・仕上げ */
+.pitfalls { display: grid; gap: 12px; }
+.pitfalls ul { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 40em; }
+.final .quiz { border-width: 2px; }
+.done-banner { display: none; padding: 16px 20px; border-radius: var(--radius); background: var(--ok-soft); border: 2px solid var(--ok); font-weight: 700; }
+.done-banner.show { display: block; }
+footer { font-size: var(--fs-small); color: var(--muted); border-top: 1px solid var(--rule); padding-top: 16px; display: grid; gap: 6px; }
+
+/* 予習ページ */
+.research { display: grid; gap: 16px; }
+.task { display: grid; gap: 10px; padding: 16px 20px; border-radius: var(--radius); background: var(--panel); border: 1px solid var(--rule); min-width: 0; }
+.task h3 { font-size: var(--fs-h3); }
+.task dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: var(--fs-small); }
+.task dt { color: var(--muted); }
+.task dd { margin: 0; }
+.task .saved { font-size: var(--fs-small); color: var(--ok); min-height: 1.4em; }
+@media (max-width: 520px) { .task dl { grid-template-columns: 1fr; } .task dt { margin-top: 6px; } }
+.checklist { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.checklist li { display: flex; gap: 10px; align-items: baseline; }
+.checklist .box { width: 22px; height: 22px; border-radius: 5px; border: 2px solid var(--rule); flex: none; display: inline-grid; place-items: center; font-size: 16px; }
+.checklist li.done .box { background: var(--ok); border-color: var(--ok); color: var(--panel); }
+
+/* 回路図（SVG） */
+.circuit svg { width: 100%; max-width: 620px; height: auto; display: block; margin: 0 auto; }
+.circuit .wire { stroke: var(--muted); stroke-width: 4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.circuit .wire.live { stroke: var(--lamp); }
+.circuit .t { font: 24px var(--font-body); fill: var(--ink); }
+.circuit .tm { font: 700 24px var(--font-mono); fill: var(--ink); }
+.circuit .bulb { fill: var(--lamp-off); stroke: var(--muted); stroke-width: 3; }
+.circuit .bulb.lit { fill: var(--lamp); stroke: var(--lamp); filter: drop-shadow(0 0 10px var(--lamp-glow)); }
+.circuit .batt { stroke: var(--ink); stroke-width: 4; }
+.circuit .sw { stroke: var(--ink); stroke-width: 5; stroke-linecap: round; transition: transform 0.2s; }
+.circuit .swpost { fill: var(--ink); }
+.circuit .box { fill: var(--panel); stroke: var(--ink); stroke-width: 3; }
+.circuit .boxq { font: 700 44px var(--font-mono); fill: var(--muted); }
+.swbtns { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.swbtns button { font-size: var(--fs-body); min-width: 7em; }
+.swbtns button[aria-pressed="true"] { background: var(--lamp); color: var(--lamp-ink); border-color: var(--lamp); font-weight: 700; }
+.ttable { border-collapse: collapse; font: 20px/1.4 var(--font-mono); }
+.ttable th, .ttable td { border: 1px solid var(--rule); padding: 4px 14px; text-align: center; }
+.ttable th { font-family: var(--font-body); font-size: var(--fs-small); background: var(--accent-soft); }
+.ttable td.unk { color: var(--muted); }
+.ttable tr.cur td { background: var(--wire-soft); }
+.cands { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 8px; }
+.cands button { text-align: left; display: grid; gap: 2px; padding: 10px 14px; }
+.cands button b { font-size: var(--fs-body); font-family: var(--font-mono); }
+.cands button span { font-size: var(--fs-small); color: var(--muted); }
+.cands button.right { border-color: var(--ok); background: var(--ok-soft); }
+.cands button.wrong { border-color: var(--ng); background: var(--ng-soft); }
+.stars { font-size: 26px; letter-spacing: 4px; color: var(--lamp); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+@media (max-width: 520px) {
+  .bit { width: 34px; height: 44px; font-size: 22px; }
+  .bits { gap: 4px; }
+  .lab { padding: 14px; }
+  .calc { font-size: 22px; }
+  .mast .title { font-size: 18px; }
+  .readout { grid-template-columns: 1fr; gap: 0; }
+  .readout dd { margin-bottom: 10px; }
+}
+.circuits { display: grid; grid-template-columns: 1fr; gap: 24px; }
+@media (min-width: 860px) { .circuits { grid-template-columns: 1fr 1fr; } }
+.circuits h3 { font-size: var(--fs-h3); }
+.checklist a { color: var(--ink); }
+
+/* 動画プレイヤー */
+.film { display: grid; gap: 10px; background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); padding: 16px; min-width: 0; }
+.film > * { min-width: 0; }
+.film-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; align-items: baseline; }
+.film-title { font-weight: 700; }
+.film-scene { font-size: var(--fs-small); color: var(--muted); }
+.film-stage { position: relative; aspect-ratio: 16 / 9; max-width: 100%; background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.film-stage:fullscreen { border: 0; border-radius: 0; display: grid; place-items: center; }
+.film-stage svg { width: 100%; height: 100%; display: block; }
+.film-big { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; gap: 12px; align-items: center;
+  font-size: var(--fs-body); font-weight: 700; background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 999px; padding: 12px 26px; }
+.film-big .tri { width: 0; height: 0; border-left: 18px solid currentColor; border-top: 11px solid transparent; border-bottom: 11px solid transparent; }
+.film-pause { display: grid; gap: 10px; padding: 14px 16px; border-radius: 8px; border: 2px solid var(--wire); background: var(--wire-soft); }
+.film-pause .q { font-weight: 700; }
+.film-pause .choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.film-pause .choices button { font-size: var(--fs-body); }
+.film-pause .skip { justify-self: start; border: 0; background: transparent; color: var(--wire); text-decoration: underline; padding: 2px 0; }
+.film-cap { min-height: 3.6em; }
+.film-pred { font-size: var(--fs-small); min-height: 1.4em; }
+.film-pred.ok { color: var(--ok); font-weight: 700; }
+.film-pred.ng { color: var(--ng); font-weight: 700; }
+.film-ctrl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.film-ctrl input[type="range"] { flex: 1 1 160px; accent-color: var(--accent); min-width: 0; }
+.film-time { font: var(--fs-small) var(--font-mono); color: var(--muted); }
+.film-chaps { display: flex; flex-wrap: wrap; gap: 6px; }
+.film-chaps button { padding: 4px 12px; border-radius: 999px; }
+.film-chaps button[aria-current="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.film-chaps b { font-family: var(--font-mono); color: var(--accent); }
+.film-script summary { cursor: pointer; font-size: var(--fs-small); color: var(--wire); }
+.film-script ol { font-size: var(--fs-small); display: grid; gap: 6px; padding-left: 1.4em; margin: 8px 0 0; }
+.film svg .ft { font-family: var(--font-body); }
+.film svg .fm { font-family: var(--font-mono); }
+.film svg .k-ink { fill: var(--ink); } .film svg .k-mut { fill: var(--muted); } .film svg .k-acc { fill: var(--accent); } .film svg .k-accink { fill: var(--accent-ink); }
+.film svg .k-lamp { fill: var(--lamp); } .film svg .k-lampink { fill: var(--lamp-ink); } .film svg .k-wire { fill: var(--wire); } .film svg .k-wiresoft { fill: var(--wire-soft); }
+.film svg .k-ng { fill: var(--ng); } .film svg .k-panel { fill: var(--panel); } .film svg .k-off { fill: var(--lamp-off); } .film svg .k-none { fill: none; }
+.film svg .s-ink { stroke: var(--ink); } .film svg .s-mut { stroke: var(--muted); } .film svg .s-acc { stroke: var(--accent); } .film svg .s-lamp { stroke: var(--lamp); }
+.film svg .s-wire { stroke: var(--wire); } .film svg .s-ng { stroke: var(--ng); } .film svg .s-rule { stroke: var(--rule); } .film svg .s-none { stroke: none; }
+.film-big { white-space: nowrap; }
+@media (max-width: 520px) { .film { padding: 10px; } .film-big { padding: 6px 14px; font-size: var(--fs-small); gap: 8px; } .film-big .tri { border-left-width: 12px; border-top-width: 8px; border-bottom-width: 8px; } }
+
+.movie-link { display: flex; gap: 14px; align-items: center; max-width: 40em; padding: 12px 18px; border-radius: var(--radius);
+  border: 2px solid var(--accent); background: var(--panel); color: var(--ink); text-decoration: none; }
+.movie-link:hover { background: var(--accent-soft); }
+.movie-link .tri { flex: none; width: 0; height: 0; border-left: 16px solid var(--accent); border-top: 10px solid transparent; border-bottom: 10px solid transparent; }
+#movie { scroll-margin-top: 120px; }
+
+.film-hint { display: none; font-size: var(--fs-small); color: var(--muted); }
+@media (max-width: 520px) { .film-hint { display: block; } }
+/* SVG の色（動画以外の図でも使う） */
+svg .k-ink { fill: var(--ink); } svg .k-mut { fill: var(--muted); } svg .k-acc { fill: var(--accent); } svg .k-accink { fill: var(--accent-ink); }
+svg .k-lamp { fill: var(--lamp); } svg .k-lampink { fill: var(--lamp-ink); } svg .k-wire { fill: var(--wire); } svg .k-wiresoft { fill: var(--wire-soft); }
+svg .k-ng { fill: var(--ng); } svg .k-panel { fill: var(--panel); } svg .k-off { fill: var(--lamp-off); } svg .k-none { fill: none; }
+svg .s-ink { stroke: var(--ink); } svg .s-mut { stroke: var(--muted); } svg .s-acc { stroke: var(--accent); } svg .s-lamp { stroke: var(--lamp); }
+svg .s-wire { stroke: var(--wire); } svg .s-ng { stroke: var(--ng); } svg .s-rule { stroke: var(--rule); } svg .s-none { stroke: none; }
+svg .ft { font-family: var(--font-body); } svg .fm { font-family: var(--font-mono); }
+.ov { text-decoration: overline; text-decoration-thickness: 2px; }
+
+.gate-pick button { font-family: var(--font-mono); }
+.gate-pick button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+
+/* 解説（簡単・通常・詳細・発展）。左のメニューで選んだレベルが既定で、その場で切りかえられる */
+.lv-box { display: grid; gap: 10px; min-width: 0; }
+.lv-title { font: 700 var(--fs-small)/1.4 var(--font-mono); color: var(--accent); letter-spacing: 0.08em; }
+.lv-tabs { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; justify-self: start; max-width: 100%; }
+.lv-tabs button { border: 0; border-radius: 0; border-right: 1px solid var(--rule); font-size: var(--fs-small); padding: 6px 16px; background: var(--panel); color: var(--ink); }
+.lv-tabs button:last-child { border-right: 0; }
+.lv-tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.lv-panel { font-size: var(--fs-body); line-height: 1.8; max-width: 40em; min-width: 0; overflow-wrap: anywhere; }
+.lv-panel > * + * { margin-top: 10px; }
+.lv-panel ul, .lv-panel ol { margin: 0; padding-left: 1.4em; }
+.lv-panel table { border-collapse: collapse; font-size: var(--fs-small); }
+.lv-panel th, .lv-panel td { border: 1px solid var(--rule); padding: 2px 10px; text-align: center; }
+.item-explain { border: 1px solid var(--rule); border-left: 6px solid var(--accent); border-radius: var(--radius); background: var(--panel); padding: 14px 18px; }
+.explain-q summary { color: var(--accent); }
+.explain-q > div { padding-top: 10px; }
+
+/* 左のメニュー。広い画面では常に出し、狭い画面では「メニュー」ボタンで引き出す */
+.side {
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: 30; width: 272px;
+  overflow-y: auto; overscroll-behavior: contain;
+  background: var(--panel); border-right: 1px solid var(--rule);
+  padding: 16px 14px 32px; display: grid; align-content: start; gap: 20px;
+  font-size: var(--fs-small); line-height: 1.5;
+}
+.side-head { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.side-home { font-weight: 700; color: var(--ink); text-decoration: none; }
+a.side-home:hover { color: var(--wire); text-decoration: underline; }
+.side-close { display: none; font-size: var(--fs-small); padding: 4px 12px; white-space: nowrap; flex: none; }
+.side-group { display: grid; gap: 8px; }
+.side-label { font: 700 var(--fs-small)/1.4 var(--font-mono); color: var(--accent); letter-spacing: 0.06em; border-bottom: 1px solid var(--rule); padding-bottom: 4px; }
+.side-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.side-list a { display: block; padding: 5px 8px; border-radius: 6px; color: var(--ink); text-decoration: none; }
+.side-list a:hover { background: var(--wire-soft); }
+.side-list a.here { background: var(--accent-soft); box-shadow: inset 4px 0 0 var(--accent); font-weight: 700; }
+.side-levels { display: grid; gap: 4px; }
+.side-levels label { display: grid; grid-template-columns: auto auto 1fr; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; cursor: pointer; }
+.side-levels label:hover { background: var(--wire-soft); }
+.side-levels input { margin: 0; width: 18px; height: 18px; accent-color: var(--accent); }
+.side-levels label span { color: var(--muted); }
+.side-levels label:has(input:checked) { background: var(--accent-soft); }
+.side-pages li { display: grid; grid-template-columns: 4em minmax(0, 1fr); gap: 0 8px; padding: 6px 4px; border-bottom: 1px solid var(--rule); }
+.side-pages .s-no { font: 700 var(--fs-small)/1.5 var(--font-mono); color: var(--accent); }
+.side-pages .s-ttl { color: var(--ink); }
+.side-pages .s-links { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.side-pages .s-links a, .side-pages .s-links span { display: inline-block; padding: 2px 10px; border-radius: 999px; }
+.side-pages .s-links a { border: 1px solid var(--wire); color: var(--wire); }
+.side-pages .s-links a:hover { background: var(--wire-soft); }
+.side-pages .s-links .cur { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.side-pages .s-links .off { border: 1px dashed var(--rule); color: var(--muted); }
+.menu-btn { display: none; font-size: var(--fs-small); padding: 6px 14px; }
+.side-backdrop { position: fixed; inset: 0; z-index: 29; background: rgba(0, 0, 0, 0.35); }
+@media (min-width: 1180px) {
+  body.has-side { padding-left: 296px; }
+  .side-backdrop { display: none !important; }
+}
+@media (max-width: 1179px) {
+  .side { width: min(320px, 88vw); transform: translateX(-102%); transition: transform 0.2s ease, visibility 0s linear 0.2s; box-shadow: 0 0 24px rgba(0, 0, 0, 0.2); visibility: hidden; }
+  body.side-open .side { transform: none; visibility: visible; transition: transform 0.2s ease; }
+  .side-close { display: inline-block; }
+  .menu-btn { display: inline-block; }
+  body.has-side .mast-inner { justify-content: flex-start; }
+  body.has-side .mast-inner > .lamps { margin-left: auto; }
+}
+@media (max-width: 640px) {
+  body.has-side .mast-inner { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; align-items: center; }
+  body.has-side .mast-inner > .lamps { grid-column: 1 / -1; margin-left: 0; }
+  .menu-btn { padding: 6px 10px; }
+}
+@media print { .side, .menu-btn, .side-backdrop { display: none !important; } body.has-side { padding-left: 16px; } }
+
+/* 課題の答え（先生の回答例の画像）。画像は白地なので、ダークでも白い台に載せる */
+.ans-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 20px; }
+figure.ans { margin: 0; display: grid; gap: 10px; align-content: start; padding: 16px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--panel); min-width: 0; }
+figure.ans.wide { grid-column: 1 / -1; }
+figure.ans figcaption { font-weight: 700; font-size: var(--fs-h3); line-height: 1.4; }
+.ans-img { background: #fff; border-radius: 8px; padding: 8px; overflow-x: auto; }
+.ans-img img { display: block; max-width: 100%; height: auto; margin-inline: auto; }
+figure.ans.wide .ans-img img { max-width: min(100%, 720px); }
+figure.ans ul { margin: 0; padding-left: 1.4em; }
+
+/* 第6回：順序回路の模型・NAND 型ラッチのパズル（seq-lab.js） */
+.seq-chart { overflow-x: auto; width: 100%; }
+.seq-model { display: grid; gap: 14px; }
+.seq-lamps { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: center; font: 700 var(--fs-body)/1.4 var(--font-mono); }
+.seq-lamps .lamp { width: 44px; height: 44px; font-size: var(--fs-body); }
+.seq-lamps .dec { font-size: 28px; }
+.seq-note { font-size: var(--fs-small); color: var(--muted); max-width: 40em; }
+.seq-warn { border-left: 6px solid var(--ng); background: var(--ng-soft); border-radius: 8px; padding: 8px 12px; }
+.nlp-table td, .nlp-table th { vertical-align: middle; }
+.nlp-table td.res { min-width: 3em; }
+.nlp-table .seg button { font-size: var(--fs-small); padding: 6px 10px; }
+@media (max-width: 520px) { .nlp-table .seg { display: grid; grid-template-columns: 1fr 1fr; } }
+
+/* 第6回：タイミングチャートを描く問題（seq-ui.js の CA.timingDraw） */
+.td-wrap { overflow-x: auto; }
+.td-svg { display: block; touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; }
+.td-svg:focus { outline: none; }
+.td-svg:focus-visible { outline: 3px solid var(--wire); outline-offset: 2px; border-radius: 6px; }
+.td-keys { font-size: var(--fs-small); color: var(--muted); }
+
+</style>
+<style>
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.ondemand-steps { display: grid; gap: 8px; padding-left: 1.4em; max-width: 40em; }
+.ondemand-steps .t { color: var(--muted); font-size: var(--fs-small); }
+.fixnote { font-size: var(--fs-small); color: var(--muted); border-left: 4px solid var(--rule); padding: 4px 12px; max-width: 40em; }
+.movie-slot { display: grid; place-items: center; min-height: 200px; border: 2px dashed var(--rule); border-radius: var(--radius); color: var(--muted); padding: 20px; text-align: center; background: var(--panel); }
+.export-box textarea { width: 100%; min-height: 14em; font: 16px/1.6 var(--font-mono); }
+.counter { font-size: var(--fs-small); color: var(--muted); }
+#furikaeri textarea { width: 100%; min-height: 8em; font: var(--fs-body)/1.7 var(--font-body); }
+
+/* 回路パズル */
+.kr-howto h4 { margin: 18px 0 4px; font-size: 19px; }
+.kr-more { border: 1px solid var(--rule); border-radius: 10px; background: var(--panel); max-width: 48em; }
+.kr-more > summary { list-style: none; display: flex; align-items: baseline; gap: 0.6ch; min-height: 44px; padding: 10px 14px; cursor: pointer; font-weight: 700; color: var(--wire); }
+.kr-more > summary::-webkit-details-marker { display: none; }
+.kr-more > summary::before { content: "▶"; font-size: 0.75em; flex-shrink: 0; }
+.kr-more[open] > summary::before { rotate: 90deg; }
+@media (prefers-reduced-motion: no-preference) { .kr-more > summary::before { transition: rotate 0.2s; } }
+.kr-more > summary:focus-visible { outline: 3px solid var(--wire); outline-offset: 2px; border-radius: 10px; }
+.kr-more-body { padding: 0 14px 12px; }
+.kr-howto-dl { display: grid; gap: 10px; max-width: 46em; margin: 0; }
+.kr-howto-dl > div { border-left: 4px solid var(--rule); padding: 4px 0 4px 12px; }
+.kr-howto-dl dt { font-weight: 700; font-size: 19px; }
+.kr-howto-dl dd { margin: 2px 0 0; line-height: 1.7; }
+.kr-howto-dl .k { display: inline-block; min-width: 4.2em; font-size: var(--fs-small); color: var(--muted); }
+.kr { display: grid; gap: 14px; min-width: 0; }
+.kr > * { min-width: 0; }
+.kr-maps { display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; align-items: start; }
+.kr-maplabel { font: 700 var(--fs-small)/2.6 var(--font-body); color: var(--muted); white-space: nowrap; }
+.kr-map { display: flex; flex-wrap: wrap; gap: 8px; }
+.kr-stagebtn { display: inline-grid; grid-template-columns: auto auto; grid-template-rows: auto auto; column-gap: 8px; text-align: left; padding: 6px 12px; min-height: 44px; border-radius: 10px; }
+.kr-stagebtn .no { grid-row: 1 / 3; font: 700 22px/1.4 var(--font-mono); color: var(--accent); align-self: center; }
+.kr-stagebtn .no.long { font-size: 16px; }
+.kr-stagebtn .t { font-size: var(--fs-small); }
+.kr-stagebtn .m { font-size: 14px; color: var(--lamp); letter-spacing: 0.05em; min-height: 1em; }
+.kr-stagebtn.done { border-color: var(--ok); }
+.kr-stagebtn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.kr-stagebtn[aria-pressed="true"] .no, .kr-stagebtn[aria-pressed="true"] .m { color: var(--accent-ink); }
+.kr-head { display: grid; gap: 6px; border-top: 3px solid var(--accent); padding-top: 12px; }
+.kr-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.kr-title .no { font: 700 var(--fs-small)/1 var(--font-mono); color: var(--accent); letter-spacing: 0.08em; }
+.kr-title h3 { margin: 0; font-size: 26px; }
+.kr-title .kai { font-size: var(--fs-small); color: var(--muted); }
+.kr-ask { margin: 0; font-size: 22px; font-weight: 700; max-width: 36em; }
+.kr-palette { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.kr-part { display: inline-flex; gap: 8px; align-items: baseline; min-height: 44px; font-weight: 700; }
+.kr-part .left { font: 16px var(--font-mono); color: var(--muted); font-weight: 400; }
+.kr-part:disabled .left { color: inherit; }
+.kr-boardwrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--rule); }
+.kr-swipe { display: none; font-size: var(--fs-small); color: var(--muted); }
+@media (max-width: 640px) { .kr-swipe { display: block; } }
+.kr-board { display: block; width: 100%; min-width: 600px; height: auto; touch-action: pan-x pan-y; -webkit-user-select: none; user-select: none; }
+.kr-p[role="button"], .kr-pin, .kr-sw { touch-action: none; }
+.kr-bg { fill: var(--paper); }
+.kr-dot { fill: var(--rule); }
+.kr-clknote { font: 14px var(--font-body); fill: var(--muted); }
+.kr-lbl { font: 700 22px var(--font-mono); fill: var(--ink); }
+.kr-plbl { font: 13px var(--font-mono); fill: var(--muted); }
+.kr-pinlbl { font: 13px var(--font-mono); fill: var(--muted); }
+.kr-blbl { font: 700 15px var(--font-body); fill: var(--ink); }
+.kr-block { fill: var(--panel); stroke: var(--ink); stroke-width: 2.5; }
+.kr-clkmark { fill: none; stroke: var(--ink); stroke-width: 2; }
+.kr-grab { fill: transparent; }
+rect.kr-block.kr-grab { fill: var(--panel); }
+.kr-p[role="button"] { cursor: grab; }
+.kr-p.dragging { cursor: grabbing; }
+.kr-p.dragging > * { opacity: 0.85; }
+.kr-p.sel .kr-block, .kr-p.sel .kr-body path { stroke: var(--wire); }
+.kr-p.sel .kr-grab:not(.kr-block) { fill: var(--wire-soft); fill-opacity: 0.6; }
+.kr-p.loop .kr-block, .kr-p.loop .kr-body path { stroke: var(--ng); }
+.kr-p.loop .kr-grab:not(.kr-block) { fill: var(--ng-soft); fill-opacity: 0.8; }
+.kr-p:focus-visible { outline: none; }
+.kr-p:focus-visible .kr-grab { stroke: var(--wire); stroke-width: 3; stroke-dasharray: 5 4; }
+.kr-sw { cursor: pointer; }
+.kr-sw .track { fill: var(--lamp-off); stroke: var(--muted); stroke-width: 2; }
+.kr-sw .knob { fill: var(--panel); stroke: var(--muted); stroke-width: 2; }
+.kr-sw.on .track { fill: var(--lamp); stroke: var(--lamp); }
+.kr-sw.on .knob { stroke: var(--lamp); }
+.kr-sw:focus-visible { outline: none; }
+.kr-sw:focus-visible .track { stroke: var(--wire); stroke-width: 4; }
+.kr-bulb { fill: var(--lamp-off); stroke: var(--muted); stroke-width: 2.5; }
+.kr-bulb.on { fill: var(--lamp); stroke: var(--lamp); filter: drop-shadow(0 0 8px var(--lamp-glow)); }
+.kr-wire .hit { fill: none; stroke: transparent; stroke-width: 16; cursor: pointer; }
+.kr-wire .line { fill: none; stroke: var(--muted); stroke-width: 3; stroke-linecap: round; }
+.kr-wire.on .line { stroke: var(--lamp); stroke-width: 5; }
+.kr-wire.sel .line { stroke: var(--wire); stroke-dasharray: 8 5; }
+.kr-wire:focus-visible { outline: none; }
+.kr-wire:focus-visible .line { stroke: var(--wire); stroke-width: 6; }
+.kr-pin { cursor: crosshair; }
+.kr-pin .hit { fill: transparent; }
+.kr-pin .dot { fill: var(--panel); stroke: var(--ink); stroke-width: 2.5; }
+.kr-pin.out .dot { fill: var(--ink); }
+.kr-pin:hover .dot, .kr-pin:focus-visible .dot { stroke: var(--wire); stroke-width: 4; }
+.kr-pin:focus-visible { outline: none; }
+.kr-pin.picked .dot { fill: var(--wire); stroke: var(--wire); }
+.kr-pin.picked .hit { fill: var(--wire-soft); }
+.kr-pin.open .dot { fill: var(--ng); stroke: var(--ng); }
+.kr-status { font-size: var(--fs-small); color: var(--muted); min-height: 1.6em; }
+.kr-status b { color: var(--ink); }
+.kr-status b.ng { color: var(--ng); }
+.kr-tools button, .kr-seq button { min-height: 44px; }
+.kr-table { overflow-x: auto; }
+.kr-tt caption { caption-side: top; text-align: left; font: var(--fs-small)/1.5 var(--font-body); color: var(--muted); padding-bottom: 6px; }
+.kr-tt .sub { font-size: 12px; color: var(--muted); font-weight: 400; }
+.kr-tt td.okc { color: var(--ok); font-weight: 700; }
+.kr-tt td.ngc { color: var(--ng); font-weight: 700; background: var(--ng-soft); }
+.kr-clear .head { font-size: 22px; }
+.kr-stars { color: var(--lamp); font-size: 26px; letter-spacing: 0.08em; margin-left: 10px; }
+.kr-stars .off { color: var(--rule); }
+@media (prefers-reduced-motion: no-preference) {
+  .kr-clear { animation: kr-pop 360ms ease-out; }
+  @keyframes kr-pop { from { scale: 0.96; opacity: 0.4; } }
+}
+@media (max-width: 520px) { .kr-maps { grid-template-columns: 1fr; } .kr-maplabel { line-height: 1.4; } .kr-ask { font-size: 20px; } }
+</style>
+<header class="mast">
+  <div class="mast-inner">
+    <div>
+      <div class="course"><a href="./">コンピュータアーキテクチャ 2026 予習・復習ページ一覧</a></div>
+      <div class="title">オンデマンド　回路パズル</div>
+    </div>
+    <div class="lamps" data-lamps></div>
+  </div>
+</header>
+<main class="page">
+  <section class="intro">
+    <h1>回路パズル<span class="sub">オンデマンドの回：第2〜6回の回路を、組んで動かす</span></h1>
+    <p class="prose">ランプが「こう点いてほしい」というお題に合わせて、ゲートやブロックを盤に置き、線でつないで回路を作ります。スイッチを押すと、1 の線が光ります。<b>テスト走行</b>で表が全部 ✓ になればクリア。ゲートを少なくするほど星が増えます。</p>
+    <div class="meta"><span>目安 約50分（必須7面＋振り返り）</span><span>締切 1/7（木）11:00</span><span>進み具合はこのブラウザの中だけに残ります</span></div>
+    <nav class="toc" aria-label="項目">
+      <a href="#guide"><span class="n">0</span>進め方</a>
+      <a href="#movie"><span class="n">1</span>紹介動画</a>
+      <a href="#puzzle"><span class="n">2</span>使い方とパズル</a>
+      <a href="#furikaeri"><span class="n">3</span>振り返り</a>
+      <a href="#submit"><span class="n">4</span>書き出して提出</a>
+      <a href="#ans">答え</a>
+    </nav>
+  </section>
+
+  <section class="stack" id="guide">
+    <h2>0　進め方</h2>
+    <ol class="ondemand-steps">
+      <li><b>紹介動画</b>と<b>使い方</b>を見て、操作の流れをつかむ。<span class="t">約5分</span></li>
+      <li><b>パズル</b>：必須の面1〜7をクリアする。挑戦1〜3は任意です。<span class="t">約42分</span></li>
+      <li><b>振り返り</b>：いちばん苦労した面と、どう解いたかを書く（100字くらい）。<span class="t">約5分</span></li>
+      <li><b>書き出して提出</b>：ページの最後で書き出した .txt を、WebClass の課題に添付する。<span class="t">約3分</span></li>
+    </ol>
+    <p class="keyline">締切は 1/7（木）11:00 です。作った回路と進み具合はこのブラウザに保存されるので、途中で閉じても同じブラウザで開けば続きから取り組めます。別のパソコンやスマホには引き継がれません。パソコン（マウスかトラックパッド）での作業をおすすめします。</p>
+  </section>
+
+  <section class="stack" id="movie">
+    <h2>1　紹介動画</h2>
+    <div class="movie-slot" id="moviebox">紹介動画（約90秒、音声と字幕つき）は、12月上旬にここに入ります。それまでは、下の「使い方」を見て進めてください。</div>
+  </section>
+
+  <section class="stack" id="puzzle">
+    <h2>2　パズル</h2>
+    <div class="lab kr-howto" id="howto">
+      <h3>使い方</h3>
+      <p class="prose"><b>基本の流れ</b>：部品箱のボタンを押して部品を置く → ドラッグで並べる → <b>出口（右の黒い点）</b>、<b>入口（左の白い点）</b>の順に押して線でつなぐ → スイッチを押して確かめ、「テスト走行」。</p>
+      <details class="kr-more">
+        <summary>くわしい使い方（画面の並び、盤の上のもの、つなぎ方、消し方、確かめ方、キーボード・スマホでの操作）</summary>
+        <div class="kr-more-body">
+        <p class="prose">画面は上から、面の一覧、お題、部品箱、盤、ボタンの列、表とヒントの順に並んでいます。クリック・タップ・キーボードの Enter は同じ働きなので、まとめて「押す」と書きます。</p>
+        <h4>1. 面を選ぶ</h4>
+      <ul class="prose">
+        <li>「必須」の列の <b>1〜7</b> のボタンを押すと、その面の盤が開きます。「挑戦（任意）」の C1〜C3 は、やらなくても提出できます。</li>
+        <li>ボタンの下の段に、クリアした面は ✓ か星（★）が付きます。</li>
+        <li>面の名前の下の太字の文が<b>お題</b>です。ランプがどう点けばよいかが書いてあります。</li>
+      </ul>
+        <h4>2. 盤の上にあるもの</h4>
+      <dl class="kr-howto-dl">
+        <div><dt>スイッチ</dt><dd><span class="k">見た目</span>盤の<b>左端</b>に縦に並ぶ、横長の丸いつまみ。左に名前（A・B など）。オンのときは黄色で、つまみが右に寄ります。</dd><dd><span class="k">押すと</span>オンとオフが切り替わります。オンは 1、オフは 0 です。</dd></div>
+        <div><dt>ランプ</dt><dd><span class="k">見た目</span>盤の<b>右端</b>に並ぶ丸。横に名前（Y など）。1 が届くと黄色く光ります。</dd><dd><span class="k">押すと</span>押しても何も起きません。動かすことも消すこともできません。</dd></div>
+        <div><dt>部品</dt><dd><span class="k">見た目</span>部品箱から置いたゲート（AND・OR などの記号）や、四角いブロック（半加算器・全加算器・D-FF など）。</dd><dd><span class="k">押すと</span>押すと選ばれ、青い縁が付きます。ドラッグで動かせます。</dd></div>
+        <div><dt>出口</dt><dd><span class="k">見た目</span>部品とスイッチの<b>右側</b>にある<b>黒く塗った点</b>。</dd><dd><span class="k">押すと</span>選ばれて青くなります。次に入口を押すと線がつながります。</dd></div>
+        <div><dt>入口</dt><dd><span class="k">見た目</span>部品とランプの<b>左側</b>にある<b>白い点</b>。何もつないでいない入口は、テスト走行の後で赤くなります。</dd><dd><span class="k">押すと</span>選ばれて青くなります。次に出口を押すと線がつながります。</dd></div>
+        <div><dt>線</dt><dd><span class="k">見た目</span>出口と入口を結ぶ灰色の曲線。1 が流れている線は<b>黄色く太く</b>なります。</dd><dd><span class="k">押すと</span>選ばれて<b>青い破線</b>になります。</dd></div>
+      </dl>
+        <h4>3. 部品を置いて、動かす</h4>
+      <ul class="prose">
+        <li><b>部品箱</b>（盤のすぐ上のボタンの列）の、たとえば「AND」のボタンを押すと、盤の空いている所に AND ゲートが 1 つ出ます。ボタンの「×2」などの数字は、その面で置ける残りの数です。0 になるとボタンは押せなくなります。</li>
+        <li>置いた部品は、記号の上を押したまま動かす（ドラッグ）と、好きな場所に移せます。置き場所は判定に関係しません。線が見やすい位置に並べてください。</li>
+        <li>ドラッグが難しいときは、部品を押して選び、キーボードの<b>矢印キー</b>で少しずつ動かせます。</li>
+      </ul>
+        <h4>4. 線でつなぐ</h4>
+      <ol class="prose">
+        <li>つなぎ元の<b>出口（右の黒い点）</b>を押します。点が青くなり、盤の下に「出口を選んでいます」と出ます。</li>
+        <li>つなぎ先の<b>入口（左の白い点）</b>を押します。2 つの点の間に線が引かれます。</li>
+      </ol>
+      <ul class="prose">
+        <li>入口を先に押してから出口を押しても、同じようにつながります。同じ点をもう一度押すと、選ぶのを取り消せます。</li>
+        <li>1 つの<b>入口</b>に入る線は 1 本だけです。線が入っている入口に別の出口をつなぐと、前の線と置き換わります。</li>
+        <li>1 つの<b>出口</b>からは、何本でも線を出せます（同じ信号を何か所にも配れます）。</li>
+        <li>同じ部品の出口から自分の入口へは、つなげません。</li>
+      </ul>
+        <h4>5. 消す</h4>
+      <ul class="prose">
+        <li>部品か線を押して選び、盤の下の「<b>選んだものを消す</b>」を押します。キーボードでは Delete キーでも消せます。部品を消すと、その部品につながっていた線も一緒に消えます。</li>
+        <li>「<b>盤を空にする</b>」を押すと、その面に置いた部品と線が全部消えて、スイッチとランプだけに戻ります。</li>
+        <li>盤の何もない所を押すと、選んでいた部品や点の選択が外れます。</li>
+      </ul>
+        <h4>6. 動きを確かめる</h4>
+      <ul class="prose">
+        <li>スイッチを押してオン・オフを切り替えると、1 が流れている線とランプが光ります。お題のとおりにランプが点くか、自分の手で確かめられます。</li>
+        <li>「<b>テスト走行</b>」を押すと、スイッチの組み合わせを全部、順に試します。盤の下の表の各行に ✓（合っている）か ✕（違う）が付きます。全部の行が ✓ なら<b>クリア</b>です。</li>
+        <li>表には、ランプごとに「<b>目標</b>」（お題が求める値）と「<b>いま</b>」（あなたの回路の値）の列が並びます。目標の列は、テスト走行の前から見られます。✕ の行は、その行のとおりにスイッチを入れて、どこで値が変わるかを追うと、直す所が見つかります。</li>
+        <li>面2・3・4 と挑戦1 では、盤の下に「ゲート ○ 個（★3 は ○ 個）」と出ます。クリアしたときのゲートの数が少ないほど、星が増えます（★1〜★3）。星は自分で目指す目標で、★1 でもクリアです。</li>
+        <li>困ったら、表の下の「<b>ヒント 1</b>」「<b>ヒント 2</b>」を押すと開きます。ヒント 2 の方が答えに近い内容です。</li>
+      </ul>
+        <h4>7. 面7 と挑戦3（D-FF を使う面）</h4>
+      <ul class="prose">
+        <li>盤の下に「<b>CLK ↑（立ち上がりを1回送る）</b>」のボタンが出ます。押すたびに、クロックの立ち上がりが 1 回届き、全部の D-FF が D の値を取り込みます。D-FF の下の「Q=0」「Q=1」が、いま覚えている値です。</li>
+        <li>「<b>D-FF を全部 0 に戻す</b>」で、覚えている値を最初の 0 に戻せます。</li>
+      </ul>
+        <h4>8. 保存</h4>
+      <ul class="prose">
+        <li>作った回路は、操作のたびに自動でこのブラウザに保存されます。保存のボタンはありません。</li>
+        <li>クリアした後に回路をいじって壊しても、クリアしたときの回路が書き出しに残ります。</li>
+      </ul>
+        <h4>キーボードとスクリーンリーダーで操作するとき</h4>
+      <ul class="prose">
+        <li><b>Tab</b> キーで、面のボタン → 部品箱 → 盤のスイッチ・部品・点・線 → 下のボタン、の順に移れます。いま選べるものには太い縁か破線の枠が付きます。</li>
+        <li><b>Enter</b> か<b>スペース</b>で「押す」、<b>矢印キー</b>で選んだ部品を動かす、<b>Delete</b> で選んだものを消す、です。</li>
+        <li>部品・点・スイッチには「AND（and1） の入口A」のような名前が付いていて、読み上げで区別できます。つないだ・消した・テストの結果は、読み上げでもお知らせします。</li>
+      </ul>
+        <h4>スマホで操作するとき</h4>
+      <ul class="prose">
+        <li>盤は横に長いので、画面がせまいと右側（ランプ）が隠れます。盤の<b>何もない所</b>を指で横に送ると、右側が見えます。部品の上で指を動かすと、部品の方が動きます。</li>
+        <li>点は小さいので、指で押しにくいときはパソコンでの作業をおすすめします。</li>
+      </ul>
+        </div>
+      </details>
+    </div>
+    <div id="game"></div>
+  </section>
+
+  <section class="stack" id="furikaeri">
+    <h2>3　振り返り（必須、100字くらい）</h2>
+    <p class="prose">いちばん苦労した面を1つ選び、どこでつまずいて、どう解いたかを書いてください。クリアできなかった面について、どこまで考えたかを書いてもかまいません。</p>
+    <div id="furi"></div>
+  </section>
+
+  <section class="stack" id="submit">
+    <h2>4　書き出して提出</h2>
+    <p class="prose">「回答を書き出す」を押すと、面ごとの回路と振り返りが1つの文にまとまります。「.txt で保存」を押して保存したファイル（CA回路パズル_回答.txt）を、WebClass の「回路パズル」の課題に添付して提出してください。ファイル名は変えなくてかまいません。</p>
+    <p class="prose">保存できないときは、「コピー」を押して、メモ帳などに貼り付け、.txt のファイルとして保存してから提出してください。Mac のテキストエディットでは、先に「フォーマット」→「標準テキストにする」を選んでから保存します。</p>
+    <p class="prose">書き出した文に名前や学籍番号を書く必要はありません。締切までは、回路を直してから書き出し直して、提出し直せます。</p>
+    <div class="row"><button type="button" class="primary" id="doexport">回答を書き出す</button></div>
+    <div id="exportbox" class="export-box stack"></div>
+  </section>
+
+  <section class="stack" id="ans">
+    <h2>答え</h2>
+    
+    <p class="prose">面ごとの回路の例は、締切（1/7（木）11:00）のあとにここに載せます。</p>
+    
+  </section>
+
+  <footer>
+    <span>コンピュータアーキテクチャ（2026年度 秋・木曜3・4限）オンデマンドの回のページ</span>
+    <span>問題は練習用に作ったもので、テストの問題そのものではありません。</span>
+  </footer>
+</main>
+
+<script>window.CA_PAGE = "odk"; window.CA_SITE = {"home":"./","sessions":[{"no":3,"title":"デジタルデータの表現と演算","pages":[{"label":"復習","href":"w03-review.html?v=202611270009"}]},{"no":4,"title":"ブール代数と論理演算","pages":[{"label":"予習","href":"w04-preview.html?v=202611270009"},{"label":"復習","href":"w04-review.html?v=202611270009"}]},{"no":5,"title":"論理回路と組み合わせ回路","pages":[{"label":"予習","href":"w05-preview.html?v=202611270009"},{"label":"復習","href":"w05-review.html?v=202611270009"}]},{"no":6,"title":"順序回路","pages":[{"label":"予習","href":"w06-preview.html?v=202611270009"},{"label":"復習","href":"w06-review.html?v=202611270009"}]},{"no":7,"title":"中間テスト","pages":[{"label":"対策","href":"midterm-prep.html?v=202611270009"}]},{"no":8,"title":"チューリングマシン","pages":[{"label":"動画と課題","href":"w08-ondemand.html?v=202611270009"}]}]};</script>
+<script>
+/* 共通の部品：保存、ステップ再生、ドリル・確認問題、進み具合のランプ、抽象レベルの地図 */
+(function (root) {
+  "use strict";
+  var CA = root.CA = root.CA || {};
+
+  /* ---------- 小さな道具 ---------- */
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      if (attrs[k] == null || attrs[k] === false) continue;
+      if (k === "html") el.innerHTML = attrs[k];
+      else if (k === "text") el.textContent = attrs[k];
+      else if (k === "class") el.className = attrs[k];
+      else if (k.slice(0, 2) === "on") el.addEventListener(k.slice(2), attrs[k]);
+      else el.setAttribute(k, attrs[k] === true ? "" : attrs[k]);
+    }
+    for (var i = 2; i < arguments.length; i++) {
+      var c = arguments[i];
+      if (c == null) continue;
+      if (Array.isArray(c)) c.forEach(function (x) { if (x != null) el.appendChild(typeof x === "string" ? document.createTextNode(x) : x); });
+      else el.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+    }
+    return el;
+  }
+  CA.h = h;
+  var uid = 0;
+  CA.uid = function (p) { uid += 1; return (p || "u") + uid; };
+
+  /* ---------- 保存（ブラウザの中だけ。使えなくても動く） ---------- */
+  var PAGE = root.CA_PAGE || "page";
+  var PREFIX = "ca2026." + PAGE + ".";
+  CA.store = {
+    get: function (k, d) {
+      try { var v = localStorage.getItem(PREFIX + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; }
+    },
+    set: function (k, v) {
+      try { localStorage.setItem(PREFIX + k, JSON.stringify(v)); } catch (e) { /* 保存できない環境 */ }
+    }
+  };
+
+  /* ---------- サイト全体で共有する設定（解説のレベルなど） ---------- */
+  CA.gstore = {
+    get: function (k, d) { try { var v = localStorage.getItem("ca2026.global." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem("ca2026.global." + k, JSON.stringify(v)); } catch (e) { /* 保存できない環境 */ } }
+  };
+  var LV = [["easy", "簡単", "要点だけ"], ["normal", "通常", "ふつうの説明"], ["detail", "詳細", "手順をくわしく"], ["adv", "発展", "一歩先の話"]];
+  var levelListeners = [];
+  CA.level = {
+    LIST: LV,
+    get: function () { var v = CA.gstore.get("level", "normal"); return LV.some(function (x) { return x[0] === v; }) ? v : "normal"; },
+    set: function (v) { CA.gstore.set("level", v); levelListeners.slice().forEach(function (fn) { fn(v); }); },
+    /* 登録をやめる関数を返す */
+    count: function () { return levelListeners.length; },
+    on: function (fn) { levelListeners.push(fn); return function () { var i = levelListeners.indexOf(fn); if (i >= 0) levelListeners.splice(i, 1); }; }
+  };
+
+  /* ---------- 解説（4段）。問題の key から作るハンドラは explain-*.js が CA.EXP.handlers に足す ---------- */
+  CA.EXP = CA.EXP || { handlers: [] };
+  CA.EXP.fromKey = function (key) {
+    if (!key) return null;
+    for (var i = 0; i < CA.EXP.handlers.length; i++) {
+      var m = key.match(CA.EXP.handlers[i][0]);
+      if (m) { try { return CA.EXP.handlers[i][1](key, m); } catch (e) { return null; } }
+    }
+    return null;
+  };
+  /* 問題の解説を探す順：問題に付いた解説 → ページの手書き解説（CA.EXP_Q[ページ][問題id]）→ 固定問題の key（CA.EXP_KEYS）→ 問題の key */
+  CA.EXP.forQuestion = function (p, qid) {
+    if (p.explain) return p.explain;
+    var q = (CA.EXP_Q || {})[root.CA_PAGE];
+    if (q && q[qid]) return q[qid];
+    var k = (CA.EXP_KEYS || {})[qid];
+    return CA.EXP.fromKey(k || p.exKey || p.key);
+  };
+  /* 4段の切りかえ。levels: { easy, normal, detail, adv }。左メニューのレベルが既定で、その場で切りかえもできる */
+  CA.levelTabs = function (mount, levels, opts) {
+    opts = opts || {};
+    var cur = CA.level.get();
+    var tabs = h("div", { class: "lv-tabs", role: "tablist", "aria-label": "解説のレベル" });
+    var panel = h("div", { class: "lv-panel", role: "tabpanel" });
+    function show(v) {
+      cur = v;
+      tabs.querySelectorAll("button").forEach(function (b) { var on = b.getAttribute("data-lv") === v; b.setAttribute("aria-selected", on ? "true" : "false"); b.tabIndex = on ? 0 : -1; });
+      panel.innerHTML = levels[v] || levels.normal || "";
+    }
+    LV.forEach(function (x) {
+      tabs.appendChild(h("button", { type: "button", role: "tab", "data-lv": x[0], title: x[2], text: x[1], onclick: function () { show(x[0]); } }));
+    });
+    tabs.addEventListener("keydown", function (e) {
+      var i = LV.map(function (x) { return x[0]; }).indexOf(cur);
+      if (e.key === "ArrowRight") { e.preventDefault(); show(LV[(i + 1) % 4][0]); tabs.querySelector("[aria-selected=true]").focus(); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); show(LV[(i + 3) % 4][0]); tabs.querySelector("[aria-selected=true]").focus(); }
+    });
+    var box = h("div", { class: "lv-box" + (opts.cls ? " " + opts.cls : "") }, opts.title ? h("div", { class: "lv-title", text: opts.title }) : null, tabs, panel);
+    /* 問題を出し直すと箱を作り直すので、古い箱の登録は dispose で外す */
+    box.dispose = CA.level.on(function (v) { show(v); });
+    mount.appendChild(box);
+    show(cur);
+    return box;
+  };
+  /* 項目ごとの解説：ページの <div data-explain="i1"> に置く */
+  CA.explainItems = function (map) {
+    if (!map) return;
+    document.querySelectorAll("[data-explain]").forEach(function (el) {
+      var lv = map[el.getAttribute("data-explain")];
+      if (lv) CA.levelTabs(el, lv, { title: "解説", cls: "item-explain" });
+    });
+  };
+
+  /* ---------- 左のメニュー：サイトのページ一覧・このページの中・解説のレベル ---------- */
+  CA.sidebar = function () {
+    var site = root.CA_SITE || { sessions: [] };
+    var nav = h("nav", { class: "side", id: "side", "aria-label": "メニュー" });
+    var close = h("button", { type: "button", class: "side-close", "aria-label": "メニューを閉じる", text: "閉じる" });
+    nav.appendChild(h("div", { class: "side-head" }, site.home ? h("a", { href: site.home, class: "side-home", text: "コンピュータアーキテクチャ 2026" }) : h("span", { class: "side-home", text: "コンピュータアーキテクチャ 2026" }), close));
+    /* このページの中 */
+    var secs = [];
+    document.querySelectorAll("main section[id]").forEach(function (sec) {
+      var hd = sec.querySelector("h2, h1");
+      if (!hd) return;
+      var no = sec.querySelector(".item-head .no");
+      /* 見出しに上線（span.ov）などがあるときは、data-label をメニューの名前にする */
+      var t = (hd.getAttribute("data-label") || hd.textContent).replace(/\s+/g, " ").trim();
+      if (sec.id === "movie") t = "動画：" + t.replace(/^動画：/, "").replace(/^今日の問い：/, "");
+      secs.push({ id: sec.id, label: (no ? no.textContent.replace("最低限 ", "").replace("やること ", "") + "　" : "") + t });
+    });
+    if (secs.length) {
+      var ul = h("ul", { class: "side-list" });
+      ul.appendChild(h("li", null, h("a", { href: "#", "data-sec": "", text: "ページの先頭" })));
+      secs.forEach(function (x) { ul.appendChild(h("li", null, h("a", { href: "#" + x.id, "data-sec": x.id, text: x.label }))); });
+      nav.appendChild(h("div", { class: "side-group" }, h("div", { class: "side-label", text: "このページ" }), ul));
+    }
+    /* 解説のレベル */
+    var lvBox = h("div", { class: "side-levels", role: "radiogroup", "aria-label": "解説のレベル" });
+    LV.forEach(function (x) {
+      var id = CA.uid("lv");
+      var r = h("input", { type: "radio", name: "side-level", id: id, value: x[0] });
+      r.checked = CA.level.get() === x[0];
+      r.onchange = function () { if (r.checked) CA.level.set(x[0]); };
+      lvBox.appendChild(h("label", { for: id }, r, h("b", { text: x[1] }), h("span", { text: x[2] })));
+    });
+    CA.level.on(function (v) { lvBox.querySelectorAll("input").forEach(function (r) { r.checked = r.value === v; }); });
+    nav.appendChild(h("div", { class: "side-group" }, h("div", { class: "side-label", text: "解説のレベル" }), lvBox));
+    /* ページ一覧 */
+    if (site.sessions && site.sessions.length) {
+      var sl = h("ul", { class: "side-list side-pages" });
+      site.sessions.forEach(function (ss) {
+        var links = ss.pages.map(function (pg) {
+          if (pg.current) return h("span", { class: "cur", "aria-current": "page", text: pg.label });
+          return pg.href ? h("a", { href: pg.href, text: pg.label }) : h("span", { class: "off", text: pg.label });
+        });
+        sl.appendChild(h("li", null, h("span", { class: "s-no", text: "第" + ss.no + "回" }), h("span", { class: "s-ttl", text: ss.title }), h("span", { class: "s-links" }, links)));
+      });
+      nav.appendChild(h("div", { class: "side-group" }, h("div", { class: "side-label", text: "予習・復習ページ" }), sl));
+    }
+    var backdrop = h("div", { class: "side-backdrop", hidden: true });
+    function open(v) {
+      document.body.classList.toggle("side-open", v);
+      backdrop.hidden = !v;
+      if (v) { var f = nav.querySelector("a, button"); if (f) f.focus(); } else if (menuBtn) menuBtn.focus();
+    }
+    close.onclick = function () { open(false); };
+    backdrop.onclick = function () { open(false); };
+    nav.addEventListener("click", function (e) { if (e.target.tagName === "A" && window.matchMedia("(max-width: 1179px)").matches) open(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && document.body.classList.contains("side-open")) open(false); });
+    var menuBtn = h("button", { type: "button", class: "menu-btn", "aria-controls": "side", "aria-label": "メニューを開く", text: "☰ メニュー" });
+    menuBtn.onclick = function () { open(!document.body.classList.contains("side-open")); };
+    var mi = document.querySelector(".mast-inner");
+    if (mi) mi.insertBefore(menuBtn, mi.firstChild);
+    document.body.insertBefore(nav, document.body.firstChild);
+    document.body.appendChild(backdrop);
+    document.body.classList.add("has-side");
+    /* いま読んでいる場所を強調 */
+    if ("IntersectionObserver" in root && secs.length) {
+      var links2 = nav.querySelectorAll("[data-sec]");
+      var io = new IntersectionObserver(function (ents) {
+        ents.forEach(function (en) {
+          if (en.isIntersecting) links2.forEach(function (a) { a.classList.toggle("here", a.getAttribute("data-sec") === en.target.id); });
+        });
+      }, { rootMargin: "-30% 0px -60% 0px" });
+      secs.forEach(function (x) { var el = document.getElementById(x.id); if (el) io.observe(el); });
+    }
+  };
+
+  /* ---------- 進み具合（最低限の項目ごとのランプ） ---------- */
+  var progress = { items: [], done: {}, listeners: [] };
+  CA.progress = {
+    /* opts.label：ランプの見出し（既定は「最低限」） */
+    init: function (items, opts) {
+      progress.items = items;
+      progress.label = (opts && opts.label) || "最低限";
+      progress.done = CA.store.get("done", {}) || {};
+      this.render();
+    },
+    mark: function (id) {
+      if (progress.done[id]) return;
+      progress.done[id] = true;
+      CA.store.set("done", progress.done);
+      this.render();
+    },
+    isDone: function (id) { return !!progress.done[id]; },
+    count: function () { return progress.items.filter(function (it) { return progress.done[it.id]; }).length; },
+    onChange: function (fn) { progress.listeners.push(fn); },
+    render: function () {
+      var n = this.count(), total = progress.items.length;
+      document.querySelectorAll("[data-lamps]").forEach(function (box) {
+        box.innerHTML = "";
+        box.appendChild(h("span", { class: "label", text: progress.label + " " + n + " / " + total }));
+        progress.items.forEach(function (it, i) {
+          box.appendChild(h("a", {
+            class: "lamp" + (progress.done[it.id] ? " on" : ""), href: "#" + it.id,
+            title: (i + 1) + ". " + it.title + (progress.done[it.id] ? "（確認問題に正解）" : "（まだ）"),
+            "aria-label": (i + 1) + "番 " + it.title + (progress.done[it.id] ? " 正解済み" : " まだ")
+          }, String(i + 1)));
+        });
+      });
+      document.querySelectorAll("[data-item-state]").forEach(function (el) {
+        var id = el.getAttribute("data-item-state");
+        el.textContent = progress.done[id] ? "確認問題に正解しました" : "";
+      });
+      progress.listeners.forEach(function (fn) { fn(n, total); });
+    }
+  };
+
+  /* ---------- ステップ再生 ----------
+     frames: [{ caption, render(stageEl) }] */
+  CA.stepper = function (mount, opts) {
+    var frames = opts.frames, i = 0, timer = null;
+    var stage = h("div", { class: "stage", "aria-hidden": "false" });
+    var cap = h("p", { class: "caption", "aria-live": "polite" });
+    var rid = CA.uid("rng");
+    var range = h("input", { type: "range", min: 0, max: frames.length - 1, value: 0, id: rid, "aria-label": "場面" });
+    var count = h("span", { class: "count" });
+    var bFirst = h("button", { type: "button", text: "最初から" });
+    var bPrev = h("button", { type: "button", text: "◀ 前へ" });
+    var bNext = h("button", { type: "button", class: "primary", text: "次へ ▶" });
+    var bPlay = h("button", { type: "button", text: "自動で再生" });
+    function stop() { if (timer) { clearInterval(timer); timer = null; bPlay.textContent = "自動で再生"; } }
+    function show(k) {
+      i = Math.max(0, Math.min(frames.length - 1, k));
+      stage.innerHTML = "";
+      frames[i].render(stage);
+      cap.innerHTML = frames[i].caption;
+      range.value = i;
+      count.textContent = (i + 1) + " / " + frames.length;
+      bPrev.disabled = i === 0; bFirst.disabled = i === 0;
+      bNext.disabled = i === frames.length - 1;
+      if (i === frames.length - 1 && opts.onEnd) opts.onEnd();
+    }
+    bFirst.onclick = function () { stop(); show(0); };
+    bPrev.onclick = function () { stop(); show(i - 1); };
+    bNext.onclick = function () { stop(); show(i + 1); };
+    range.oninput = function () { stop(); show(+range.value); };
+    bPlay.onclick = function () {
+      if (timer) { stop(); return; }
+      if (i === frames.length - 1) show(0);
+      bPlay.textContent = "止める";
+      timer = setInterval(function () {
+        if (i >= frames.length - 1) { stop(); return; }
+        show(i + 1);
+      }, opts.interval || 2600);
+    };
+    var box = h("div", { class: "stepper" }, stage, cap,
+      h("div", { class: "ctrl" }, bFirst, bPrev, bNext, range, count, bPlay));
+    box.addEventListener("keydown", function (e) {
+      if (e.target === range) return;
+      if (e.key === "ArrowRight") { stop(); show(i + 1); }
+      if (e.key === "ArrowLeft") { stop(); show(i - 1); }
+    });
+    mount.appendChild(box);
+    show(0);
+    return { show: show };
+  };
+
+  /* ---------- ドリル・確認問題 ----------
+     opts.mode: "drill"（何問でも） / "check"（1問、正解で項目のランプが点く） / "seq"（決まった問題を順に）
+     opts.make(): 問題を返す。問題は { prompt, inputLabel, check(x)->{ok,msg}, solution, type, choices } */
+  CA.quiz = function (mount, opts) {
+    var mode = opts.mode || "drill";
+    var stats = CA.store.get("q." + opts.id, { ok: 0, tried: 0 }) || { ok: 0, tried: 0 };
+    var p = null, answered = false, wrongs = 0, seqIndex = 0, seqOk = 0;
+    var kind = h("div", { class: "kind" });
+    var prompt = h("div", { class: "prompt" });
+    var area = h("div");
+    var fb = h("div", { class: "feedback", role: "status", "aria-live": "polite" });
+    var sol = h("details", { class: "solution" }, h("summary", { text: "解き方を見る" }), h("div"));
+    var exq = h("details", { class: "solution explain-q" }, h("summary", { text: "解説を見る（簡単・通常・詳細・発展）" }), h("div")), exBox = null;
+    var bNext = h("button", { type: "button", text: mode === "seq" ? "次の問題へ" : "別の問題を出す" });
+    var foot = h("div", { class: "row" });
+    if (mode !== "check") foot.appendChild(bNext);
+    var box = h("div", { class: "quiz" + (mode === "check" ? " check-quiz" : "") }, kind, prompt, area, fb, sol, exq, foot);
+    if (mode === "check" && opts.itemId && CA.progress.isDone(opts.itemId)) box.classList.add("done");
+
+    function label() {
+      kind.innerHTML = "";
+      var title = mode === "check" ? "確認問題" : mode === "seq" ? (opts.title || "仕上げ") + "　" + (seqIndex + 1) + " / " + opts.seq.length : (opts.title || "練習");
+      kind.appendChild(h("b", { text: title }));
+      if (mode === "drill") kind.appendChild(h("span", { class: "score", text: "正解 " + stats.ok + " / " + stats.tried }));
+      if (mode === "check") kind.appendChild(h("span", { class: "score", "data-item-state": opts.itemId }));
+      if (mode === "seq") kind.appendChild(h("span", { class: "score", text: "正解 " + seqOk }));
+    }
+    function judge(res, picked) {
+      if (answered && mode !== "check") return;
+      if (mode !== "check" || !answered) { stats.tried += 1; }
+      if (res.ok) {
+        answered = true;
+        stats.ok += 1;
+        if (mode === "seq") seqOk += 1;
+        fb.className = "feedback ok";
+        fb.innerHTML = "<span class=\"head\">正解</span>" + (opts.okNote ? "　" + opts.okNote : "");
+        if (mode === "check") { box.classList.add("done"); if (opts.itemId) CA.progress.mark(opts.itemId); }
+        sol.open = false;
+        if (opts.onCorrect) opts.onCorrect();
+      } else {
+        wrongs += 1;
+        if (mode === "seq") answered = true;
+        fb.className = "feedback ng";
+        fb.innerHTML = "<span class=\"head\">" + (mode === "seq" ? "ちがいます" : "もう一度") + "</span>　" + (res.msg || (wrongs >= 2 || mode === "seq" ? "「解き方を見る」で手順を確かめましょう。" : "手順を一つずつ確かめてみましょう。"));
+        if (wrongs >= 2 || mode === "seq") sol.open = true;
+      }
+      CA.store.set("q." + opts.id, stats);
+      label();
+      if (mode === "seq") { bNext.disabled = false; if (seqIndex === opts.seq.length - 1) bNext.textContent = "結果を見る"; }
+    }
+    function load() {
+      answered = false; wrongs = 0;
+      p = mode === "seq" ? opts.seq[seqIndex]() : opts.make();
+      prompt.innerHTML = p.prompt;
+      sol.lastChild.innerHTML = p.solution;
+      sol.open = false;
+      var ex = CA.EXP.forQuestion(p, mode === "seq" ? opts.id + (seqIndex + 1) : opts.id);
+      if (exBox) exBox.dispose();
+      exq.lastChild.innerHTML = "";
+      exq.open = false;
+      exq.hidden = !ex;
+      exBox = ex ? CA.levelTabs(exq.lastChild, ex) : null;
+      fb.className = "feedback"; fb.innerHTML = "";
+      area.innerHTML = "";
+      if (p.type === "choice") {
+        var list = h("div", { class: "choices" });
+        /* 選択肢は毎回並べかえて出す（正解がいつも同じ位置にならないように）。数だけの選択肢と keepOrder は並びのまま */
+        var order = p.choices.map(function (c, k) { return k; });
+        var numeric = p.choices.every(function (c) { return /^\s*-?\d+\s*$/.test(String(c)); });
+        if (!p.keepOrder && !numeric) for (var oi = order.length - 1; oi > 0; oi--) { var oj = Math.floor(Math.random() * (oi + 1)); var ot = order[oi]; order[oi] = order[oj]; order[oj] = ot; }
+        order.forEach(function (k) {
+          var c = p.choices[k];
+          var b = h("button", { type: "button", html: c, "data-k": k });
+          b.onclick = function () {
+            if (answered) return;
+            var res = p.check(k);
+            list.querySelectorAll("button").forEach(function (x) { x.classList.remove("picked-ng"); });
+            b.classList.add(res.ok ? "picked-ok" : "picked-ng");
+            judge(res, k);
+          };
+          list.appendChild(b);
+        });
+        area.appendChild(list);
+      } else {
+        var iid = CA.uid("ans");
+        var inp = h("input", { type: "text", id: iid, autocomplete: "off", autocapitalize: "off", spellcheck: "false", inputmode: p.inputMode || "text" });
+        var go = h("button", { type: "button", class: "primary", text: "答え合わせ" });
+        go.onclick = function () {
+          if (!inp.value.trim()) { fb.className = "feedback ng"; fb.innerHTML = "答えを入力してください。"; return; }
+          judge(p.check(inp.value));
+        };
+        inp.addEventListener("keydown", function (e) { if (e.key === "Enter") go.onclick(); });
+        area.appendChild(h("div", { class: "answer-row" }, h("label", { for: iid, text: p.inputLabel || "答え" }), inp, go));
+      }
+      if (mode === "seq") bNext.disabled = true;
+      label();
+      CA.progress.render();
+    }
+    bNext.onclick = function () {
+      if (mode === "seq") {
+        if (seqIndex === opts.seq.length - 1) { if (opts.onFinish) opts.onFinish(seqOk, opts.seq.length, box); return; }
+        seqIndex += 1;
+      }
+      load();
+    };
+    box.restart = function () { seqIndex = 0; seqOk = 0; bNext.textContent = "次の問題へ"; load(); };
+    mount.appendChild(box);
+    load();
+    return box;
+  };
+
+  /* ---------- 抽象レベルの地図（第3回スライド2の9層） ---------- */
+  var LEVELS = [
+    ["アプリケーションソフトウェア", "プログラム"],
+    ["OS", "デバイスドライバ"],
+    ["アーキテクチャ", "命令とレジスタ"],
+    ["マイクロアーキテクチャ", "データパス、コントローラ"],
+    ["論理", "加算器、メモリ"],
+    ["ディジタル回路", "ANDゲート、NOTゲート"],
+    ["アナログ回路", "増幅器、フィルタ"],
+    ["デバイス（素子）", "トランジスタ、ダイオード"],
+    ["物理", "電子"]
+  ];
+  CA.levels = function (mount, here, note) {
+    var ol = h("ol");
+    LEVELS.forEach(function (lv, k) {
+      var mark = here[k];
+      ol.appendChild(h("li", { class: mark ? "here" : "" }, h("span", { text: lv[0] }), h("span", { class: "ex", text: mark ? mark : lv[1] })));
+    });
+    var d = h("details", { class: "levels" }, h("summary", { text: note }), ol);
+    mount.appendChild(d);
+  };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+/* 部品② 論理ゲート：ゲートの関数、MIL 記号の SVG（文字列）、ドリルの問題生成。node のテストからも読む。
+   決まり：中間テストの「NAND だけで AND・OR を作る」「NAND 5個の XOR 回路を読む」は出さない（第5回の授業内演習とテスト）。
+   真理値表の行は 00, 01, 10, 11 の順に並べる。 */
+(function (root) {
+  "use strict";
+
+  var G2 = {
+    AND: { f: function (a, b) { return a & b; }, ja: "論理積", desc: "両方 1 のときだけ 1", expr: "A·B" },
+    OR: { f: function (a, b) { return a | b; }, ja: "論理和", desc: "どちらか（両方でも）1 なら 1", expr: "A+B" },
+    XOR: { f: function (a, b) { return a ^ b; }, ja: "排他的論理和", desc: "2つが違うときだけ 1", expr: "A⊕B" },
+    NAND: { f: function (a, b) { return 1 - (a & b); }, ja: "否定論理積", desc: "AND の反対。両方 1 のときだけ 0", expr: "<span class=\"ov\">A·B</span>" },
+    NOR: { f: function (a, b) { return 1 - (a | b); }, ja: "否定論理和", desc: "OR の反対。両方 0 のときだけ 1", expr: "<span class=\"ov\">A+B</span>" },
+    XNOR: { f: function (a, b) { return 1 - (a ^ b); }, ja: "否定排他的論理和", desc: "XOR の反対。2つが同じときに 1", expr: "<span class=\"ov\">A⊕B</span>" }
+  };
+  var G1 = {
+    NOT: { f: function (a) { return 1 - a; }, ja: "否定（インバータ）", desc: "入力の反対を出す", expr: "<span class=\"ov\">A</span>" },
+    BUF: { f: function (a) { return a; }, ja: "バッファ", desc: "入力と同じ値を出す", expr: "A" }
+  };
+  var NAMES2 = ["AND", "OR", "XOR", "NAND", "NOR", "XNOR"];
+  var ROWS2 = [[0, 0], [0, 1], [1, 0], [1, 1]];
+  function evalGate(name, ins) {
+    if (G1[name]) return G1[name].f(ins[0]);
+    if (ins.length === 2) return G2[name].f(ins[0], ins[1]);
+    /* 3入力以上は AND・OR・NAND・NOR だけ */
+    var all = ins.every(function (x) { return x === 1; }), any = ins.some(function (x) { return x === 1; });
+    if (name === "AND") return all ? 1 : 0;
+    if (name === "OR") return any ? 1 : 0;
+    if (name === "NAND") return all ? 0 : 1;
+    if (name === "NOR") return any ? 0 : 1;
+    throw new Error("3入力以上はこのゲートを扱わない：" + name);
+  }
+  function column(name) { return ROWS2.map(function (r) { return evalGate(name, r); }).join(""); }
+  function rowsOf(n) {
+    var out = [];
+    for (var v = 0; v < Math.pow(2, n); v++) {
+      var r = [];
+      for (var i = n - 1; i >= 0; i--) r.push((v >> i) & 1);
+      out.push(r);
+    }
+    return out;
+  }
+  function onesCount(name, n) { return rowsOf(n).filter(function (r) { return evalGate(name, r) === 1; }).length; }
+
+  /* ---------- MIL 記号（ローカル座標 120×80、入力は左、出力は右の y=40） ---------- */
+  function orEdgeX(x0, y) { var t = 1 - y / 80; return x0 + 2 * t * (1 - t) * 20; }
+  function inputYs(n) {
+    if (n === 1) return [40];
+    if (n === 2) return [20, 60];
+    if (n === 3) return [14, 40, 66];
+    return [10, 30, 50, 70];
+  }
+  /* o: { n: 入力数, live: [入力ごとに true/false], out: 出力 true/false, x, y, s: 拡大率, labels: ["A","B"] , outLabel } */
+  function symbol(name, o) {
+    o = o || {};
+    var n = o.n || (G1[name] ? 1 : 2), ys = inputYs(n), live = o.live || [], s = "";
+    function wire(x1, y1, x2, y2, hot) { return "<line x1=\"" + x1 + "\" y1=\"" + y1 + "\" x2=\"" + x2 + "\" y2=\"" + y2 + "\" class=\"" + (hot ? "s-lamp" : "s-ink") + "\" stroke-width=\"" + (hot ? 5 : 3) + "\" stroke-linecap=\"round\"/>"; }
+    var body = "", tip = 100, bubble = false, inEnd;
+    var base = name.replace(/^N(?=AND|OR)/, "").replace("XNOR", "XOR");
+    bubble = /^(NAND|NOR|XNOR|NOT)$/.test(name);
+    if (base === "AND") {
+      body = "<path d=\"M20,0 H60 A40,40 0 0 1 60,80 H20 Z\" class=\"k-panel s-ink\" stroke-width=\"3\"/>";
+      inEnd = function () { return 20; };
+    } else if (base === "OR") {
+      body = "<path d=\"M12,0 Q58,0 100,40 Q58,80 12,80 Q32,40 12,0 Z\" class=\"k-panel s-ink\" stroke-width=\"3\"/>";
+      inEnd = function (y) { return orEdgeX(12, y); };
+    } else if (base === "XOR") {
+      body = "<path d=\"M2,0 Q22,40 2,80\" class=\"k-none s-ink\" fill=\"none\" stroke-width=\"3\"/>" +
+        "<path d=\"M16,0 Q60,0 98,40 Q60,80 16,80 Q36,40 16,0 Z\" class=\"k-panel s-ink\" stroke-width=\"3\"/>";
+      tip = 98;
+      inEnd = function (y) { return orEdgeX(2, y); };
+    } else {
+      body = "<path d=\"M20,8 L88,40 L20,72 Z\" class=\"k-panel s-ink\" stroke-width=\"3\"/>";
+      tip = 88;
+      inEnd = function () { return 20; };
+    }
+    for (var i = 0; i < n; i++) s += wire(-24, ys[i], inEnd(ys[i]), ys[i], live[i]);
+    s += body;
+    var outStart = tip;
+    if (bubble) { s += "<circle cx=\"" + (tip + 7) + "\" cy=\"40\" r=\"7\" class=\"k-panel s-ink\" stroke-width=\"3\"/>"; outStart = tip + 14; }
+    s += wire(outStart, 40, 144, 40, o.out);
+    if (o.labels) {
+      for (var j = 0; j < n; j++) s += "<text x=\"-30\" y=\"" + (ys[j] + 8) + "\" text-anchor=\"end\" class=\"fm k-ink\" font-size=\"22\" font-weight=\"700\">" + o.labels[j] + "</text>";
+      if (o.outLabel != null) s += "<text x=\"152\" y=\"48\" class=\"fm k-ink\" font-size=\"22\" font-weight=\"700\">" + o.outLabel + "</text>";
+    }
+    var tr = "translate(" + (o.x || 0) + "," + (o.y || 0) + ")" + (o.s ? " scale(" + o.s + ")" : "");
+    return "<g transform=\"" + tr + "\">" + s + "</g>";
+  }
+  /* ページに置く単独の記号 */
+  function icon(name, o) {
+    o = o || {};
+    var w = o.w || 200;
+    return "<svg class=\"gsvg\" viewBox=\"-60 -10 250 100\" width=\"" + w + "\" role=\"img\" aria-label=\"" + (o.aria || name + " の記号") + "\">" +
+      symbol(name, { n: o.n, live: o.live, out: o.out, labels: o.labels || (o.n === 1 || G1[name] ? ["A"] : ["A", "B", "C", "D"].slice(0, o.n || 2)), outLabel: o.outLabel != null ? o.outLabel : "Y" }) + "</svg>";
+  }
+  function tableHTML(cols, rows, o) {
+    o = o || {};
+    var hd = "<tr>" + cols.map(function (c) { return "<th>" + c + "</th>"; }).join("") + "</tr>";
+    var bd = rows.map(function (r, i) {
+      return "<tr" + (o.hl === i ? " class=\"cur\"" : "") + ">" + r.map(function (c) { return "<td" + (c === "?" ? " class=\"unk\"" : "") + ">" + c + "</td>"; }).join("") + "</tr>";
+    }).join("");
+    return "<table class=\"ttable\">" + hd + bd + "</table>";
+  }
+
+  /* ---------- 問題の生成（{ key, type, prompt, choices|inputLabel, answer, check, solution }） ---------- */
+  var B = root.CA && root.CA.bits;
+  function rint(rng, lo, hi) { return lo + Math.floor(rng() * (hi - lo + 1)); }
+  function pick(rng, a) { return a[Math.floor(rng() * a.length)]; }
+  function shuffle(rng, a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(rng() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function choiceProblem(key, prompt, choices, correct, why, solution) {
+    return { key: key, type: "choice", prompt: prompt, choices: choices, answer: correct, solution: solution,
+      check: function (i) { return i === correct ? { ok: true } : { ok: false, msg: why ? why(i) : null }; } };
+  }
+  var GG = {};
+  var MSG = {
+    AND: "AND は両方 1 のときだけ 1 です。", OR: "OR はどちらか（両方でも）が 1 なら 1 です。", XOR: "XOR は2つが違うときだけ 1。両方 1 なら 0 です。",
+    NAND: "NAND は AND の反対で、両方 1 のときだけ 0 です。", NOR: "NOR は OR の反対で、両方 0 のときだけ 1 です。", XNOR: "XNOR は XOR の反対で、2つが同じときに 1 です。",
+    NOT: "NOT は入力の反対を出します。", BUF: "バッファは入力と同じ値を出します。"
+  };
+
+  /* 記号・名前・式のどれかを見て、出力を答える */
+  GG.gateOut = function (rng, only) {
+    var name = pick(rng, Array.isArray(only) ? only : NAMES2.concat(["NOT"]));
+    var one = !!G1[name], ins = one ? [rint(rng, 0, 1)] : [rint(rng, 0, 1), rint(rng, 0, 1)];
+    var y = evalGate(name, ins), mode = pick(rng, ["symbol", "name", "expr"]);
+    var show = mode === "symbol" ? icon(name, { w: 220, aria: "論理ゲートの記号" }) + "<br>この記号のゲート" : mode === "name" ? name + " ゲート" : "Y = " + (one ? G1 : G2)[name].expr;
+    var vals = one ? "A=" + ins[0] : "A=" + ins[0] + "、B=" + ins[1];
+    return choiceProblem("go:" + name + ":" + ins.join(""), show + " に " + vals + " を入れると、出力 Y は？", ["0", "1"], y,
+      function () { return MSG[name]; }, name + "（" + (one ? G1 : G2)[name].desc + "）に " + vals + " → Y = " + y);
+  };
+  /* 真理値表を見て、どのゲートかを答える */
+  GG.gateFromTable = function (rng) {
+    var name = pick(rng, NAMES2);
+    var others = shuffle(rng, NAMES2.filter(function (n) { return n !== name; })).slice(0, 3);
+    var opts = shuffle(rng, others.concat([name]));
+    var rows = ROWS2.map(function (r) { return [r[0], r[1], evalGate(name, r)]; });
+    return choiceProblem("gt:" + name, "次の真理値表のゲートは？" + tableHTML(["A", "B", "Y"], rows), opts.map(function (n) { return n + "（" + G2[n].ja + "）"; }), opts.indexOf(name),
+      function (i) {
+        var n = opts[i], diff = ROWS2.filter(function (r) { return evalGate(n, r) !== evalGate(name, r); })[0];
+        return n + " なら、A=" + diff[0] + "・B=" + diff[1] + " の行の Y は " + evalGate(n, diff) + " のはずです。";
+      }, "出力の列 " + column(name).split("").join("・") + " は " + name + "（" + G2[name].desc + "）");
+  };
+  /* 記号を見て名前を答える */
+  GG.symbolName = function (rng) {
+    var all = NAMES2.concat(["NOT", "BUF"]);
+    var name = pick(rng, all);
+    var opts = shuffle(rng, shuffle(rng, all.filter(function (n) { return n !== name; })).slice(0, 3).concat([name]));
+    var hint = { AND: "D の形", OR: "盾の形", XOR: "盾の形＋入口側にもう1本の線", NAND: "D の形＋出口の○", NOR: "盾の形＋出口の○", XNOR: "盾の形＋入口の線＋出口の○", NOT: "三角＋出口の○", BUF: "三角だけ" };
+    return choiceProblem("sn:" + name, icon(name, { w: 220, aria: "論理ゲートの記号" }) + "<br>この記号のゲートは？", opts, opts.indexOf(name),
+      function (i) { return opts[i] + " の記号は「" + hint[opts[i]] + "」です。この記号は「" + hint[name] + "」。"; }, name + "：" + hint[name]);
+  };
+  /* n 入力の真理値表は何行？ */
+  GG.rowsCount = function (rng) {
+    var n = rint(rng, 2, 5), ans = Math.pow(2, n);
+    return { key: "rc:" + n, prompt: n + " 入力のゲートの真理値表は、何行になる？", inputLabel: "行", answer: String(ans),
+      solution: "入力が1つ増えるごとに行は2倍。2<sup>" + n + "</sup> = " + ans + " 行",
+      check: function (x) {
+        var v = (B ? B.normalize(x) : String(x)).replace(/行$/, "");
+        if (v === String(ans)) return { ok: true };
+        if (v === String(2 * n)) return { ok: false, msg: "入力1つにつき 0 と 1 の2通りなので、足すのではなく掛け合わせます（2 × 2 × …）。" };
+        if (v === String(n * n)) return { ok: false, msg: "n × n ではなく、2 を n 回掛けた数（2<sup>n</sup>）です。" };
+        return { ok: false };
+      } };
+  };
+  /* n 入力のゲートで、出力が 1 になる行は何行？ */
+  GG.onesCount = function (rng) {
+    var name = pick(rng, ["AND", "OR", "NAND", "NOR"]), n = rint(rng, 3, 4), ans = onesCount(name, n), total = Math.pow(2, n);
+    return { key: "oc:" + name + n, prompt: n + " 入力の " + name + " ゲートの真理値表で、出力が 1 になる行は何行？（全部で " + total + " 行）", inputLabel: "行", answer: String(ans),
+      solution: { AND: "全部 1 の行だけが 1 → 1 行", OR: "全部 0 の行だけが 0 → " + (total - 1) + " 行", NAND: "全部 1 の行だけが 0 → " + (total - 1) + " 行", NOR: "全部 0 の行だけが 1 → 1 行" }[name],
+      check: function (x) {
+        var v = (B ? B.normalize(x) : String(x)).replace(/行$/, "");
+        if (v === String(ans)) return { ok: true };
+        if (v === String(total - ans)) return { ok: false, msg: "それは出力が 0 になる行の数です。" + MSG[name] };
+        return { ok: false, msg: MSG[name] };
+      } };
+  };
+  /* ド・モルガン */
+  var DM = [
+    { q: "<span class=\"ov\">A·B</span>", a: "<span class=\"ov\">A</span>+<span class=\"ov\">B</span>", trap: "<span class=\"ov\">A</span>·<span class=\"ov\">B</span>", k: "nand" },
+    { q: "<span class=\"ov\">A+B</span>", a: "<span class=\"ov\">A</span>·<span class=\"ov\">B</span>", trap: "<span class=\"ov\">A</span>+<span class=\"ov\">B</span>", k: "nor" },
+    { q: "<span class=\"ov\">A</span>+<span class=\"ov\">B</span>", a: "<span class=\"ov\">A·B</span>", trap: "<span class=\"ov\">A+B</span>", k: "orbar" },
+    { q: "<span class=\"ov\">A</span>·<span class=\"ov\">B</span>", a: "<span class=\"ov\">A+B</span>", trap: "<span class=\"ov\">A·B</span>", k: "andbar" }
+  ];
+  GG.deMorgan = function (rng) {
+    var d = pick(rng, DM), plain = d.k === "nand" || d.k === "andbar" ? "A·B" : "A+B";
+    var opts = shuffle(rng, [d.a, d.trap, plain]);
+    return choiceProblem("dm:" + d.k, "Y = " + d.q + " と、すべての入力で同じ値になる式は？", opts, opts.indexOf(d.a),
+      function (i) { return opts[i] === d.trap ? "バーを分ける（つなぐ）ときは、· と + を入れかえます。" : "バーが消えてしまっています。ド・モルガンでは、バーを分けても残ります。"; },
+      "ド・モルガンの定理：" + DM[0].q + " = " + DM[0].a + "、" + DM[1].q + " = " + DM[1].a);
+  };
+  /* ブール式の値 */
+  var EX = [
+    { s: "A + B·C", f: function (a, b, c) { return a | (b & c); } },
+    { s: "(A + B)·C", f: function (a, b, c) { return (a | b) & c; } },
+    { s: "<span class=\"ov\">A</span>·B + C", f: function (a, b, c) { return ((1 - a) & b) | c; } },
+    { s: "<span class=\"ov\">A + B</span>·C", f: function (a, b, c) { return (1 - (a | b)) & c; } },
+    { s: "A·<span class=\"ov\">B</span> + <span class=\"ov\">A</span>·B", f: function (a, b) { return (a & (1 - b)) | ((1 - a) & b); } },
+    { s: "<span class=\"ov\">A·B</span> + C", f: function (a, b, c) { return (1 - (a & b)) | c; } }
+  ];
+  GG.boolEval = function (rng) {
+    var i = rint(rng, 0, EX.length - 1), e = EX[i];
+    var a = rint(rng, 0, 1), b = rint(rng, 0, 1), c = rint(rng, 0, 1), y = e.f(a, b, c);
+    var uses = /C/.test(e.s), vals = "A=" + a + "、B=" + b + (uses ? "、C=" + c : "");
+    return choiceProblem("be:" + i + ":" + a + b + (uses ? c : ""), "Y = " + e.s + " で、" + vals + " のとき Y は？", ["0", "1"], y,
+      function () { return "ブール代数では 1 + 1 = 1（どちらかが 1 なら 1）、1·0 = 0 です。バーの付いた部分は、計算してから反転します。"; },
+      vals + " を代入して計算すると Y = " + y);
+  };
+  /* 半加算器 */
+  GG.halfAdder = function (rng) {
+    var a = rint(rng, 0, 1), b = rint(rng, 0, 1), s = a ^ b, c = a & b;
+    var opts = ["S=0、C=0", "S=1、C=0", "S=0、C=1", "S=1、C=1"];
+    var ans = opts.indexOf("S=" + s + "、C=" + c);
+    return choiceProblem("ha:" + a + b, "半加算器に A=" + a + "、B=" + b + " を入れると、和 S と桁上がり C は？", opts, ans,
+      function (i) { return i === 3 ? "1 + 1 = 10（2進数）。1の桁 S は 0、桁上がり C は 1 です。S = A⊕B、C = A·B。" : "S = A⊕B（違うとき1）、C = A·B（両方1のとき1）です。"; },
+      a + " + " + b + " = " + (c ? "10" : String(s)) + "（2進数）→ S = " + s + "、C = " + c);
+  };
+  /* 1桁分の足し算（下からの桁上がりつき）。ゲーム用。真理値表としては見せない */
+  function addColumn(a, b, cin) { var t = a + b + cin; return { s: t & 1, c: t >> 1 }; }
+
+  var api = { G2: G2, G1: G1, NAMES2: NAMES2, ROWS2: ROWS2, evalGate: evalGate, column: column, rowsOf: rowsOf, onesCount: onesCount,
+    symbol: symbol, icon: icon, tableHTML: tableHTML, gen: GG, addColumn: addColumn, DM: DM, EX: EX };
+  root.CA = root.CA || {};
+  root.CA.gates = api;
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+/* オンデマンド回「回路パズル」の中身：部品、回路の計算、判定、面の定義、書き出しの形。node のテスト・採点の台本からも読む。
+   回路の形：{ p: [[id, 種類, x, y], …], w: [[出す部品id, 出口, 受ける部品id, 入口], …] }
+     スイッチ（SW）とランプ（LAMP）は面が決める。id はスイッチ・ランプの名前（"A"、"Y" など）。
+   決まり（2026-11-26 先生了承「推奨どおり」）：
+     - 答えがすでに手に入る回路は出さない（第5回課題・第6回課題・中間2026・公開済みの復習ページ）。
+       NAND の NOT/AND/OR/XOR、半加算器・全加算器の中身、論理演算装置（デコーダ）、算術演算回路、RS/D ラッチ、D-FF の中身、カウンタ。
+     - ゲートだけの輪は作れない（発振を考えない）。輪になってよいのは D-FF を通るときだけ。D-FF の初期値は Q=0。
+     - D-FF は立ち上がり型（授業 第6回 s28・中間 問6 と同じ）。CLK は全部の D-FF に共通で、「CLK」ボタンが立ち上がりを1回送る。
+     - 採点では、書き出された回路をこのファイルで動かし直して判定する（「クリア」の印は信じない）。 */
+(function (root) {
+  "use strict";
+  var CA = root.CA = root.CA || {};
+
+  /* ---------- 部品 ---------- */
+  var G2F = {
+    AND: function (a, b) { return a & b; }, OR: function (a, b) { return a | b; }, XOR: function (a, b) { return a ^ b; },
+    NAND: function (a, b) { return 1 - (a & b); }, NOR: function (a, b) { return 1 - (a | b); }, XNOR: function (a, b) { return 1 - (a ^ b); }
+  };
+  /* ins：入口の名前、outs：出口の名前、gate：星の数に数えるゲート、f：入口の値 → 出口の値 */
+  var PARTS = {
+    SW: { ins: [], outs: ["Y"], ja: "スイッチ" },
+    LAMP: { ins: ["A"], outs: [], ja: "ランプ" },
+    NOT: { ins: ["A"], outs: ["Y"], gate: true, ja: "NOT", f: function (v) { return { Y: 1 - v.A }; } },
+    HA: { ins: ["A", "B"], outs: ["S", "C"], block: true, ja: "半加算器", f: function (v) { return { S: v.A ^ v.B, C: v.A & v.B }; } },
+    FA: { ins: ["A", "B", "Ci"], outs: ["S", "Co"], block: true, ja: "全加算器", f: function (v) { var s = v.A + v.B + v.Ci; return { S: s & 1, Co: s >> 1 }; } },
+    ZERO: { ins: [], outs: ["Y"], ja: "いつも 0", f: function () { return { Y: 0 }; } },
+    DFF: { ins: ["D"], outs: ["Q"], block: true, ff: true, ja: "D-FF（立ち上がり）" }
+  };
+  Object.keys(G2F).forEach(function (n) {
+    PARTS[n] = { ins: ["A", "B"], outs: ["Y"], gate: true, ja: n, f: (function (fn) { return function (v) { return { Y: fn(v.A, v.B) }; }; })(G2F[n]) };
+  });
+
+  function partMap(c) { var m = {}; c.p.forEach(function (p) { m[p[0]] = { id: p[0], type: p[1], x: p[2], y: p[3] }; }); return m; }
+  /* 入口ごとに、つながっている線（入口には線は1本まで） */
+  function inputMap(c) {
+    var m = {};
+    c.w.forEach(function (w) { m[w[2] + "." + w[3]] = { id: w[0], pin: w[1] }; });
+    return m;
+  }
+
+  /* 並べる順（ゲートの輪を見つける）。D-FF の Q は「今の状態」なので、そこから先は輪に数えない */
+  function order(c) {
+    var pm = partMap(c), ids = Object.keys(pm), deps = {}, users = {};
+    ids.forEach(function (id) { deps[id] = 0; users[id] = []; });
+    c.w.forEach(function (w) {
+      if (!pm[w[0]] || !pm[w[2]]) return;
+      if (PARTS[pm[w[0]].type].ff) return;
+      deps[w[2]] += 1; users[w[0]].push(w[2]);
+    });
+    var q = ids.filter(function (id) { return deps[id] === 0; }), out = [];
+    while (q.length) {
+      var id = q.shift(); out.push(id);
+      users[id].forEach(function (u) { deps[u] -= 1; if (deps[u] === 0) q.push(u); });
+    }
+    var rest = ids.filter(function (id) { return out.indexOf(id) < 0; });
+    /* 残りのうち、輪の先にぶら下がっているだけの部品を外し、輪そのものだけを返す */
+    var changed = true;
+    while (changed) {
+      changed = false;
+      rest = rest.filter(function (id) {
+        var keep = users[id].some(function (u) { return rest.indexOf(u) >= 0; });
+        if (!keep) changed = true;
+        return keep;
+      });
+    }
+    return { order: out, loop: rest };
+  }
+
+  /* ランプまで届く部品（星や「つながっていない入口」は、ここに入る部品だけを見る） */
+  function reachable(c) {
+    var pm = partMap(c), im = inputMap(c), seen = {}, stack = [];
+    Object.keys(pm).forEach(function (id) { if (pm[id].type === "LAMP") stack.push(id); });
+    while (stack.length) {
+      var id = stack.pop();
+      if (seen[id]) continue;
+      seen[id] = true;
+      PARTS[pm[id].type].ins.forEach(function (pin) { var s = im[id + "." + pin]; if (s && pm[s.id]) stack.push(s.id); });
+    }
+    return seen;
+  }
+
+  /* 回路を1回計算する。inputs：{ スイッチ名: 0/1 }、state：{ D-FF の id: Q }
+     返す値：{ v: { "id.出口": 値 }, lamps: { ランプ名: 値 }, loop: [id…], open: ["id.入口"…（ランプまで届く部品だけ）] } */
+  function evaluate(c, inputs, state) {
+    inputs = inputs || {}; state = state || {};
+    var pm = partMap(c), im = inputMap(c), o = order(c), v = {}, open = [], reach = reachable(c);
+    function inVal(id, pin) {
+      var s = im[id + "." + pin];
+      if (!s || !pm[s.id]) { if (reach[id]) open.push(id + "." + pin); return 0; }
+      var x = v[s.id + "." + s.pin];
+      return x == null ? 0 : x;
+    }
+    Object.keys(pm).forEach(function (id) { if (PARTS[pm[id].type].ff) v[id + ".Q"] = state[id] ? 1 : 0; });
+    var lamps = {};
+    o.order.forEach(function (id) {
+      var p = pm[id], d = PARTS[p.type];
+      if (p.type === "SW") { v[id + ".Y"] = inputs[id] ? 1 : 0; return; }
+      if (p.type === "LAMP") { lamps[id] = inVal(id, "A"); return; }
+      if (d.ff) { inVal(id, "D"); return; }
+      var iv = {};
+      d.ins.forEach(function (pin) { iv[pin] = inVal(id, pin); });
+      var r = d.f(iv);
+      d.outs.forEach(function (pin) { v[id + "." + pin] = r[pin]; });
+    });
+    /* 輪の中の部品は計算しない（ランプは 0） */
+    Object.keys(pm).forEach(function (id) { if (pm[id].type === "LAMP" && !(id in lamps)) lamps[id] = 0; });
+    return { v: v, lamps: lamps, loop: o.loop, open: open };
+  }
+
+  /* CLK の立ち上がり：全部の D-FF が、いまの D を同時に取りこむ */
+  function clock(c, inputs, state) {
+    var pm = partMap(c), im = inputMap(c), e = evaluate(c, inputs, state), next = {};
+    Object.keys(pm).forEach(function (id) {
+      if (!PARTS[pm[id].type].ff) return;
+      var s = im[id + ".D"];
+      next[id] = s && pm[s.id] ? (e.v[s.id + "." + s.pin] || 0) : 0;
+    });
+    return next;
+  }
+
+  function gateCount(c) { return c.p.filter(function (p) { return PARTS[p[1]] && PARTS[p[1]].gate; }).length; }
+
+  /* 入力の全部の組（行は 00…0 → 11…1 の順。名前の並びの左が上の桁） */
+  function rowsOf(names) {
+    var out = [], n = names.length;
+    for (var r = 0; r < (1 << n); r++) {
+      var o = {};
+      names.forEach(function (nm, i) { o[nm] = (r >> (n - 1 - i)) & 1; });
+      out.push(o);
+    }
+    return out;
+  }
+
+  /* ---------- 面の定義 ---------- */
+  function bit(x, i) { return (x >> i) & 1; }
+  var STAGES = [
+    { id: "s1", no: "1", req: true, kai: "第4回", title: "はじめの一歩",
+      ask: "2つのスイッチ A・B が両方オンのときだけ、ランプ Y を点けてください。",
+      inputs: ["A", "B"], outputs: ["Y"], palette: { AND: 1, OR: 1 },
+      f: function (x) { return { Y: x.A & x.B }; },
+      hints: ["「両方 1 のときだけ 1」になるゲートはどれでしょう。部品箱には AND と OR が1つずつあります。", "AND を盤に置き、A の出口 → AND の上の入口、B の出口 → AND の下の入口、AND の出口 → Y とつなぎます。"] },
+    { id: "s2", no: "2", req: true, kai: "第4・5回", title: "3人の多数決", min: 4,
+      ask: "3人（A・B・C）のうち2人以上が賛成（オン）なら、扉のランプ Y を点けてください。",
+      inputs: ["A", "B", "C"], outputs: ["Y"], palette: { AND: 3, OR: 3 },
+      f: function (x) { return { Y: (x.A & x.B) | (x.B & x.C) | (x.C & x.A) }; },
+      hints: ["「2人以上」は、「A と B」「B と C」「C と A」のどれかの組がそろっていること、と言いかえられます。", "組ごとに AND を1つ使い、3つの結果を OR でまとめると、ゲート5個でできます。★3 は4個。「C と（A か B）」のようにまとめられる所を探しましょう。"] },
+    { id: "s3", no: "3", req: true, kai: "第4・5回", title: "NAND だけで「A ならば B」", min: 2,
+      ask: "A がオンで B がオフのときだけランプ Y が消え、ほかのときは点く回路を、NAND だけで作ってください（Y ＝ Ā＋B）。",
+      inputs: ["A", "B"], outputs: ["Y"], palette: { NAND: 4 },
+      f: function (x) { return { Y: (1 - x.A) | x.B }; },
+      hints: ["Y が 0 になるのは「A＝1 かつ B＝0」の1行だけです。「1行だけ 0」になるゲートは NAND でした。NAND の入口に、A と「B の反対」を入れれば…？", "「B の反対」も NAND で作れます。NAND の2つの入口に同じ線（B）をつなぐと、どうなるかを試しましょう。"] },
+    { id: "s4", no: "4", req: true, kai: "第4回", title: "誤りを見つけるランプ", min: 2,
+      ask: "3つのスイッチ A・B・C のうち、オンの数が奇数（1つか3つ）のときだけランプ Y を点けてください。",
+      inputs: ["A", "B", "C"], outputs: ["Y"], palette: { XOR: 2, AND: 2, OR: 2, NOT: 2 },
+      f: function (x) { return { Y: x.A ^ x.B ^ x.C }; },
+      hints: ["スイッチが2つなら「オンの数が奇数」＝「2つが違う」で、XOR 1つです。", "まず A と B を XOR でまとめると、「A と B のうちオンの数が奇数か」が分かります。そこに C を足すと、どうなるでしょう。データの誤りを見つける「パリティ」と同じ考え方です。"] },
+    { id: "s5", no: "5", req: true, kai: "第3・5回", title: "2ビットの足し算機",
+      ask: "2ビットの数 A（A1 A0）と B（B1 B0）を足して、3ビットの答え S2 S1 S0 をランプに出してください。",
+      inputs: ["A1", "A0", "B1", "B0"], outputs: ["S2", "S1", "S0"], palette: { FA: 2, HA: 1, ZERO: 1 },
+      f: function (x) { var s = (x.A1 * 2 + x.A0) + (x.B1 * 2 + x.B0); return { S2: bit(s, 2), S1: bit(s, 1), S0: bit(s, 0) }; },
+      hints: ["筆算と同じく、右の桁（A0＋B0）から足して、桁上がりを左の桁へ渡します。第5回スライド17の「桁上げ伝搬加算器」の形です。", "右の桁から出た桁上がりは、左の桁の部品のどの入口に入れればよいでしょう。いちばん右の桁には下からの桁上がりがありません。そこに使える部品は部品箱に2通りあります。"] },
+    { id: "s6", no: "6", req: true, kai: "第3・5回", title: "2ビット×2ビットの掛け算機",
+      ask: "2ビットの数 A（A1 A0）と B（B1 B0）を掛けて、4ビットの答え P3 P2 P1 P0 をランプに出してください。",
+      inputs: ["A1", "A0", "B1", "B0"], outputs: ["P3", "P2", "P1", "P0"], palette: { AND: 4, HA: 2 },
+      f: function (x) { var p = (x.A1 * 2 + x.A0) * (x.B1 * 2 + x.B0); return { P3: bit(p, 3), P2: bit(p, 2), P1: bit(p, 1), P0: bit(p, 0) }; },
+      hints: ["1ビット同士の掛け算は AND と同じです（1×1 だけが 1）。第3回の筆算のように、B0 の段と B1 の段の「部分積」を AND で作ります。", "部分積は A0·B0、A1·B0、A0·B1、A1·B1 の4つ。P0 は A0·B0 そのものです。P1 の桁には部分積が2つ来るので、足す必要があります。足すと出る桁上がりは、次の桁へ。"] },
+    { id: "s7", no: "7", req: true, kai: "第6回", title: "光のバトン", seq: true,
+      ask: "CLK を押すたびに、IN の値がランプ L1 に入り、L1 の光は L2 へ、L2 の光は L3 へ、1つずつ右へ進むようにしてください。",
+      inputs: ["IN"], outputs: ["L1", "L2", "L3"], palette: { DFF: 3 },
+      run: [1, 0, 0, 1, 1, 0, 1, 0],
+      hints: ["D-FF は、CLK の立ち上がりの瞬間の D を Q に写し、次の立ち上がりまで覚えています。第6回のレジスタは、D-FF を並べて CLK を共通にしたものでした。テスト走行では、CLK と CLK の間に IN を変えても、ランプが変わらないことも確かめます。", "1つ目の D-FF の D には IN をつなぎます。2つ目の D-FF に「1つ前の光」を入れるには、2つ目の D に何をつなげばよいでしょう。"] },
+    { id: "c1", no: "挑戦1", req: false, kai: "第5回", title: "多数決を NAND だけで", min: 6,
+      ask: "面2 と同じ多数決（3人のうち2人以上でランプ Y が点く）を、NAND だけで作ってください。",
+      inputs: ["A", "B", "C"], outputs: ["Y"], palette: { NAND: 8 },
+      f: function (x) { return { Y: (x.A & x.B) | (x.B & x.C) | (x.C & x.A) }; },
+      hints: ["ド・モルガンの定理で、「AND をまとめた OR」は「NAND をまとめた NAND」に書きかえられます（入口に○の付いた OR ＝ NAND）。", "面2 の4個の形「A·B ＋ C·(A＋B)」から始めます。外側の OR と2つの AND は、NAND 3個に置きかえられます。残る「A＋B」も NAND で作ると、全部で6個（★3）になります。"] },
+    { id: "c2", no: "挑戦2", req: false, kai: "第4・5回", title: "どちらが大きい？",
+      ask: "2ビットの数 A（A1 A0）が B（B1 B0）より大きいときだけ、ランプ Y を点けてください。",
+      inputs: ["A1", "A0", "B1", "B0"], outputs: ["Y"], palette: { AND: 4, OR: 3, NOT: 2, XOR: 2, XNOR: 2 },
+      f: function (x) { return { Y: (x.A1 * 2 + x.A0) > (x.B1 * 2 + x.B0) ? 1 : 0 }; },
+      hints: ["上の桁から比べます。A1＝1 で B1＝0 なら、下の桁を見なくても A が大きい。", "上の桁が等しい（A1 と B1 が同じ）ときだけ、下の桁で決まります。「等しい」は XNOR で調べられます。"] },
+    { id: "c3", no: "挑戦3", req: false, kai: "第6回", title: "回り続ける光", seq: true,
+      ask: "ST をオンにして CLK を1回押すと L1 が点き、あとは ST をオフにしたまま CLK を押すたびに、光が L1 → L2 → L3 → L1 …と回り続けるようにしてください。",
+      inputs: ["ST"], outputs: ["L1", "L2", "L3"], palette: { DFF: 3, OR: 2, AND: 1, NOT: 1 },
+      run: [1, 0, 0, 0, 0, 0, 0],
+      hints: ["面7 の「光のバトン」で、右端（L3）から出ていく光を、左端の入口に戻すと輪になります。", "左端の D-FF の D に入れたいのは、はじめは ST、そのあとは右端から戻ってくる光です。2本の線を1本にまとめるには、どの部品が使えるでしょう。"] }
+  ];
+  /* 順序回路の面の期待値：run の各 CLK のあとのランプ */
+  function seqExpect(s) {
+    var out = [], q = s.outputs.map(function () { return 0; });
+    s.run.forEach(function (x) {
+      if (s.id === "s7") q = [x].concat(q.slice(0, -1));
+      else q = [x | q[q.length - 1]].concat(q.slice(0, -1));
+      var o = {}; s.outputs.forEach(function (n, i) { o[n] = q[i]; }); out.push(o);
+    });
+    return out;
+  }
+  STAGES.forEach(function (s) { if (s.seq) s.expect = seqExpect(s); });
+  var BY_ID = {}; STAGES.forEach(function (s) { BY_ID[s.id] = s; });
+
+  /* 面の最初の盤：スイッチを左、ランプを右に並べる（座標はマス目） */
+  function blank(s) {
+    var p = [];
+    s.inputs.forEach(function (n, i) { p.push([n, "SW", 1, 1 + i * 2]); });
+    s.outputs.forEach(function (n, i) { p.push([n, "LAMP", 14, 1 + i * 2]); });
+    return { p: p, w: [] };
+  }
+
+  /* ---------- 判定 ---------- */
+  /* 部品箱の数を超えていないか、面にない部品を使っていないか */
+  function paletteProblems(s, c) {
+    var used = {}, bad = [];
+    c.p.forEach(function (p) {
+      if (p[1] === "SW" || p[1] === "LAMP") return;
+      used[p[1]] = (used[p[1]] || 0) + 1;
+    });
+    Object.keys(used).forEach(function (t) { if (!(t in s.palette) || used[t] > s.palette[t]) bad.push(t); });
+    /* スイッチとランプは面のとおりか */
+    var sw = c.p.filter(function (p) { return p[1] === "SW"; }).map(function (p) { return p[0]; }).sort().join(",");
+    var lp = c.p.filter(function (p) { return p[1] === "LAMP"; }).map(function (p) { return p[0]; }).sort().join(",");
+    if (sw !== s.inputs.slice().sort().join(",") || lp !== s.outputs.slice().sort().join(",")) bad.push("スイッチ・ランプ");
+    return bad;
+  }
+  /* 線がおかしくないか（ない部品・ない口・入口に2本） */
+  function wireProblems(c) {
+    var pm = partMap(c), seen = {}, bad = [];
+    c.w.forEach(function (w) {
+      var a = pm[w[0]], b = pm[w[2]];
+      if (!a || !b || PARTS[a.type].outs.indexOf(w[1]) < 0 || PARTS[b.type].ins.indexOf(w[3]) < 0) { bad.push(w.join(" ")); return; }
+      var k = w[2] + "." + w[3];
+      if (seen[k]) bad.push(k); seen[k] = true;
+    });
+    return bad;
+  }
+  /* 返す値：{ ok, rows: [{ in, want, got, ok }], loop, open, bad, gates, stars } */
+  function judge(s, c) {
+    var bad = paletteProblems(s, c).concat(wireProblems(c));
+    var o = order(c), rows = [], open = {};
+    if (!bad.length && !o.loop.length) {
+      if (s.seq) {
+        var st = {};
+        s.run.forEach(function (x, i) {
+          var inp = {}; inp[s.inputs[0]] = x;
+          st = clock(c, inp, st);
+          var e = evaluate(c, inp, st);
+          e.open.forEach(function (k) { open[k] = 1; });
+          /* CLK の間に入力を変えても、ランプが変わらないこと（入力をランプに直結した回路を落とす） */
+          var flip = {}; flip[s.inputs[0]] = 1 - x;
+          var e2 = evaluate(c, flip, st);
+          var want = s.expect[i], got = e.lamps;
+          var hold = s.outputs.every(function (n) { return e2.lamps[n] === got[n]; });
+          rows.push({ in: inp, want: want, got: got, hold: hold, ok: hold && s.outputs.every(function (n) { return want[n] === got[n]; }) });
+        });
+      } else {
+        rowsOf(s.inputs).forEach(function (inp) {
+          var e = evaluate(c, inp, {}), want = s.f(inp), got = e.lamps;
+          e.open.forEach(function (k) { open[k] = 1; });
+          rows.push({ in: inp, want: want, got: got, ok: s.outputs.every(function (n) { return want[n] === got[n]; }) });
+        });
+      }
+    }
+    var openList = Object.keys(open);
+    var ok = !bad.length && !o.loop.length && !openList.length && rows.length > 0 && rows.every(function (r) { return r.ok; });
+    var g = gateCount(c), stars = 0;
+    if (ok) stars = s.min ? (g <= s.min ? 3 : g <= s.min + 1 ? 2 : 1) : 1;
+    return { ok: ok, rows: rows, loop: o.loop, open: openList, bad: bad, gates: g, stars: stars };
+  }
+
+  /* ---------- 書き出しの形（1行の JSON） ---------- */
+  function pack(c) { return JSON.stringify({ p: c.p, w: c.w }); }
+  function unpack(t) {
+    var o = JSON.parse(t);
+    if (!o || !Array.isArray(o.p) || !Array.isArray(o.w)) throw new Error("回路の形ではない");
+    o.p.forEach(function (p) { if (!Array.isArray(p) || p.length !== 4 || !PARTS[p[1]]) throw new Error("部品の形ではない"); });
+    o.w.forEach(function (w) { if (!Array.isArray(w) || w.length !== 4) throw new Error("線の形ではない"); });
+    return { p: o.p, w: o.w };
+  }
+
+  var api = { PARTS: PARTS, STAGES: STAGES, byId: BY_ID, blank: blank, evaluate: evaluate, clock: clock, order: order,
+    judge: judge, gateCount: gateCount, rowsOf: rowsOf, pack: pack, unpack: unpack, partMap: partMap, inputMap: inputMap };
+  CA.kairo = api;
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+/* 回路パズルの画面：面の一覧、盤（部品を置く・動かす・線でつなぐ・スイッチで光る）、テスト走行、星、ヒント。
+   計算と判定は kairo.js（CA.kairo）。進み具合はこのブラウザの中だけに保存する（CA.store）。
+   操作：部品箱のボタンで盤に置く → 部品をドラッグで動かす → 出口（右の点）を押してから入口（左の点）を押すと線がつながる。
+   ドラッグしなくても解ける（置く場所は空いた所に自動、線は押すだけ）。点と部品はキーボードでも選べる（Tab → Enter）。 */
+(function (root) {
+  "use strict";
+  var CA = root.CA, h = CA.h, K = CA.kairo, L = CA.gates;
+  var U = 40, BW = 17 * U, BH = 10 * U;
+  var NS = "http://www.w3.org/2000/svg";
+  function reduced() { try { return root.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } }
+
+  /* ---------- 部品の形（px）。x, y はマス目の座標 ---------- */
+  function geo(type) {
+    var d = K.PARTS[type];
+    if (type === "SW") return { w: 76, h: 40, ins: {}, outs: { Y: [76, 20] } };
+    if (type === "LAMP") return { w: 60, h: 40, ins: { A: [0, 20] }, outs: {} };
+    if (d.gate) {
+      var n = d.ins.length, ys = n === 1 ? [40] : [20, 60], ins = {};
+      d.ins.forEach(function (p, i) { ins[p] = [0, ys[i] / 2]; });
+      return { w: 84, h: 40, ins: ins, outs: { Y: [84, 20] } };
+    }
+    if (type === "ZERO") return { w: 56, h: 40, ins: {}, outs: { Y: [56, 20] } };
+    var k = Math.max(d.ins.length, d.outs.length), H = Math.max(56, k * 28 + 12), W = type === "DFF" ? 104 : 128, g = { w: W, h: H, ins: {}, outs: {} };
+    d.ins.forEach(function (p, i) { g.ins[p] = [0, H / 2 + (i - (d.ins.length - 1) / 2) * 28]; });
+    d.outs.forEach(function (p, i) { g.outs[p] = [W, H / 2 + (i - (d.outs.length - 1) / 2) * 28]; });
+    return g;
+  }
+  function pinXY(part, pin, isOut) {
+    var g = geo(part[1]), o = (isOut ? g.outs : g.ins)[pin];
+    return [part[2] * U + o[0], part[3] * U + o[1]];
+  }
+  var PIN_JA = { A: "入口A", B: "入口B", Ci: "入口Ci", D: "入口D", Y: "出口", S: "出口S", C: "出口C", Co: "出口Co", Q: "出口Q" };
+  function partName(p) {
+    if (p[1] === "SW") return "スイッチ " + p[0];
+    if (p[1] === "LAMP") return "ランプ " + p[0];
+    return K.PARTS[p[1]].ja + "（" + p[0] + "）";
+  }
+
+  /* ---------- 盤 ---------- */
+  CA.kairoGame = function (mount, opts) {
+    opts = opts || {};
+    var stages = K.STAGES, cur = null, c = null, sw = {}, ff = {}, sel = null, pick = null, running = false, lastJudge = null;
+    var saved = CA.store.get("kairo", {}) || {};
+    function rec(id) { return saved[id] || (saved[id] = { c: null, ok: false, stars: 0, gates: null }); }
+    function save() { CA.store.set("kairo", saved); }
+
+    var mapReq = h("div", { class: "kr-map", role: "group", "aria-label": "必須の面" });
+    var mapOpt = h("div", { class: "kr-map", role: "group", "aria-label": "挑戦の面（任意）" });
+    var head = h("div", { class: "kr-head" });
+    var palette = h("div", { class: "kr-palette", role: "group", "aria-label": "部品箱" });
+    var tools = h("div", { class: "row kr-tools" });
+    var svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "0 0 " + BW + " " + BH);
+    svg.setAttribute("class", "kr-board");
+    svg.setAttribute("role", "group");
+    var boardWrap = h("div", { class: "kr-boardwrap" });
+    boardWrap.appendChild(svg);
+    var swipeNote = h("p", { class: "kr-swipe", text: "画面がせまいときは、盤の何もない所を指で横に送ると右側（ランプ）が見えます。パソコンでの作業をおすすめします。" });
+    var status = h("div", { class: "kr-status", role: "status", "aria-live": "polite" });
+    var seqBar = h("div", { class: "row kr-seq" });
+    var table = h("div", { class: "kr-table" });
+    var verdict = h("div", { class: "feedback", role: "status", "aria-live": "polite" });
+    var hints = h("div", { class: "stack kr-hints" });
+    var live = h("div", { class: "visually-hidden", "aria-live": "polite" });
+
+    var btnTest = h("button", { type: "button", class: "primary", text: "テスト走行", onclick: function () { testRun(); } });
+    var btnDel = h("button", { type: "button", text: "選んだものを消す", onclick: function () { delSel(); } });
+    var btnReset = h("button", { type: "button", text: "盤を空にする", onclick: function () { if (running) return; c = K.blank(cur); sel = null; pick = null; ff = {}; changed(); say("盤を空にしました。"); } });
+    tools.appendChild(btnTest); tools.appendChild(btnDel); tools.appendChild(btnReset);
+
+    mount.appendChild(h("div", { class: "kr" },
+      h("div", { class: "kr-maps" }, h("div", { class: "kr-maplabel", text: "必須" }), mapReq, h("div", { class: "kr-maplabel", text: "挑戦（任意）" }), mapOpt),
+      head, palette, swipeNote, boardWrap, seqBar, status, tools, verdict, table, hints, live));
+
+    function say(t) { live.textContent = t; }
+
+    /* 面の一覧 */
+    function drawMap() {
+      [mapReq, mapOpt].forEach(function (m) { m.innerHTML = ""; });
+      stages.forEach(function (s) {
+        var r = rec(s.id), mark = r.ok ? (s.min ? "★".repeat(r.stars) + "☆".repeat(3 - r.stars) : "✓") : "";
+        var b = h("button", { type: "button", class: "kr-stagebtn" + (r.ok ? " done" : ""), "aria-pressed": cur && cur.id === s.id ? "true" : "false",
+          onclick: function () { if (!running) open(s.id); } },
+          h("span", { class: "no" + (s.no.length > 1 ? " long" : ""), text: s.no }), h("span", { class: "t", text: s.title }), h("span", { class: "m", text: mark || "　" }));
+        (s.req ? mapReq : mapOpt).appendChild(b);
+      });
+    }
+
+    function open(id) {
+      cur = K.byId[id];
+      var r = rec(id);
+      try { c = r.c ? K.unpack(r.c) : K.blank(cur); } catch (e) { c = K.blank(cur); }
+      sw = {}; cur.inputs.forEach(function (n) { sw[n] = 0; });
+      ff = {}; sel = null; pick = null; lastJudge = null;
+      CA.store.set("kairoCur", id);
+      head.innerHTML = "";
+      head.appendChild(h("div", { class: "kr-title" }, h("span", { class: "no", text: (cur.req ? "面 " : "") + cur.no }), h("h3", { text: cur.title }), h("span", { class: "kai", text: cur.kai })));
+      head.appendChild(h("p", { class: "kr-ask", text: cur.ask }));
+      hints.innerHTML = "";
+      cur.hints.forEach(function (t, i) { hints.appendChild(h("details", { class: "solution" }, h("summary", { text: "ヒント " + (i + 1) }), h("div", null, h("p", { text: t })))); });
+      if (cur.id === "s7" || cur.id === "c3") hints.appendChild(h("p", { class: "fixnote", text: "この盤の D-FF は立ち上がり型です（授業の第6回スライド28 と同じ）。第6回の課題で使った SimcirJS の D-FF 部品は立ち下がりで動くので、そこだけ違います。" }));
+      verdict.className = "feedback"; verdict.innerHTML = "";
+      drawTable(null);
+      drawMap(); drawPalette(); drawSeq(); draw();
+      if (opts.onOpen) opts.onOpen(cur);
+    }
+
+    function used(t) { return c.p.filter(function (p) { return p[1] === t; }).length; }
+    function drawPalette() {
+      palette.innerHTML = "";
+      palette.appendChild(h("span", { class: "kr-maplabel", text: "部品箱" }));
+      Object.keys(cur.palette).forEach(function (t) {
+        var left = cur.palette[t] - used(t);
+        palette.appendChild(h("button", { type: "button", class: "kr-part", disabled: left <= 0 || running ? true : null,
+          "aria-label": K.PARTS[t].ja + " を盤に置く（残り " + left + "）", onclick: function () { place(t); } },
+          h("span", { class: "nm", text: K.PARTS[t].ja }), h("span", { class: "left", text: "×" + left })));
+      });
+    }
+
+    function drawSeq() {
+      seqBar.innerHTML = "";
+      if (!cur.seq) { seqBar.hidden = true; return; }
+      seqBar.hidden = false;
+      seqBar.appendChild(h("button", { type: "button", class: "kr-clk", text: "CLK ↑（立ち上がりを1回送る）", onclick: function () {
+        if (running) return; ff = K.clock(c, sw, ff); draw(); say("CLK の立ち上がりを送りました。");
+      } }));
+      seqBar.appendChild(h("button", { type: "button", text: "D-FF を全部 0 に戻す", onclick: function () { if (running) return; ff = {}; draw(); } }));
+    }
+
+    function freeSpot(t) {
+      var g = geo(t);
+      for (var x = 4; x <= 11; x += 1) for (var y = 0; y * U + g.h + 20 <= BH; y += 1) {
+        var box = [x * U, y * U, x * U + g.w, y * U + g.h + 20];
+        var hit = c.p.some(function (p) { var q = geo(p[1]), b = [p[2] * U - 24, p[3] * U - 12, p[2] * U + q.w + 24, p[3] * U + q.h + 24]; return box[0] < b[2] && b[0] < box[2] && box[1] < b[3] && b[1] < box[3]; });
+        if (!hit) return [x, y];
+      }
+      return [6, 4];
+    }
+    function newId(t) {
+      var base = { AND: "and", OR: "or", NOT: "not", NAND: "nand", NOR: "nor", XOR: "xor", XNOR: "xnor", HA: "ha", FA: "fa", ZERO: "zero", DFF: "ff" }[t] || "p";
+      for (var i = 1; ; i++) { var id = base + i; if (!c.p.some(function (p) { return p[0] === id; })) return id; }
+    }
+    function place(t) {
+      if (running || cur.palette[t] - used(t) <= 0) return;
+      var xy = freeSpot(t), id = newId(t);
+      c.p.push([id, t, xy[0], xy[1]]);
+      sel = { kind: "part", id: id }; pick = null;
+      changed(); say(K.PARTS[t].ja + " を盤に置きました。");
+    }
+    function delSel() {
+      if (running || !sel) return;
+      if (sel.kind === "part") {
+        var p = K.partMap(c)[sel.id];
+        if (!p || p.type === "SW" || p.type === "LAMP") { say("スイッチとランプは消せません。"); return; }
+        c.p = c.p.filter(function (q) { return q[0] !== sel.id; });
+        c.w = c.w.filter(function (w) { return w[0] !== sel.id && w[2] !== sel.id; });
+        delete ff[sel.id];
+      } else {
+        var k = sel.key;
+        c.w = c.w.filter(function (w) { return w.join("|") !== k; });
+      }
+      sel = null; changed(); say("消しました。");
+    }
+
+    /* 線をつなぐ：出口を押してから入口を押す（逆の順でもよい） */
+    function pinPress(id, pin, isOut) {
+      if (running) return;
+      if (!pick) { pick = { id: id, pin: pin, out: isOut }; draw(); say((isOut ? "出口" : "入口") + "を選びました。つなぐ先の" + (isOut ? "入口" : "出口") + "を押してください。"); return; }
+      if (pick.id === id && pick.pin === pin && pick.out === isOut) { pick = null; draw(); return; }
+      if (pick.out === isOut) { pick = { id: id, pin: pin, out: isOut }; draw(); return; }
+      var from = isOut ? [id, pin] : [pick.id, pick.pin], to = isOut ? [pick.id, pick.pin] : [id, pin];
+      if (from[0] === to[0]) { pick = null; draw(); say("同じ部品の出口と入口はつなげません。"); return; }
+      c.w = c.w.filter(function (w) { return !(w[2] === to[0] && w[3] === to[1]); });
+      c.w.push([from[0], from[1], to[0], to[1]]);
+      pick = null; changed(); say("つなぎました。");
+    }
+
+    function changed() {
+      var r = rec(cur.id); r.c = K.pack(c); save();
+      lastJudge = null; verdict.className = "feedback"; verdict.innerHTML = "";
+      drawTable(null); drawPalette(); draw();
+    }
+
+    /* ---------- 描画 ---------- */
+    function el(tag, attrs, parent) {
+      var e = document.createElementNS(NS, tag);
+      for (var k in attrs) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(e);
+      return e;
+    }
+    function draw(hl) {
+      hl = hl || {};
+      var e = K.evaluate(c, sw, ff), pm = K.partMap(c), loop = {}, open = {};
+      e.loop.forEach(function (id) { loop[id] = 1; });
+      (hl.open || []).forEach(function (k) { open[k] = 1; });
+      svg.innerHTML = "";
+      svg.setAttribute("aria-label", "回路の盤。" + cur.title + "。部品 " + (c.p.length - cur.inputs.length - cur.outputs.length) + " 個、線 " + c.w.length + " 本");
+      el("rect", { x: 0, y: 0, width: BW, height: BH, class: "kr-bg" }, svg);
+      for (var gx = U; gx < BW; gx += U) for (var gy = U; gy < BH; gy += U) el("circle", { cx: gx, cy: gy, r: 1.6, class: "kr-dot" }, svg);
+      if (cur.seq) { var clk = el("text", { x: BW / 2, y: BH - 10, "text-anchor": "middle", class: "kr-clknote" }, svg); clk.textContent = "D-FF の CLK は全部共通（「CLK ↑」ボタン）"; }
+      /* 線 */
+      wireLayer = el("g", {}, svg); lastEval = e;
+      paintWires();
+      /* 部品 */
+      c.p.forEach(function (p) {
+        var type = p[1], g = geo(type), X = p[2] * U, Y = p[3] * U, d = K.PARTS[type];
+        var isSel = sel && sel.kind === "part" && sel.id === p[0];
+        var pg = el("g", { class: "kr-p kr-" + type.toLowerCase() + (isSel ? " sel" : "") + (loop[p[0]] ? " loop" : ""), transform: "translate(" + X + "," + Y + ")" }, svg);
+        if (type === "SW") {
+          var on = sw[p[0]] === 1;
+          var b = el("g", { class: "kr-sw" + (on ? " on" : ""), tabindex: 0, role: "switch", "aria-checked": on ? "true" : "false", "aria-label": "スイッチ " + p[0] }, pg);
+          el("rect", { x: 22, y: 4, width: 46, height: 32, rx: 16, class: "track" }, b);
+          el("circle", { cx: on ? 52 : 38, cy: 20, r: 12, class: "knob" }, b);
+          var t = el("text", { x: 16, y: 27, "text-anchor": "end", class: "kr-lbl" }, pg); t.textContent = p[0];
+          var flip = function () { if (running) return; sw[p[0]] = 1 - (sw[p[0]] || 0); draw(); say("スイッチ " + p[0] + " を " + (sw[p[0]] ? "オン" : "オフ") + " にしました。"); };
+          b.addEventListener("click", flip);
+          b.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); flip(); } });
+        } else if (type === "LAMP") {
+          var lv = e.lamps[p[0]] === 1;
+          el("circle", { cx: 30, cy: 20, r: 17, class: "kr-bulb" + (lv ? " on" : "") }, pg);
+          var lt = el("text", { x: 54, y: 27, class: "kr-lbl" }, pg); lt.textContent = p[0];
+          pg.setAttribute("aria-label", "ランプ " + p[0] + (lv ? " 点灯" : " 消灯"));
+        } else if (d.gate) {
+          var ins = d.ins.map(function (pin) { var s = K.inputMap(c)[p[0] + "." + pin]; return s ? e.v[s.id + "." + s.pin] === 1 : false; });
+          var body = el("g", { class: "kr-body" }, pg);
+          body.innerHTML = L.symbol(type, { n: d.ins.length, live: ins, out: e.v[p[0] + ".Y"] === 1, x: 12, y: 0, s: 0.5 });
+          el("rect", { x: 10, y: 0, width: 64, height: 40, class: "kr-grab" }, pg);
+          var gl = el("text", { x: 42, y: 54, "text-anchor": "middle", class: "kr-plbl" }, pg); gl.textContent = type;
+        } else {
+          el("rect", { x: 8, y: 0, width: g.w - 16, height: g.h, rx: 8, class: "kr-block kr-grab" }, pg);
+          var bt = el("text", { x: g.w / 2, y: g.h / 2 + 6, "text-anchor": "middle", class: "kr-blbl" }, pg);
+          bt.textContent = { HA: "半加算器", FA: "全加算器", ZERO: "0", DFF: "D-FF" }[type];
+          d.ins.forEach(function (pin) { var o = g.ins[pin], tt = el("text", { x: o[0] + 12, y: o[1] + 5, class: "kr-pinlbl" }, pg); tt.textContent = pin; });
+          d.outs.forEach(function (pin) { var o = g.outs[pin], tt = el("text", { x: o[0] - 12, y: o[1] + 5, "text-anchor": "end", class: "kr-pinlbl" }, pg); tt.textContent = pin; });
+          if (type === "DFF") { var tq = el("text", { x: g.w / 2, y: g.h + 16, "text-anchor": "middle", class: "kr-plbl" }, pg); tq.textContent = "Q=" + (ff[p[0]] ? 1 : 0); el("path", { d: "M8," + (g.h - 14) + " l9,7 l-9,7", class: "kr-clkmark" }, pg); }
+        }
+        if (type !== "SW" && type !== "LAMP") dragable(pg, p);
+        /* 点（入口・出口） */
+        Object.keys(g.ins).forEach(function (pin) { pinDot(pg, p, pin, g.ins[pin], false, open[p[0] + "." + pin]); });
+        Object.keys(g.outs).forEach(function (pin) { pinDot(pg, p, pin, g.outs[pin], true, false); });
+      });
+      /* 状態の文 */
+      var msgs = [];
+      if (e.loop.length) msgs.push("<b class=\"ng\">ゲートだけで輪になっています</b>（赤い部品）。出口を自分より前の入口に戻すと、値が決まりません。");
+      if (pick) msgs.push("<b>" + (pick.out ? "出口" : "入口") + "を選んでいます。</b>つなぐ先の" + (pick.out ? "入口（左の点）" : "出口（右の点）") + "を押してください。もう一度押すと取り消し。");
+      else if (sel && sel.kind === "part") msgs.push("部品を選んでいます。ドラッグで動かせます。「選んだものを消す」で外せます。");
+      else if (sel && sel.kind === "wire") msgs.push("線を選んでいます。「選んだものを消す」で外せます。");
+      else msgs.push("部品箱から部品を置き、<b>出口（右の点）→ 入口（左の点）</b>の順に押して線をつなぎます。スイッチを押すと、1 の線が光ります。");
+      var gc = K.gateCount(c);
+      if (cur.min) msgs.push("ゲート " + gc + " 個（★3 は " + cur.min + " 個）");
+      status.innerHTML = msgs.join("　");
+      btnDel.disabled = !sel || running;
+      btnTest.disabled = running;
+    }
+    var wireLayer = null, lastEval = null;
+    function paintWires() {
+      if (!wireLayer) return;
+      wireLayer.innerHTML = "";
+      var e = lastEval, pm = K.partMap(c);
+      c.w.forEach(function (w) {
+        var a = pm[w[0]], b = pm[w[2]];
+        if (!a || !b) return;
+        var p1 = pinXY([a.id, a.type, a.x, a.y], w[1], true), p2 = pinXY([b.id, b.type, b.x, b.y], w[3], false);
+        var dx = Math.max(36, Math.abs(p2[0] - p1[0]) / 2);
+        var d = "M" + p1[0] + "," + p1[1] + " C" + (p1[0] + dx) + "," + p1[1] + " " + (p2[0] - dx) + "," + p2[1] + " " + p2[0] + "," + p2[1];
+        var on = e.v[w[0] + "." + w[1]] === 1, key = w.join("|"), isSel = sel && sel.kind === "wire" && sel.key === key;
+        var g = el("g", { class: "kr-wire" + (on ? " on" : "") + (isSel ? " sel" : ""), tabindex: 0, role: "button",
+          "aria-label": "線：" + partName([a.id, a.type]) + " の" + (PIN_JA[w[1]] || w[1]) + " → " + partName([b.id, b.type]) + " の" + (PIN_JA[w[3]] || w[3]) + (on ? "（1）" : "（0）") }, wireLayer);
+        el("path", { d: d, class: "hit" }, g);
+        el("path", { d: d, class: "line" }, g);
+        g.addEventListener("click", function (ev) { ev.stopPropagation(); if (running) return; sel = { kind: "wire", key: key }; pick = null; draw(); });
+        g.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); sel = { kind: "wire", key: key }; draw(); } keyDel(ev); });
+      });
+    }
+    function pinDot(pg, p, pin, o, isOut, isOpen) {
+      var picked = pick && pick.id === p[0] && pick.pin === pin && pick.out === isOut;
+      var g = el("g", { class: "kr-pin" + (isOut ? " out" : " in") + (picked ? " picked" : "") + (isOpen ? " open" : ""), tabindex: 0, role: "button",
+        "aria-label": partName(p) + " の" + (PIN_JA[pin] || pin) + (picked ? "（選択中）" : "") }, pg);
+      el("circle", { cx: o[0], cy: o[1], r: 15, class: "hit" }, g);
+      el("circle", { cx: o[0], cy: o[1], r: 6, class: "dot" }, g);
+      g.addEventListener("pointerdown", function (ev) { ev.stopPropagation(); });
+      g.addEventListener("click", function (ev) { ev.stopPropagation(); pinPress(p[0], pin, isOut); });
+      g.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pinPress(p[0], pin, isOut); } });
+    }
+    function keyDel(ev) { if (ev.key === "Delete" || ev.key === "Backspace") { ev.preventDefault(); delSel(); } }
+
+    /* ドラッグで動かす（押しただけなら選ぶだけ）。キーボードでは矢印キーで1マスずつ */
+    function toBoard(ev) {
+      var pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+      var m = svg.getScreenCTM(); if (!m) return [0, 0];
+      var q = pt.matrixTransform(m.inverse()); return [q.x, q.y];
+    }
+    function clampXY(p, x, y) {
+      var g = geo(p[1]);
+      return [Math.max(2, Math.min((BW - g.w - 4) / U, x)), Math.max(0, Math.min((BH - g.h - 4) / U, y))];
+    }
+    function dragable(pg, p) {
+      pg.setAttribute("tabindex", "0");
+      pg.setAttribute("role", "button");
+      pg.setAttribute("aria-label", partName(p) + "。矢印キーで動かす、Delete で消す");
+      var start = null;
+      pg.addEventListener("pointerdown", function (ev) {
+        if (ev.button !== 0 || running) return;
+        var b = toBoard(ev);
+        start = { px: b[0], py: b[1], x: p[2], y: p[3], moved: false, id: ev.pointerId };
+        pg.setPointerCapture(ev.pointerId);
+      });
+      pg.addEventListener("pointermove", function (ev) {
+        if (!start || !pg.hasPointerCapture(ev.pointerId)) return;
+        var b = toBoard(ev), dx = b[0] - start.px, dy = b[1] - start.py;
+        if (!start.moved && Math.abs(dx) + Math.abs(dy) < 6) return;
+        start.moved = true; pg.classList.add("dragging");
+        var xy = clampXY(p, Math.round((start.x + dx / U) * 2) / 2, Math.round((start.y + dy / U) * 2) / 2);
+        p[2] = xy[0]; p[3] = xy[1];
+        pg.setAttribute("transform", "translate(" + p[2] * U + "," + p[3] * U + ")");
+        redrawWires();
+      });
+      pg.addEventListener("lostpointercapture", function () {
+        if (!start) return;
+        var moved = start.moved; start = null; pg.classList.remove("dragging");
+        justPressed = true; root.setTimeout(function () { justPressed = false; }, 0);
+        sel = { kind: "part", id: p[0] }; pick = null;
+        if (moved) changed(); else draw();
+      });
+      pg.addEventListener("keydown", function (ev) {
+        var k = { ArrowLeft: [-0.5, 0], ArrowRight: [0.5, 0], ArrowUp: [0, -0.5], ArrowDown: [0, 0.5] }[ev.key];
+        if (k) { ev.preventDefault(); var xy = clampXY(p, p[2] + k[0], p[3] + k[1]); p[2] = xy[0]; p[3] = xy[1]; sel = { kind: "part", id: p[0] }; changed(); focusPart(p[0]); return; }
+        if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); sel = { kind: "part", id: p[0] }; draw(); focusPart(p[0]); return; }
+        keyDel(ev);
+      });
+    }
+    function focusPart(id) {
+      var nodes = svg.querySelectorAll("g.kr-p");
+      var ps = c.p;
+      for (var i = 0; i < nodes.length; i++) if (ps[i] && ps[i][0] === id) { try { nodes[i].focus(); } catch (e) { /* なし */ } }
+    }
+    var rafWire = 0;
+    function redrawWires() {
+      if (rafWire) return;
+      rafWire = root.requestAnimationFrame(function () { rafWire = 0; paintWires(); });
+    }
+    var justPressed = false;
+    svg.addEventListener("click", function () { if (running || justPressed) return; if (sel || pick) { sel = null; pick = null; draw(); } });
+
+    /* ---------- テスト走行 ---------- */
+    function drawTable(j, upto) {
+      table.innerHTML = "";
+      if (!cur) return;
+      var cols = cur.seq ? ["CLK", cur.inputs[0]] : cur.inputs.slice();
+      var head = cols.map(function (n) { return "<th>" + n + "</th>"; }).join("") + cur.outputs.map(function (n) { return "<th>" + n + "<br><span class=\"sub\">目標</span></th><th>" + n + "<br><span class=\"sub\">いま</span></th>"; }).join("") + "<th></th>";
+      var rows = [];
+      if (cur.seq) cur.run.forEach(function (x, i) { var inp = {}; inp[cur.inputs[0]] = x; rows.push({ in: inp, want: cur.expect[i], n: i + 1 }); });
+      else K.rowsOf(cur.inputs).forEach(function (inp) { rows.push({ in: inp, want: cur.f(inp) }); });
+      var body = rows.map(function (r, i) {
+        var got = j && j.rows[i] && (upto == null || i <= upto) ? j.rows[i] : null;
+        var tds = (cur.seq ? ["<td>" + r.n + "回目</td>"] : []).concat(cur.inputs.map(function (n) { return "<td>" + r.in[n] + "</td>"; }));
+        cur.outputs.forEach(function (n) { tds.push("<td>" + r.want[n] + "</td>"); tds.push("<td class=\"" + (got ? (got.got[n] === r.want[n] ? "okc" : "ngc") : "unk") + "\">" + (got ? got.got[n] : "?") + "</td>"); });
+        tds.push("<td>" + (got ? (got.ok ? "✓" : "✕") : "") + "</td>");
+        return "<tr" + (upto === i ? " class=\"cur\"" : "") + ">" + tds.join("") + "</tr>";
+      }).join("");
+      table.innerHTML = "<table class=\"ttable kr-tt\"><caption>" + (cur.seq ? "テスト走行では、D-FF を全部 0 に戻してから、" + cur.inputs[0] + " を表のとおりにして CLK を順に送ります。CLK と CLK の間に " + cur.inputs[0] + " を変えても、ランプが変わらないことも確かめます（変わると ✕）。" : "テスト走行では、スイッチの全部の組を上から順に試します。") + "</caption><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>";
+    }
+    function testRun() {
+      if (running) return;
+      var j = K.judge(cur, c);
+      lastJudge = j; sel = null; pick = null;
+      if (j.bad.length || j.loop.length || !j.rows.length) { finish(j); return; }
+      running = true; draw(); drawPalette();
+      var i = 0, st = {}, wait = reduced() ? 0 : 420;
+      if (cur.seq) ff = {};
+      (function stepRow() {
+        if (i >= j.rows.length) { running = false; finish(j); return; }
+        var r = j.rows[i];
+        Object.keys(r.in).forEach(function (n) { sw[n] = r.in[n]; });
+        if (cur.seq) { st = K.clock(c, sw, st); ff = st; }
+        draw({ open: j.open }); drawTable(j, i);
+        i += 1;
+        if (wait) root.setTimeout(stepRow, wait); else stepRow();
+      })();
+    }
+    function finish(j) {
+      draw({ open: j.open }); drawTable(j.rows.length ? j : null); drawPalette();
+      var r = rec(cur.id), msg;
+      if (j.ok) {
+        var first = !r.ok;
+        r.ok = true; if (j.stars > r.stars) r.stars = j.stars;
+        /* クリアした回路は別に持つ（いちばん星が多い・ゲートが少ないもの）。そのあと盤をいじっても書き出しは「クリア」のまま */
+        var bestJ = null; try { bestJ = r.best ? K.judge(cur, K.unpack(r.best)) : null; } catch (e) { bestJ = null; }
+        if (!bestJ || !bestJ.ok || j.stars > bestJ.stars || (j.stars === bestJ.stars && j.gates < bestJ.gates)) r.best = K.pack(c);
+        if (r.gates == null || j.gates < r.gates) r.gates = j.gates;
+        r.c = K.pack(c); save();
+        verdict.className = "feedback ok kr-clear";
+        var st = cur.min ? "<span class=\"kr-stars\" aria-label=\"星 " + j.stars + " つ\">" + "★".repeat(j.stars) + "<span class=\"off\">" + "☆".repeat(3 - j.stars) + "</span></span>" : "";
+        msg = "<span class=\"head\">クリア！</span>" + st + "　" + (cur.min ? "ゲート " + j.gates + " 個。" + (j.stars < 3 ? "★3 は " + cur.min + " 個でできます。もっと減らせるか挑戦してみましょう。" : "最少の個数です。") : "表の全部の行が目標どおりです。");
+        if (first && opts.onClear) opts.onClear(cur, j);
+        drawMap();
+        say("クリアしました。");
+      } else {
+        verdict.className = "feedback ng";
+        if (j.loop.length) msg = "<span class=\"head\">まだです</span>　ゲートだけで輪になっている所があります（赤い部品）。";
+        else if (j.bad.length) msg = "<span class=\"head\">まだです</span>　部品箱にない部品や、1つの入口に2本の線があります。";
+        else if (j.open.length) msg = "<span class=\"head\">まだです</span>　つながっていない入口があります（赤い点）。空いた入口は 0 として動くので、全部つないでください。";
+        else if (j.rows.some(function (x) { return x.hold === false; })) msg = "<span class=\"head\">まだです</span>　CLK を押していないのに、" + cur.inputs[0] + " を変えるとランプが変わります（✕ の行）。ランプには、CLK の瞬間の値を覚えている部品の出口をつなぎましょう。";
+        else { var bad = j.rows.filter(function (x) { return !x.ok; }).length; msg = "<span class=\"head\">あと " + bad + " 行</span>　表の ✕ の行で、ランプが目標と違います。その行のとおりにスイッチを入れて、どこで値が変わるか追ってみましょう。"; }
+        say("まだです。");
+      }
+      verdict.innerHTML = msg;
+      if (opts.onJudge) opts.onJudge(cur, j);
+    }
+
+    /* 書き出し用 */
+    var api = {
+      records: function () { return saved; },
+      /* 書き出す回路：クリアした回路があればそれ、なければ今の盤 */
+      exportCircuit: function (id) { var r = saved[id] || {}; return r.best || r.c || K.pack(K.blank(K.byId[id])); },
+      open: open
+    };
+    var first = CA.store.get("kairoCur", null);
+    open(first && K.byId[first] ? first : (opts.start || "s1"));
+    return api;
+  };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>CA.explainItems((CA.EXP_ITEMS || {})[window.CA_PAGE]); CA.sidebar();</script>
+<script>
+(function () {
+  var K = CA.kairo, h = CA.h;
+  function $(id) { return document.getElementById(id); }
+  var REQ = K.STAGES.filter(function (s) { return s.req; });
+  CA.progress.init(REQ.map(function (s) { return { id: s.id, title: "面" + s.no }; }), { label: "必須の面" });
+  var game = CA.kairoGame($("game"), {
+    onClear: function (s) { if (s.req) { CA.progress.mark(s.id); CA.progress.render(); } }
+  });
+  var recs = game.records();
+  REQ.forEach(function (s) { if (recs[s.id] && recs[s.id].ok) CA.progress.mark(s.id); });
+
+  /* 目次の「使い方」から来たときは、くわしい使い方を開いておく */
+  function openHowto() { if (location.hash === "#howto") { var d = document.querySelector("#howto .kr-more"); if (d) d.open = true; } }
+  openHowto(); window.addEventListener("hashchange", openHowto);
+
+  /* 振り返り */
+  var furi = h("textarea", { id: "furi-text", rows: "6", "aria-label": "振り返り" });
+  furi.value = CA.store.get("furi", "") || "";
+  var cnt = h("p", { class: "counter", role: "status" });
+  function count() { cnt.textContent = furi.value.replace(/\s/g, "").length + " 字"; }
+  furi.addEventListener("input", function () { CA.store.set("furi", furi.value); count(); });
+  $("furi").appendChild(furi); $("furi").appendChild(cnt); count();
+
+  /* 書き出し（採点では「回路」の行を動かし直して判定する。「クリア」の文字は見ない） */
+  function exportText() {
+    var r = game.records(), out = ["CA 回路パズル 回答 v1", "書き出した時刻: " + new Date().toLocaleString("ja-JP"), ""];
+    K.STAGES.forEach(function (s) {
+      var x = r[s.id] || {};
+      var c = game.exportCircuit(s.id), j;
+      try { j = K.judge(s, K.unpack(c)); } catch (e) { j = { ok: false, gates: 0, stars: 0 }; }
+      out.push("[" + (s.req ? "面" : "") + s.no + "] " + s.title + "：" + (j.ok ? "クリア" : "まだ") + (s.min ? (j.ok ? "　★" + j.stars : "") + "　ゲート " + j.gates + " 個" : ""));
+      out.push("回路: " + c);
+    });
+    out.push("", "[振り返り]", (CA.store.get("furi", "") || "（未記入）").trim(), "", "（ここまで）");
+    return out.join("\n");
+  }
+  $("doexport").onclick = function () {
+    var text = exportText(), box = $("exportbox");
+    box.innerHTML = "";
+    var miss = REQ.filter(function (s) { try { return !K.judge(s, K.unpack(game.exportCircuit(s.id))).ok; } catch (e) { return true; } }).map(function (s) { return "面" + s.no; });
+    if (!(CA.store.get("furi", "") || "").trim()) miss.push("振り返り");
+    box.appendChild(h("p", { class: "hint", text: miss.length ? "まだのもの：" + miss.join("、") + "。このまま提出することもできます。" : "必須の面と振り返りが、全部そろっています。" }));
+    var ta = h("textarea", { readonly: true, "aria-label": "書き出した回答" });
+    ta.value = text;
+    var note = h("p", { class: "hint", role: "status" });
+    var COPIED = "コピーしました。メモ帳などに貼り付けて .txt のファイルとして保存し、そのファイルを提出してください。";
+    var bCopy = h("button", { type: "button", text: "コピー", onclick: function () {
+      function fallback() { try { ta.focus(); ta.select(); var okc = document.execCommand("copy"); note.textContent = okc ? COPIED : "コピーできませんでした。欄の文をすべて選んでコピーしてください。"; } catch (e) { note.textContent = "コピーできませんでした。欄の文をすべて選んでコピーしてください。"; } }
+      try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { note.textContent = COPIED; }, fallback); else fallback(); } catch (e) { fallback(); }
+    } });
+    var bSel = h("button", { type: "button", text: "すべて選択", onclick: function () { ta.focus(); ta.select(); } });
+    var bSave = h("button", { type: "button", class: "primary", text: ".txt で保存", onclick: function () {
+      try {
+        var blob = new Blob(["﻿" + text], { type: "text/plain;charset=utf-8" });
+        var url = URL.createObjectURL(blob), a2 = h("a", { href: url, download: "CA回路パズル_回答.txt" });
+        document.body.appendChild(a2); a2.click(); a2.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+        note.textContent = "「CA回路パズル_回答.txt」を保存しました。WebClass の「回路パズル」の課題に、このファイルを添付して提出してください。保存できていないときは「コピー」を押し、メモ帳などに貼り付けて .txt で保存してください。";
+      } catch (e) { note.textContent = "保存できませんでした。「コピー」を押し、メモ帳などに貼り付けて .txt で保存してください。"; }
+    } });
+    box.appendChild(h("div", { class: "row" }, bSave, bCopy, bSel));
+    box.appendChild(note);
+    box.appendChild(ta);
+  };
+  CA.progress.render();
+})();
+</script>
+
+</body>
+</html>
